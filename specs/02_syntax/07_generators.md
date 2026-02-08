@@ -29,6 +29,25 @@ gen = generate {
 ### From Python/JavaScript
 Similar to `yield` syntax, but purely functional (no mutable iterator state).
 
+### From Haskell/Scala (no list comprehension syntax)
+
+AIVI does **not** use Haskell-style list comprehensions like:
+
+```aivi
+// Not AIVI syntax
+[ x | x <- xs, p x ]
+```
+
+Instead, write the equivalent logic with a `generate` block:
+
+```aivi
+generate {
+  x <- xs
+  x -> p x
+  yield x
+}
+```
+
 ---
 
 ## 7.4 Guards and predicates
@@ -78,7 +97,7 @@ stream = generate async {
 ### Safety and Cleanup
 Async generators are integrated with the AIVI concurrency tree:
 - **Cancellation**: If the consumer of an async generator stops (or is cancelled), the generator's current execution point is cancelled.
-- **Cleanup**: Like regular effect blocks, `generate async` supports `defer` to ensure resources (like open HTTP connections) are released during early termination.
+- **Cleanup**: Use `resource { ... }` blocks (and `<-` acquisition) inside `generate async` to ensure resources are released during early termination.
 ## 7.7 Expressive Sequence Logic
 
 Generators provide a powerful, declarative way to build complex sequences without intermediate collections or mutation.

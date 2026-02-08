@@ -8,7 +8,7 @@
 
 2.  **Effect System**:
     *   Is `Effect ε A` enough? Do we need Algebraic Effects (handlers)?
-    *   How to handle resource cleanup (bracket/defer)?
+    *   How to handle resource cleanup (bracket/resource)?
 
 3.  **Generators**:
     *   Are they always synchronous? How to handle `AsyncGenerator`?
@@ -48,4 +48,3 @@
 4.  **Multi-Carrier Domains**:
     *   Can one domain span multiple carrier types (e.g., `Vec2 | Vec3 | Vec4`)?
     *   How does operator resolution work when carriers share operators?
-

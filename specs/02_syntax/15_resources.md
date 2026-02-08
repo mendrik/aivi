@@ -53,22 +53,26 @@ copy src dest = effect {
 
 ---
 
-## 15.3 Ad-hoc Cleanup (`defer`)
+## 15.3 Ad-hoc cleanup (inline `resource`)
 
-For simple, one-off cleanup where defining a reusable `resource` block is unnecessary, you can use the `defer` keyword. Deferred operations are executed in LIFO order when the block exits.
+Instead of a `defer` statement, define a small inline `resource` and bind it with `<-`. Cleanup happens automatically when the scope exits.
 
 ```aivi
-effect {
-  s = socket.connect "localhost" 8080
-  defer s.close ()
-  
-  s.send "Hello"
+main = effect {
+  s <- resource {
+    sock = socket.connect "localhost" 8080
+    yield sock
+    sock.close ()
+  }
+
+  _ <- s.send "Hello"
+  Unit
 }
 ```
 
 ### Guarantees
 
-Both `resource` blocks and `defer` provide the same safety guarantees. Cleanup operations run if:
+Cleanup code runs if:
 1. The block completes successfully.
 2. The block returns an error.
 3. The task executing the block is **cancelled**.
