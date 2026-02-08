@@ -106,21 +106,27 @@ point = (10, 20)
 distance = sqrt (x² + y²) // Unicode powers (², ³, etc.) are supported as syntactic sugar for `pow x 2`.
 ```
 
-// Intermediate keys are automatically bound:
-{ data: { user: { name } } } = response 
+## 1.5 Deep path destructuring
 
-// Equivalent to:
-// { data } = response
-// { user } = data
-// { name } = user
+Record destructuring supports **dot-paths** to access nested fields directly. This combines path addressing with the `@` whole-value binder.
 
-// name = "Alice"
-// user = { id: 1, name: "Alice" }
-// data = { ... }
+```aivi
+{ data.user.profile@{ name } } = response
+```
 
+Semantics:
+* `data.user.profile` is the path to the record being destructured.
+* `@{ name }` binds the fields of that specific nested record.
+* Intermediate records are **not** bound unless explicitly requested.
+
+This is exactly equivalent to the nested expansion:
+```aivi
+{ data: { user: { profile: p@{ name } } } } = response
+```
+But much more readable for deep hierarchies.
 
 > [!NOTE]
-> Deep exposure significantly reduces the need for multiple destructuring lines when you need both a record and its fields.
+> Deep path destructuring is a powerful tool for working with complex JSON-like data, providing both brevity and clarity.
 
 ### List Head/Tail
 

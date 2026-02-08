@@ -17,11 +17,26 @@ function build_html() {
   local FILES=("$@")
   
   local HTML_FILE="$OUTPUT_DIR/$FILENAME.html"
+  local TEMP_SPEC_DIR="$OUTPUT_DIR/temp_md"
+  mkdir -p "$TEMP_SPEC_DIR"
 
   echo "Building $TITLE..."
 
+  local PROCESSED_FILES=()
+  for f in "${FILES[@]}"; do
+    local REL_PATH="${f#$SPEC_DIR/}"
+    # Create a slug from the relative path: 02_syntax/01_bindings.md -> 02_syntax-01_bindings
+    local SLUG=$(echo "$REL_PATH" | sed 's/\.md$//' | tr '/' '-')
+    local TEMP_F="$TEMP_SPEC_DIR/$SLUG.md"
+    
+    # Add an anchor at the start of each file
+    echo "<span id=\"$SLUG\"></span>" > "$TEMP_F"
+    cat "$f" >> "$TEMP_F"
+    PROCESSED_FILES+=("$TEMP_F")
+  done
+
   echo "  Generating HTML..."
-  pandoc "${FILES[@]}" \
+  pandoc "${PROCESSED_FILES[@]}" \
     --from commonmark_x \
     --to html5 \
     --standalone \
@@ -32,16 +47,16 @@ function build_html() {
     --css="style.css" \
     -o "$HTML_FILE"
 
-  # Fix internal links - convert .md file links to anchor links
+  # Fix internal links via Python script
   echo "  Fixing internal links..."
-  sed -i \
-    -e 's|href="[^"]*\.md"|href="#"|g' \
-    -e 's|href="\.\./[^"]*\.md"|href="#"|g' \
-    "$HTML_FILE"
+  python3 "$SPEC_DIR/fix_links.py" "$HTML_FILE"
 
   # Apply AIVI syntax highlighting
   echo "  Applying syntax highlighting..."
   python3 "$SPEC_DIR/highlight.py" "$HTML_FILE"
+
+  # Clean up temp files
+  rm -rf "$TEMP_SPEC_DIR"
 
   echo "  ✓ HTML generated: $HTML_FILE"
 }

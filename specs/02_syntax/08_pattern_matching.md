@@ -36,8 +36,8 @@ greet = _ ?
 ## 8.4 Nested Patterns
 
 ```aivi
-processResult Ok { data: { users: [first, ...] } } = "First user: {first.name}"
-processResult Ok { data: { users: [] } } = "No users found"
+processResult Ok { data.users: [first, ...] } = "First user: {first.name}"
+processResult Ok { data.users: [] } = "No users found"
 processResult Err { code: 404 } = "Not found"
 processResult Err { code, message } = "Error {code}: {message}"
 ```
@@ -139,14 +139,11 @@ result = eval expr
 
 Pattern matching excels at simplifying complex conditional branches into readable declarations.
 
-### Deeply Nested Destructuring
-```aivi
 // Extract deeply buried data with fallback
 headerLabel = response ?
-  | { data: { user: { profile: { name } } } } => name
-  | { data: { guest: True } }               => "Guest"
-  | _                                       => "Unknown"
-```
+  | { data.user.profile@{name} } => name
+  | { data.guest: True }         => "Guest"
+  | _                           => "Unknown"
 
 ### Concise State Machines
 ```aivi

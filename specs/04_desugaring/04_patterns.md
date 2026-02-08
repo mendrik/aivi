@@ -8,6 +8,11 @@ Kernel has only `case`, so even total bindings can lower via `case`. (A compiler
 | `[h, ...t] = e; body` | `case ⟦e⟧ of \| (h :: t) -> ⟦body⟧` |
 | `p = e; body` | `case ⟦e⟧ of \| ⟦p⟧ -> ⟦body⟧` |
 
+### Deep Path Destructuring
+| Surface | Desugaring |
+| :--- | :--- |
+| `{ a.b.c@{x} }` | `⟦{ a: { b: { c: v#1@{x} } } }⟧` |
+
 Pattern translation `⟦p⟧` uses the kernel pattern forms.
 
 ---
