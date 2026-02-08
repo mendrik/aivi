@@ -45,26 +45,17 @@ xs |> map inc |> filter (_ > 0)
 // Identity
 id = x => x
 
-// Constant
+// Constant: returns a function that ignores its input and always returns x
 const = x _ => x
 
 // Flip arguments
 flip = f => x y => f y x
 ```
 
-### Composition
-
-```aivi
-// Function composition
-compose = f g => x => f (g x)
-
-// Or with operator
-(>>) = f g => x => g (f x)
-
-// Usage
-processName = trim >> lowercase >> capitalize
+// Function composition is most common via the pipe operator:
+processName = name => name |> trim |> lowercase |> capitalize
 result = processName "  HELLO  "
-```
+
 
 ### Higher-Order Functions
 
@@ -92,7 +83,8 @@ result = numbers |> map (add 10)
 // [11, 12, 13]
 ```
 
-### Complex Pipelines
+### Block Pipelines
+
 
 Pipelines allow building complex data transformations without nested function calls.
 
@@ -105,17 +97,17 @@ users = [
 
 // Data processing pipeline
 activeNames = users
-  filter _.active
-  map _.name
-  sort
-  join ", "
+  |> filter (.active)
+  |> map (.name)
+  |> sort
+  |> join ", "
 // "Alice, Carol"
 
 // Mathematical series
 sigma = [1..100]
-  filter (_ % 2 == 0)
-  map (pow _ 2)
-  sum
+  |> filter (_ % 2 == 0)
+  |> map (pow _ 2)
+  |> sum
 ```
 
 ### Expressive Logic: Point-Free Style
@@ -124,14 +116,14 @@ Functions can be combined to form new functions without naming their arguments, 
 
 ```aivi
 // Boolean logic composition
-isAdmin = _.role == Admin
-isOwner = _.id == ownerId
-canDelete = isAdmin ∨ isOwner
+isAdmin = .role == Admin
+isOwner = .id == ownerId
+canDelete = isAdmin or isOwner 
 
 // Validation chains
 isEmail = contains "@"
 isLongEnough = len >> (_ > 8)
-isValidPassword = isEmail ∧ isLongEnough
+isValidPassword = isEmail and isLongEnough
 
 // Usage
 passwords |> filter isValidPassword
@@ -142,8 +134,8 @@ passwords |> filter isValidPassword
 ```aivi
 // Single arg with _
 double = _ * 2
-isEven = _ % 2 == 0
-getName = _.name
+isEven = _ % 2 == 0 
+getName = .name // Predicate shorthand for r => r.name
 
 // Equivalent explicit forms
 double = x => x * 2

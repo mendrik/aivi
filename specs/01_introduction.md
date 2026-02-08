@@ -26,7 +26,7 @@ AIVI is a statically typed, purely functional language designed for **high-integ
 * **Predicate-driven transformations**
 * **Pure generators**
 * Fiber-based structured concurrency
-* Explicit effect tracking
+* Explicit effect tracking with `Effect E A`
 
 **Intentional omissions**
 
@@ -45,11 +45,30 @@ AIVI is a statically typed, purely functional language designed for **high-integ
 ## Normative Principles
 
 > **Bindings are immutable.**
-> **Patterns may bind structure and identity simultaneously.**
-> **Predicates are expressions with implicit scope.**
-> **Patches describe structure, not mutation.**
-> **Domains own semantics.**
-> **Generators model data; effects model reality.**
+> **Patterns are total by default; use `?` for partial matches.**
+> **Predicates are expressions with implicit scope (`.prop`).**
+> **Patches describe structure, not mutation (`<=`).**
+> **Domains own semantics and interpreted operators.**
+> **Generators model data streams; effects model typed I/O (`Effect E A`).**
+
+## Why AIVI?
+
+AIVI is designed to solve the complexity of modern data-heavy applications by shifting the focus from **how** data is moved to **what** data means. 
+
+### High Integrity by Design
+By eliminating `null`, exceptions, and mutable state, AIVI ensures that if a program compiles, it is fundamentally sound. Its exhaustive pattern matching and totality requirements for bindings make "unhandled state" a impossibility at the type level.
+
+### Universal Portability (WASM & WASI)
+AIVI is built from the ground up to target **WebAssembly (WASM)**. 
+- **Browser**: High-performance client-side logic and Aivi LiveView-like frontends.
+- **Server/Edge**: Using **WASI** (WebAssembly System Interface), AIVI runs in highly isolated, secure sandboxes across cloud and edge infrastructure with near-native speed and instant startup.
+- **Security**: The WASM capability-based security model naturally complements AIVI's explicit effect tracking.
+
+### The Power of Domains
+In AIVI, the language doesn't try to know everything. Instead, it provides **Domains**—a mechanism to extend the language's semantics.
+- **Semantic Arithmetic**: Operators like `+` and `-` are not restricted to numbers; they are interpreted by domains to perform calendar shifts, color blending, or vector math.
+- **Syntactic Sugar**: Domains like `Html` can define how JSX-like literals desugar into functional trees, allowing specialized syntax for specialized problems.
+- **Extensibility**: Developers can define their own domains, creating a language that speaks the vocabulary of their specific business area (Finance, IoT, UI) without losing the safety of the AIVI core.
 
 ---
 

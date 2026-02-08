@@ -3,7 +3,7 @@
 ## 8.1 Effect type
 
 ```text
-Effect ε A
+Effect E A
 ```
 
 Opaque in the kernel.
@@ -13,7 +13,7 @@ Opaque in the kernel.
 ## 8.2 Effect bind
 
 ```text
-bind : Effect ε A → (A → Effect ε B) → Effect ε B
+bind : Effect E A → (A → Effect E B) → Effect E B
 ```
 
 ---

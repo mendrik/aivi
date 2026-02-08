@@ -2,8 +2,9 @@
 
 ## 8.1 `?` branching
 
+
 ```aivi
-classify = _ ?
+classify = v ?
   | 0 => "zero"
   | _ => "nonzero"
 ```
@@ -15,9 +16,8 @@ This is a concise way to do case analysis, similar to `match` in Rust or `case` 
 ## 8.2 Multi-clause functions
 
 ```aivi
-sum =
-  | [] => 0
-  | [h, ...t] => h + sum t
+sum [] = 0
+sum [h, ...t] = h + sum t
 ```
 
 ---
@@ -36,26 +36,25 @@ greet = _ ?
 ## 8.4 Nested Patterns
 
 ```aivi
-processResult = _ ?
-  | Ok { data: { users: [first, ...] } } => "First user: {first.name}"
-  | Ok { data: { users: [] } } => "No users found"
-  | Err { code: 404 } => "Not found"
-  | Err { code, message } => "Error {code}: {message}"
+processResult Ok { data: { users: [first, ...] } } = "First user: {first.name}"
+processResult Ok { data: { users: [] } } = "No users found"
+processResult Err { code: 404 } = "Not found"
+processResult Err { code, message } = "Error {code}: {message}"
 ```
 
 ---
 
 ## 8.5 Guards
 
-Patterns can have guards using `when`:
+Patterns can have guards using `|`:
 
 ```aivi
-classify = n ?
-  | _ when n < 0 => "negative"
-  | 0 => "zero"
-  | _ when n < 10 => "small"
-  | _ when n < 100 => "medium"
-  | _ => "large"
+classify n
+  | n < 0  = "negative"
+  | n == 0 = "zero"
+  | n < 10 = "small"
+  | n < 100 = "medium"
+  | _      = "large"
 ```
 
 ---
@@ -93,21 +92,19 @@ fetchUser id
 
 ```aivi
 // Safe head
-head = _ ?
-  | [] => None
-  | [x, ...] => Some x
+head [] = None
+head [x, ...] = Some x
 
 // Take first n
-take = n => _ ?
-  | _ when n <= 0 => []
-  | [] => []
-  | [x, ...xs] => [x, ...take (n - 1) xs]
+take n xs
+  | n <= 0 = []
+  | xs == [] = []
+  | [x, ...xs] = [x, ...take (n - 1) xs]
 
 // Zip two lists
-zip =
-  | ([], _) => []
-  | (_, []) => []
-  | ([x, ...xs], [y, ...ys]) => [(x, y), ...zip xs ys]
+zip ([], _) = []
+zip (_, []) = []
+zip ([x, ...xs], [y, ...ys]) = [(x, y), ...zip xs ys]
 ```
 
 ### Tree Traversal
@@ -165,9 +162,9 @@ nextState = (state, event) => (state, event) ?
 ### Expressive Logic Branches
 ```aivi
 // Business rule mapping
-discount = user ?
-  | { tier: Gold, age } when age > 65 => 0.3
-  | { tier: Gold }                    => 0.2
-  | { tier: Silver }                  => 0.1
-  | _                                 => 0.0
+discount user
+  | user.age > 65 and user.tier == Gold = 0.3
+  | user.tier == Gold                  = 0.2
+  | user.tier == Silver                = 0.1
+  | _                                  = 0.0
 ```

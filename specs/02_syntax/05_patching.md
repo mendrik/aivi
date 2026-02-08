@@ -1,6 +1,4 @@
-# Record Patching (`<=`)
-
-The `<=` operator applies a **declarative structural patch**.
+The `<=` operator applies a **declarative structural patch**. The compiler enforces that the patch shape matches the target record's type, ensuring that only existing fields are updated or new fields are added according to the record's openness.
 
 ```aivi
 updated = record <= { path: instruction }

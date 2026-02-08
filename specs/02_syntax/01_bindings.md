@@ -41,10 +41,11 @@ Structural patterns may appear in bindings.
 [h, ...t] = xs       // List destructuring
 ```
 
-Rule:
+* `=` may only be used where the compiler can prove the pattern is **total** (i.e., it covers all possible shapes of the data).
+* Potentially failing matches (refutable patterns) must use `?` (case analysis) or appear in a context where failure can be handled.
 
-* `=` may only be used where the compiler can prove the pattern is **total**
-* potentially failing matches must use `?` (case analysis)
+> [!NOTE]
+> Using `=` with a non-total pattern (like `[h, ...t] = []`) results in a compile-time error. For partial matches, use the `?` operator which converts a refutable pattern into an `Option` or branch.
 
 ---
 
@@ -54,6 +55,7 @@ Patterns may bind the **entire value** alongside destructuring.
 
 ```aivi
 user@{ name: n } = input
+user@{ name } = input
 ```
 
 Semantics:
@@ -64,14 +66,17 @@ Semantics:
 
 Allowed in:
 
-* bindings
-* `?` pattern arms
-* function clauses
+* Top-level and local bindings
+* `?` pattern arms (allowing capture of the matched sub-structure)
+* Function clauses 
 
 Example:
 
 ```aivi
-describe = u@{ id, name } => "{id}: {name}"
+// u is used to pass the entire record, while id/name are used for interpolation
+logUser = u@{ id, name } => 
+  log u 
+  "{id}: {name}"
 ```
 
 ---
@@ -88,7 +93,8 @@ config = {
 }
 
 { host, port } = config
-serverUrl = "http://{host}:{port}"
+serverUrl = "http://{host}:{port}" 
+```
 ```
 
 ### Tuple Destructuring
@@ -97,35 +103,21 @@ serverUrl = "http://{host}:{port}"
 point = (10, 20)
 (x, y) = point
 
-distance = sqrt (x * x + y * y)
+distance = sqrt (x² + y²) // Unicode powers (², ³, etc.) are supported as syntactic sugar for `pow x 2`.
 ```
 
-### Nested Destructuring and Deep Exposure
+// Intermediate keys are automatically bound:
+{ data: { user: { name } } } = response 
 
-Nested patterns allow deep extraction. In AIVI, intermediate keys are **automatically exposed** as bindings unless explicitly renamed.
+// Equivalent to:
+// { data } = response
+// { user } = data
+// { name } = user
 
-```aivi
-response = {
-  data: {
-    user: { id: 1, name: "Alice" }
-    token: "abc123"
-  }
-  status: 200
-}
-
-{ data: { user: { name } } } = response
-// Binds:
 // name = "Alice"
 // user = { id: 1, name: "Alice" }
-// data = { user: ..., token: ... }
-```
+// data = { ... }
 
-If you wish to ignore intermediate bindings or rename them:
-```aivi
-{ data: _ @ { user: u @ { name } } } = response // (Experimental syntax for explicit focus)
-// OR just use renaming to hide them if needed
-{ data: { user: { name: n } } } = response // Only 'n' is bound if this is how the compiler is configured
-```
 
 > [!NOTE]
 > Deep exposure significantly reduces the need for multiple destructuring lines when you need both a record and its fields.
@@ -143,7 +135,7 @@ numbers = [1, 2, 3, 4, 5]
 
 ```aivi
 // Named function
-greet = name => "Hello, {name}!"
+greet = name => "Hello, {name}!" or greet = "Hello, _!"
 
 // Multi-argument
 add = x y => x + y

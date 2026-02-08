@@ -1,6 +1,4 @@
-# Domain Definitions
-
-Domains can be fully defined in AIVI, making them **self-hosted**.
+Domain operators are defined using standard function signatures and pattern matching. The syntax `(+) : Carrier -> Delta -> Carrier` specifies that the plus operator maps a carrier and a delta to a new carrier value. This allows for semantic arithmetic where the behavior of `+` changes based on the types involved.
 
 ## 11.1 Domain Declaration Syntax
 

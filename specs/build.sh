@@ -6,8 +6,9 @@ set -e
 
 SPEC_DIR="$(dirname "$0")"
 OUTPUT_DIR="$SPEC_DIR/build"
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR/fonts"
 cp "$SPEC_DIR/style.css" "$OUTPUT_DIR/"
+cp "$SPEC_DIR/0xProto"/*.woff2 "$OUTPUT_DIR/fonts/"
 
 function build_html() {
   local TITLE="$1"
@@ -30,22 +31,6 @@ function build_html() {
     --highlight-style=tango \
     --css="style.css" \
     -o "$HTML_FILE"
-
-  # Replace ASCII operators with Unicode ligatures in code blocks
-  echo "  Applying ligatures..."
-  sed -i \
-    -e 's/-&gt;/→/g' \
-    -e 's/=&gt;/⇒/g' \
-    -e 's/|&gt;/▷/g' \
-    -e 's/&lt;=/⇐/g' \
-    -e 's/&lt;-/←/g' \
-    -e 's/!=/≠/g' \
-    -e 's/&gt;=/≥/g' \
-    -e 's/&lt;=/≤/g' \
-    -e 's/&amp;&amp;/∧/g' \
-    -e 's/||/∨/g' \
-    -e 's/\.\.\./…/g' \
-    "$HTML_FILE"
 
   # Fix internal links - convert .md file links to anchor links
   echo "  Fixing internal links..."
@@ -126,5 +111,8 @@ KERNEL_FILES=(
 
 build_html "AIVI Language Specification" "aivi-spec" "${MAIN_FILES[@]}"
 build_html "AIVI Kernel Specification" "aivi-kernel" "${KERNEL_FILES[@]}"
+
+# Create index.html for entry point
+cp "$OUTPUT_DIR/aivi-spec.html" "$OUTPUT_DIR/index.html"
 
 echo "Done!"

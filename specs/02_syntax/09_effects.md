@@ -1,15 +1,15 @@
 # Effects
 
-## 9.1 The `Effect ε A` Type
+## 9.1 The `Effect E A` Type
 
-Effectful operations in AIVI are modeled using the `Effect ε A` type, where:
-- `ε` is the **error domain** (describing what could go wrong).
+Effectful operations in AIVI are modeled using the `Effect E A` type, where:
+- `E` is the **error domain** (describing what could go wrong).
 - `A` is the **successful return value**.
 
 ### Semantics
-- **Atomic Progress**: Effects are either successfully completed, failed with `ε`, or **cancelled**.
+- **Atomic Progress**: Effects are either successfully completed, failed with `E`, or **cancelled**.
 - **Cancellation**: Cancellation is an asynchronous signal that stops the execution of an effect. When cancelled, the effect is guaranteed to run all registered cleanup (see [Resources](file:///home/mendrik/desk/mendrik/aivi/specs/02_syntax/15_resources.md)).
-- **Transparent Errors**: Errors in `ε` are part of the type signature, forcing explicit handling or propagation.
+- **Transparent Errors**: Errors in `E` are part of the type signature, forcing explicit handling or propagation.
 
 ---
 
@@ -54,11 +54,11 @@ Example translation:
 
 ```aivi
 // Sequence with effect block
-transfer = from to amount => effect {
-  balance = getBalance from
+transfer fromAccount toAccount amount = effect {
+  balance = getBalance fromAccount
   if balance >= amount then {
-    withdraw from amount
-    deposit to amount
+    withdraw fromAccount amount
+    deposit toAccount amount
     Ok Unit
   } else {
     Err InsufficientFunds
@@ -66,11 +66,11 @@ transfer = from to amount => effect {
 }
 
 // Equivalent functional composition
-transfer = from to amount =>
-  getBalance from |> bind (balance =>
+transfer fromAccount toAccount amount =
+  getBalance fromAccount |> bind (balance =>
     if balance >= amount then
-      withdraw from amount |> bind (_ =>
-        deposit to amount |> bind (_ =>
+      withdraw fromAccount amount |> bind (_ =>
+        deposit toAccount amount |> bind (_ =>
           pure (Ok Unit)))
     else
       pure (Err InsufficientFunds)
@@ -85,7 +85,7 @@ Effect blocks can be combined with pipelines and pattern matching to create very
 // Fetch config, then fetch data, then log
 setup = effect {
   loadConfig "prod.json"
-    |> filter _.enabled
+    |> filter (.enabled)
     |> bind fetchRemoteData
     |> map logSuccess
 }
@@ -103,6 +103,6 @@ getUser = id => effect {
 
 // Composition with Result domains
 validatedUser = getUser 123
-  |> filter (_.age > 18)
+  |> filter (.age > 18)
   |> map toAdmin
 ```

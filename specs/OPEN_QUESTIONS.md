@@ -12,7 +12,7 @@
 
 3.  **Generators**:
     *   Are they always synchronous? How to handle `AsyncGenerator`?
-    *   Should `generate` block allow `await`?
+    *   Should `generate` block allow `await`? (Answer: No, generators should be pure; use `Effect` for async pull).
 
 ## Syntax
 
@@ -20,7 +20,7 @@
     *   Is `|>` sufficient, or do we need a "bind pipe" for monads (`>>=`)?
 
 2.  **String Interpolation**:
-    *   Allows arbitrary expressions? `{x + 1}`? Or just variables?
+    *   Allows arbitrary expressions? `{x + 1}`? Or just variables? (Answer: Arbitrary expressions are allowed within `{}`).
 
 ## Ecosystem
 
@@ -43,8 +43,7 @@
     *   How would overriding operators work?
 
 3.  **Runtime vs Static Domains**:
-    *   Are domains always static (compile-time rewrite rules)?
-    *   Could domains ever be first-class values for metaprogramming?
+    *   Are domains always static (compile-time rewrite rules)? (Answer: Yes, in v0.1).
 
 4.  **Multi-Carrier Domains**:
     *   Can one domain span multiple carrier types (e.g., `Vec2 | Vec3 | Vec4`)?

@@ -2,8 +2,8 @@
 
 Kernel effect primitives:
 
-* `pure : A -> Effect ε A`
-* `bind : Effect ε A -> (A -> Effect ε B) -> Effect ε B`
+* `pure : A -> Effect E A`
+* `bind : Effect E A -> (A -> Effect E B) -> Effect E B`
 
 ## `do` (Monad comprehension)
 

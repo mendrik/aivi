@@ -1,8 +1,4 @@
-# Generators
-
-## 7.1 Concept
-
-Generators are **pure, pull-based sequence producers**.
+Generators are **pure, pull-based sequence producers**. They are distinct from effects: regular `generate` blocks are purely functional and cannot perform I/O, while `generate async` blocks (see 7.6) are effectful and can await external data.
 
 They:
 

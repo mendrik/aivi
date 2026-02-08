@@ -1,7 +1,6 @@
 # Decorators
 
 Decorators provide **compile-time metadata** attached to definitions.
-
 ---
 
 ## 14.1 Syntax

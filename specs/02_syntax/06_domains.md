@@ -1,13 +1,17 @@
 # Domains, Units, and Deltas
 
-Domains define **semantics**, not values.
+Domains define **semantics**, not just values. They provide a context in which operators (like `+`, `-`, `*`) and literals (like `1m`, `1d`) are interpreted. This allows AIVI to handle complex, domain-specific logic like calendar arithmetic, color blending, or physical units with type safety and without polluting the core language with special cases.
 
 ```aivi
 domain Calendar
-domain Duration
 domain Color
 domain Vector
 ```
+
+A domain typically defines:
+1.  **Carrier Types**: The underlying data types (e.g., a `ZonedDateTime` record for `Calendar`).
+2.  **Delta Types**: Representing changes or intervals (e.g., `Duration`).
+3.  **Interpretation Rules**: How literals and operators map to functions.
 
 ---
 
@@ -73,3 +77,10 @@ position2 = position1 + (velocity * 2.0s)
 total = usd 100 + usd 50 // OK
 err = usd 100 + eur 50   // Compile-time Error
 ```
+
+### Behind the Scenes: Interpretation
+Every operation like `date + 1m` is desugared into a domain-specific function call. The compiler uses the type of `date` to look up the `Calendar` domain's `(+)` implementation for that carrier.
+
+1.  **Delta Interpretation**: `1m` is interpreted by the `Calendar` domain as "one month".
+2.  **Operator Mapping**: `+` is mapped to `Calendar.add`.
+3.  **Result**: `Calendar.add date (Calendar.delta "1m")`.

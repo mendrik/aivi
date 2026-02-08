@@ -2,10 +2,10 @@
 
 ## Specification Gaps
 
-- [ ] Define module import/resolution semantics precisely.
-- [ ] Specify strictness/evaluation order of `let` bindings formally.
+- [x] Define module import/resolution semantics precisely.
+- [x] Specify strictness/evaluation order of `let` bindings formally.
 - [ ] Define the exact set of "primitive types" vs "standard library types".
-- [ ] Specify error handling for `Effect` (do we have `catch`? or just `Result`?).
+- [x] Specify error handling for `Effect` (using `Effect E A`).
 
 ## Tooling
 

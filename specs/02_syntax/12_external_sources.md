@@ -151,21 +151,8 @@ logo = s3.get "my-assets" "branding/logo.png"
 ```
 
 ---
-
-## 12.9 Browser / Web Automation Sources
-
-Headless browser interaction for scraping, testing, or rendering.
-
-```aivi
-// Scrape a dynamic page using CSS selectors
-@selector ".price-tag"
-price : Source Browser Float
-price = browser.scrape "https://shop.com/item/1"
-
-// Capture full page screenshot
-shot : Source Browser Image
-shot = browser.screenshot "https://dashboard.io"
-```
+> [!NOTE]
+> Browser sources are part of the AIVI long-term vision for end-to-end automation but are considered **Experimental** and may not be fully available in the initial WASM-targeted phase.
 
 ---
 

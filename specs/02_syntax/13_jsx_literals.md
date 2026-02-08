@@ -1,6 +1,4 @@
-# JSX Literals
-
-AIVI supports **JSX-like syntax** as domain sugar for the Html domain.
+AIVI supports **JSX-like syntax** as domain sugar for the `Html` domain. Tags like `div`, `span`, etc., are regular functions defined within the `aivi.std.html` module. Any domain can define its own syntax sugar by providing a mapping from tree structures to domain-specific constructors.
 
 ---
 
@@ -64,7 +62,6 @@ badge = user => <div>
 The `<></>` is an empty fragment.
 
 ---
-
 ## 13.5 Lists and Iteration
 
 ```aivi
@@ -75,7 +72,7 @@ nav = links => <ul class="nav">
 </ul>
 ```
 
-Pipe expressions work naturally inside interpolation.
+Pipe expressions work naturally inside interpolation. AIVI favors functional pipelines (`|> map`) over object methods for consistency across all domains.
 
 ---
 
@@ -89,7 +86,7 @@ Card = { title, children } => <div class="card">
   <h2>{title}</h2>
   <div class="card-body">{children}</div>
 </div>
-
+```
 // Usage
 page = <div>
   <Card title="Welcome">
