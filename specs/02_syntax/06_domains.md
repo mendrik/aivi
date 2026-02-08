@@ -78,6 +78,13 @@ total = usd 100 + usd 50 // OK
 err = usd 100 + eur 50   // Compile-time Error
 ```
 
+If you want more literal-style surface syntax, the same idea could be expressed with currency suffixes (as sugar):
+
+```aivi
+total = 100$ + 50$ // OK
+err = 100$ + 50€   // Compile-time Error
+```
+
 ### Behind the Scenes: Interpretation
 Every operation like `date + 1m` is desugared into a domain-specific function call. The compiler uses the type of `date` to look up the `Calendar` domain's `(+)` implementation for that carrier.
 

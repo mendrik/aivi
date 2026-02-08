@@ -106,7 +106,7 @@ activeNames = users
 // Mathematical series
 sigma = [1..100]
   |> filter (_ % 2 == 0)
-  |> map (pow _ 2) // or map _
+  |> map (pow _ 2) // or map _²
   |> sum
 ```
 
@@ -116,8 +116,11 @@ Functions can be combined to form new functions without naming their arguments, 
 
 ```aivi
 // Boolean logic composition
-isAdmin = .role == Admin
-isOwner = .id == ownerId
+isAdmin : User => Bool
+isAdmin = role == Admin
+
+isOwner : User => Bool
+isOwner = id == ownerId
 canDelete = isAdmin or isOwner 
 
 // Validation chains
@@ -142,8 +145,8 @@ double = x => x * 2
 isEven = x => x % 2 == 0
 getName = user => user.name
 
-// Predicates can automatically deconstruct fields:
-// filter active is a shortcut for filter ({ active } => active)
+// Boolean fields can be used directly as predicates:
+// filter active is a shortcut for filter (x => x.active)
 
 // Complexity can be handled inline via explicit record deconstruction:
 // map { name, id } => if id > 10 then name else "Anonymous"

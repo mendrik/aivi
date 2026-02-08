@@ -107,9 +107,9 @@ Patching allows for very concise updates to deeply nested data structures and co
 
 ### Deep Collection Updates
 ```aivi
-// Increase prices of all active items in a category
+// Update prices of all active items in a category
 store2 = store <= {
-  categories[_.name == "Hardware"].items[_.active].price: _ * 1.1
+  categories[name == "Hardware"].items[active].price: _ * 1
 }
 ```
 

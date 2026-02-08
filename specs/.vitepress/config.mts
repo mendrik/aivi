@@ -1,4 +1,12 @@
 import { defineConfig } from "vitepress";
+import fs from "node:fs";
+
+const aiviGrammar = JSON.parse(
+  fs.readFileSync(new URL("./aivi.tmLanguage.json", import.meta.url), "utf8")
+);
+const ebnfGrammar = JSON.parse(
+  fs.readFileSync(new URL("./ebnf.tmLanguage.json", import.meta.url), "utf8")
+);
 
 function resolveBase(): string {
   const repo = process.env.GITHUB_REPOSITORY;
@@ -19,6 +27,18 @@ export default defineConfig({
   base: process.env.CI ? resolveBase() : "/",
   cleanUrls: false,
   lastUpdated: true,
+  markdown: {
+    languages: [
+      {
+        ...aiviGrammar,
+        id: "aivi"
+      },
+      {
+        ...ebnfGrammar,
+        id: "ebnf"
+      }
+    ]
+  },
   themeConfig: {
     nav: [
       { text: "Spec", link: "/" },

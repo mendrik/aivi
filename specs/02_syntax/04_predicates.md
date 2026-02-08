@@ -28,10 +28,10 @@ Ok { value } when value > 10
 Inside a predicate expression:
 
 * `_` is bound to the **current element**
-* bare field names are resolved as `_ . field`
+* bare field names are resolved as `_.field`
 
 > [!TIP]
-> This creates a powerful deconstruction shortcut. `filter active` is interpreted as `filter ({ active } => active)`, meaning boolean fields can be used directly as filters without extra syntax.
+> `filter active` is shorthand for `filter (_.active)` when `active` is a boolean field. If `active` is bound in scope, it refers to that binding instead.
 
 ```aivi
 price > 80        // _.price > 80
@@ -67,6 +67,35 @@ Applies to:
 * generator guards
 * patch predicates
 * user-defined functions
+
+Examples:
+
+```aivi
+users |> filter active
+users |> filter (age > 18)
+users |> find (email == Some "x")
+xs |> takeWhile (_ < 10)
+```
+
+```aivi
+generate {
+  for u in users
+  when active
+  yield u
+}
+```
+
+```aivi
+store <= { items[price > 80].discount: 0.1 }
+```
+
+```aivi
+where : (A => Bool) -> List A -> List A
+where pred xs = xs |> filter pred
+
+admins = where (role == Admin) users
+activeUsers = where active users
+```
 
 ---
 
