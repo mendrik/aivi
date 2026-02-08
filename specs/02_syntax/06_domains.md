@@ -85,6 +85,55 @@ total = 100$ + 50$ // OK
 err = 100$ + 50€   // Compile-time Error
 ```
 
+### Built-in operator domains
+
+Some domains are effectively built in for practicality (but can still be specified in the same “operators come from domains” model):
+
+* `Int` / `Float` / `Decimal`: numeric operators like `+`, `-`, `*`, `/`
+* `Int` (and/or a dedicated `Bits` carrier): bitwise operators like `&`, `|`, `^`, `~`, `<<`, `>>`
+* `Bool`: boolean operators `!`, `&&`, `||` (typically defined with short-circuit semantics)
+
+#### Predicates
+
+A predicate is just a function:
+
+```aivi
+Pred A = A => Bool
+```
+
+Predicate composition is ordinary boolean logic inside a predicate position:
+
+```aivi
+isGoodUser : Pred User
+isGoodUser = active && tier == Premium && isValidEmail email
+
+goodUsers = users |> filter isGoodUser
+```
+
+#### Bits
+
+Bitwise operators can be viewed as coming from a `Bits` domain (often implemented on `Int`):
+
+```aivi
+// Test a bit
+isSet = flags n => (flags & (1 << n)) != 0
+
+// Combine masks
+mask = readMask1 | readMask2
+```
+
+---
+
+### Standard library domains
+
+The standard library exports domains as modules (see Modules). Typical domains include:
+
+* `Calendar` (date arithmetic with calendar-aware deltas)
+* `Duration` (fixed time deltas)
+* `Color`, `Vector`
+* `Html`, `Style`
+* `SQLite`
+
 ### Behind the Scenes: Interpretation
 Every operation like `date + 1m` is desugared into a domain-specific function call. The compiler uses the type of `date` to look up the `Calendar` domain's `(+)` implementation for that carrier.
 

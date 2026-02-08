@@ -2,7 +2,7 @@
 
 ## 3.1 Primitive Types
 
-AIVI includes a comprehensive set of primitive types for high-integrity data handling. Type combinators (like `+` for record merging or domain-specific type transformations) are handled via the Domain system.
+AIVI includes a comprehensive set of primitive types for high-integrity data handling. Type combinators (like `&` for record/type composition, or domain-specific type transformations) are handled via the Domain system.
 
 ```aivi
 Unit
@@ -16,6 +16,7 @@ Bytes
 Duration
 Instant
 Date
+Time
 TimeZone
 ZonedDateTime
 ```

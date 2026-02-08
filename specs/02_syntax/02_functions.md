@@ -115,18 +115,20 @@ sigma = [1..100]
 Functions can be combined to form new functions without naming their arguments, leading to very concise code.
 
 ```aivi
-// Boolean logic composition
+// Boolean predicate composition
 isAdmin : User => Bool
 isAdmin = role == Admin
 
 isOwner : User => Bool
 isOwner = id == ownerId
-canDelete = isAdmin or isOwner 
+
+canDelete : User => Bool
+canDelete = u => isAdmin u || isOwner u
 
 // Validation chains
 isEmail = contains "@"
 isLongEnough = s => s |> len |> (_ > 8)
-isValidPassword = isEmail and isLongEnough
+isValidPassword = s => isEmail s && isLongEnough s
 
 // Usage
 passwords |> filter isValidPassword

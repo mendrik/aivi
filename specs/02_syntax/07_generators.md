@@ -41,6 +41,16 @@ Generators use a Scala/Haskell-style binder:
 
 In a guard, `pred` is a predicate expression with the implicit `_` bound to `x` (so bare fields like `active` resolve to `x.active`).
 
+This means these are equivalent:
+
+```aivi
+u -> isValidEmail email
+u -> isValidEmail (_.email)
+u -> isValidEmail u.email
+```
+
+Note: `.email` is an accessor function (`x => x.email`). It’s useful for `map .email`, but in a predicate position you usually want a value like `email` / `_.email`, not a function.
+
 ```aivi
 generate {
   x <- xs
@@ -100,12 +110,12 @@ processed = generate {
 ```aivi
 // Infinite sequence of Fibonacci numbers
 fibs = generate {
-  yield 0
-  yield 1
-  loop (a, b) => {
-    next = a + b
-    yield next
-    recurse (b, next)
+  loop (a, b) = (0, 1) => {
+    yield a
+    recurse (b, a + b)
   }
 }
 ```
+
+`loop (pat) = init => { ... }` introduces a local tail-recursive loop for generators.
+Inside the loop body, `recurse next` continues with the next state.

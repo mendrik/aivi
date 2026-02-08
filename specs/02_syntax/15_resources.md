@@ -1,49 +1,74 @@
 # Resource Management
 
-AIVI ensures that resources (files, sockets, memory) are always reliably released, even in the event of errors or task cancellation.
+AIVI provides a dedicated `Resource` type to manage lifecycles (setup and teardown) in a declarative way. This ensures that resources like files, sockets, and database connections are always reliably released, even in the event of errors or task cancellation.
 
 ---
 
-## 15.1 The `bracket` Primitive
+## 15.1 Defining Resources
 
-The `bracket` function is the fundamental building block for safe resource management. It guarantees that the release operation is executed regardless of the outcome of the use operation.
+Resources are defined using `resource` blocks. The syntax is analogous to generators: you perform setup, `yield` the resource, and then perform cleanup.
 
-```text
-bracket : Effect ε A -> (A -> Effect ε Unit) -> (A -> Effect ε B) -> Effect ε B
-```
+The code after `yield` is guaranteed to run when the resource goes out of scope.
 
 ```aivi
-effect { 
-  contents = bracket
-    (file.open "data.txt") // Acquire
-    (f => f.close ())      // Release
-    (f => f.readAll ())    // Use
+// Define a reusable resource
+managedFile path = resource {
+  handle = file.open path   // Acquire
+  yield handle              // Provide to user
+  handle.close ()           // Release
+}
+```
+
+This declarative approach hides the complexity of error handling and cancellation checks.
+
+---
+
+## 15.2 Using Resources
+
+Inside an `effect` block, you use the `<-` binder to acquire a resource. This is similar to the generator binder, but instead of iterating, it scopes the resource to the current block.
+
+```aivi
+main = effect {
+  // Acquire resource
+  f <- managedFile "data.txt"
+  
+  // Use resource
+  content = f.readAll ()
+  _ <- print content
+} // f is automatically closed here
+```
+
+### Multiple Resources
+
+You can acquire multiple resources in sequence. They will be released in reverse order of acquisition (LIFO).
+
+```aivi
+copy src dest = effect {
+  input  <- managedFile src
+  output <- managedFile dest
+  
+  input.copyTo output
 }
 ```
 
 ---
 
-## 15.2 The `defer` Keyword (LIFO Sugar)
+## 15.3 Ad-hoc Cleanup (`defer`)
 
-The `defer` keyword provides a more ergonomic way to release resources within an `effect` block. Deferred operations are executed in **Last-In, First-Out (LIFO)** order when the block exits.
+For simple, one-off cleanup where defining a reusable `resource` block is unnecessary, you can use the `defer` keyword. Deferred operations are executed in LIFO order when the block exits.
 
 ```aivi
-copyFile = src dest => effect {
-  s = file.open src
+effect {
+  s = socket.connect "localhost" 8080
   defer s.close ()
   
-  d = file.create dest
-  defer d.close ()
-  
-  s.copyTo d
+  s.send "Hello"
 }
 ```
 
 ### Guarantees
 
-Deferred operations are guaranteed to run if:
+Both `resource` blocks and `defer` provide the same safety guarantees. Cleanup operations run if:
 1. The block completes successfully.
 2. The block returns an error.
 3. The task executing the block is **cancelled**.
-
-This ensures that AIVI code is "safe by default" against leaks.

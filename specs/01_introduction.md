@@ -27,6 +27,7 @@ AIVI is a statically typed, purely functional language designed for **high-integ
 * **Pure generators**
 * Fiber-based structured concurrency
 * Explicit effect tracking with `Effect E A`
+* **Declarative Resource Management**
 
 **Intentional omissions**
 

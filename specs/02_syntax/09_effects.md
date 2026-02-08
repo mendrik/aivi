@@ -17,12 +17,19 @@ Effectful operations in AIVI are modeled using the `Effect E A` type, where:
 
 ```aivi
 main = effect {
-  cfg = load (file.json "config.json")
-  print "loaded"
+  cfg <- load (file.json "config.json")
+  _ <- print "loaded"
 }
 ```
 
 This is syntax sugar for monadic binding (see Desugaring section). All effectful operations within these blocks are automatically sequenced.
+
+Inside an `effect { ... }` block:
+
+- `x <- eff` binds the result of an `Effect` to `x`
+- `x = e` is a pure local binding
+- `x <- res` acquires a `Resource` (see [Resources](15_resources.md))
+- Branching is done with ordinary expressions (`if`, `case`, `?`); `->` guards are generator-only.
 
 Compiler checks:
 
@@ -50,7 +57,7 @@ The `effect` block is the primary way to sequence impure operations. It translat
 
 | `effect` Syntax | Explicit Monadic Syntax |
 | :--- | :--- |
-| `val = effect { x = f; g x }` | `val = f |> bind (x => g x)` |
+| `val = effect { x <- f; g x }` | `val = f |> bind (x => g x)` |
 | `effect { f; g }` | `f |> bind (_ => g)` |
 
 Example translation:
@@ -58,10 +65,10 @@ Example translation:
 ```aivi
 // Sequence with effect block
 transfer fromAccount toAccount amount = effect {
-  balance = getBalance fromAccount
+  balance <- getBalance fromAccount
   if balance >= amount then {
-    withdraw fromAccount amount
-    deposit toAccount amount
+    _ <- withdraw fromAccount amount
+    _ <- deposit toAccount amount
     Ok Unit
   } else {
     Err InsufficientFunds
@@ -87,10 +94,10 @@ Effect blocks can be combined with pipelines and pattern matching to create very
 ```aivi
 // Fetch config, then fetch data, then log
 setup = effect {
-  loadConfig "prod.json"
-    |> filter enabled
-    |> bind fetchRemoteData
-    |> map logSuccess
+  cfg <- loadConfig "prod.json"
+  data <- fetchRemoteData cfg
+  _ <- logSuccess data
+  Unit
 }
 ```
 
@@ -98,14 +105,14 @@ setup = effect {
 ```aivi
 // Attempt operation, providing a typed default on error
 getUser = id => effect {
-  res = api.fetchUser id
+  res <- api.fetchUser id
   res ?
     | Ok user => user
     | Err _   => GuestUser
 }
 
-// Composition with Result domains
-validatedUser = getUser 123
-  |> filter (age > 18)
-  |> map toAdmin
+validatedUser = effect {
+  u <- getUser 123
+  if u.age > 18 then Ok (toAdmin u) else Err TooYoung
+}
 ```

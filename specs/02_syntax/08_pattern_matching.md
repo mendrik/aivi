@@ -40,10 +40,12 @@ greet =
 
 ## 8.4 Nested Patterns
 
+Record patterns support dotted keys, so nested patterns can often be written without extra braces.
+
 ```aivi
 processResult =
-  | Ok { data: { users: [first, ...] } } => "First user: {first.name}"
-  | Ok { data: { users: [] } } => "No users found"
+  | Ok { data.users: [first, ...] } => "First user: {first.name}"
+  | Ok { data.users: [] } => "No users found"
   | Err { code: 404 } => "Not found"
   | Err { code, message } => "Error {code}: {message}"
 ```
@@ -169,7 +171,7 @@ nextState = (state, event) => (state, event) ?
 ```aivi
 // Business rule mapping
 discount = user => user ?
-  | _ when user.age > 65 and user.tier == Gold => 0.3
+  | _ when user.age > 65 && user.tier == Gold => 0.3
   | _ when user.tier == Gold                  => 0.2
   | _ when user.tier == Silver                => 0.1
   | _                                         => 0.0
