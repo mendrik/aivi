@@ -10,7 +10,7 @@ A **meta-domain** allows AIVI to express domain definitions as first-class data 
 ## The Domain Domain
 
 ```aivi
-module aivi/meta/domain = {
+module aivi.meta/domain = {
   export domain Domain
   export DomainDef, Rule, Operator
   
@@ -48,11 +48,11 @@ module aivi/meta/domain = {
 ## Usage: Domain Composition
 
 ```aivi
-use aivi/meta/domain
+use aivi.meta/domain
 
--- Define a base numeric domain
+// Define a base numeric domain
 numericDomain = {
-  name: `Numeric`
+  name: "Numeric"
   carriers: [Int, Float]
   deltas: []
   rules: [
@@ -61,13 +61,13 @@ numericDomain = {
   ]
 }
 
--- Extend with comparison
+// Extend with comparison
 orderedDomain = numericDomain ++ {
-  name: `Ordered`
+  name: "Ordered"
   carriers: []
   deltas: []
   rules: [
-    { operator: Custom `<`, carrier: Int, delta: Int, impl: intLt }
+    { operator: Custom "<", carrier: Int, delta: Int, impl: intLt }
   ]
 }
 ```
@@ -76,16 +76,16 @@ orderedDomain = numericDomain ++ {
 
 ```aivi
 testCalendarDomain : Test
-testCalendarDomain = describe `Calendar domain` [
-  it `adds days correctly` (
+testCalendarDomain = describe "Calendar domain" [
+  it "adds days correctly" (
     { year: 2025, month: 2, day: 28 } + Day 1
-    `shouldEqual`
+    "shouldEqual"
     { year: 2025, month: 3, day: 1 }
   )
   
-  it `handles leap years` (
+  it "handles leap years" (
     { year: 2024, month: 2, day: 28 } + Day 1
-    `shouldEqual`
+    "shouldEqual"
     { year: 2024, month: 2, day: 29 }
   )
 ]

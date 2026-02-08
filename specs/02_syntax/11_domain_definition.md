@@ -17,7 +17,7 @@ domain Calendar over Date = {
   (-) : Date -> Delta -> Date
   (-) date delta = date + (negate delta)
   
-  -- Delta shorthand literals
+  // Delta shorthand literals
   1d = Day 1
   1m = Month 1
   1y = Year 1
@@ -54,7 +54,7 @@ The carrier type determines when domain operators apply:
 myColor : Rgb
 myColor = #ff5500
 
--- Resolved via Color domain because myColor : Rgb
+// Resolved via Color domain because myColor : Rgb
 result = myColor + 10l
 ```
 
@@ -97,11 +97,11 @@ Domains may export helper functions alongside operators:
 
 ```aivi
 domain Calendar over Date = {
-  -- Operators
+  // Operators
   (+) : Date -> Delta -> Date
   ...
   
-  -- Exported functions
+  // Exported functions
   isLeapYear : Date -> Bool
   isLeapYear date = ...
   

@@ -7,7 +7,7 @@ AIVI supports **JSX-like syntax** as domain sugar for the Html domain.
 ## 13.1 Basic Syntax
 
 ```aivi
-header = <div class=`header`>
+header = <div class="header">
   <span>AIVI</span>
 </div>
 ```
@@ -15,8 +15,8 @@ header = <div class=`header`>
 Desugars to:
 
 ```aivi
-header = div [ class `header` ] (
-  span [] (TextNode `AIVI`)
+header = div [ class "header" ] (
+  span [] (TextNode "AIVI")
 )
 ```
 
@@ -25,7 +25,7 @@ header = div [ class `header` ] (
 ## 13.2 Attributes
 
 ```aivi
-<a href=`/home` class=`link` target=`_blank`>Home</a>
+<a href="/home" class="link" target="_blank">Home</a>
 ```
 
 Attribute syntax:
@@ -34,7 +34,7 @@ Attribute syntax:
 - `{...record}` — spread attributes from a record
 
 ```aivi
-attrs = { class: `btn`, disabled: True }
+attrs = { class: "btn", disabled: True }
 button = <button {...attrs}>Click</button>
 ```
 
@@ -47,7 +47,7 @@ Use `{expr}` to embed AIVI expressions:
 ```aivi
 greeting = name => <h1>Hello, {name}!</h1>
 
-userAge = user => <p>Age: {user.age ?? `Unknown`}</p>
+userAge = user => <p>Age: {user.age ?? "Unknown"}</p>
 ```
 
 ---
@@ -56,7 +56,7 @@ userAge = user => <p>Age: {user.age ?? `Unknown`}</p>
 
 ```aivi
 badge = user => <div>
-  {user.verified ? <span class=`verified`>✓</span> : <></>}
+  {user.verified ? <span class="verified">✓</span> : <></>}
   <span>{user.name}</span>
 </div>
 ```
@@ -68,7 +68,7 @@ The `<></>` is an empty fragment.
 ## 13.5 Lists and Iteration
 
 ```aivi
-nav = links => <ul class=`nav`>
+nav = links => <ul class="nav">
   {links |> map (link => <li>
     <a href={link.url}>{link.title}</a>
   </li>)}
@@ -84,15 +84,15 @@ Pipe expressions work naturally inside interpolation.
 Functions returning elements are components:
 
 ```aivi
--- Component definition
-Card = { title, children } => <div class=`card`>
+// Component definition
+Card = { title, children } => <div class="card">
   <h2>{title}</h2>
-  <div class=`card-body`>{children}</div>
+  <div class="card-body">{children}</div>
 </div>
 
--- Usage
+// Usage
 page = <div>
-  <Card title=`Welcome`>
+  <Card title="Welcome">
     <p>This is the card content.</p>
   </Card>
 </div>
@@ -118,9 +118,9 @@ Desugars to:
 
 ```aivi
 items = fragment [
-  li [] (TextNode `First`)
-  li [] (TextNode `Second`)
-  li [] (TextNode `Third`)
+  li [] (TextNode "First")
+  li [] (TextNode "Second")
+  li [] (TextNode "Third")
 ]
 ```
 
@@ -129,8 +129,8 @@ items = fragment [
 ## 13.8 Self-Closing Tags
 
 ```aivi
-<input type=`text` placeholder=`Enter name` />
-<img src=`/logo.png` alt=`Logo` />
+<input type="text" placeholder="Enter name" />
+<img src="/logo.png" alt="Logo" />
 <br />
 ```
 
@@ -153,14 +153,14 @@ items = fragment [
 ## 13.10 Full Example
 
 ```aivi
-use aivi/std/html
+use aivi.std.html
 
-UserCard = user => <div class=`user-card`>
+UserCard = user => <div class="user-card">
   <img src={user.avatar} alt={user.name} />
   <h3>{user.name}</h3>
-  <p class=`bio`>{user.bio ?? `No bio provided`}</p>
-  {user.verified ? <span class=`badge`>Verified</span> : <></>}
-  <ul class=`stats`>
+  <p class="bio">{user.bio ?? "No bio provided"}</p>
+  {user.verified ? <span class="badge">Verified</span> : <></>}
+  <ul class="stats">
     {user.stats |> map (s => <li>
       <strong>{s.label}:</strong> {s.value}
     </li>)}
@@ -169,10 +169,45 @@ UserCard = user => <div class=`user-card`>
 
 App = users => <main>
   <h1>Users</h1>
-  <div class=`user-grid`>
+  <div class="user-grid">
     {users |> map UserCard}
   </div>
 </main>
 ```
 
 This is clean, readable, and fully type-safe — the Html domain validates element structure at compile time.
+## 13.11 Expressive UI Composition
+
+JSX in AIVI provides many ergonomic features that make UI code extremely concise.
+
+### Expressive List Rendering
+```aivi
+// Render a list of posts with a conditional empty state
+PostList = posts => <div>
+  {posts ?
+    | [] => <p>No posts yet.</p>
+    | _  => <div class="grid">
+        {posts |> map (p => <PostCard post={p} />)}
+      </div>
+  }
+</div>
+```
+
+### Logical Suffix Patterns
+```aivi
+// Use function composition and pipes for clean component logic
+Sidebar = { items } => <aside>
+  {items 
+    |> filter (_.visible) 
+    |> map (i => <NavItem {...i} />)}
+</aside>
+```
+
+### Expressive Attribute Binding
+```aivi
+// Dynamic class names and spread attributes
+Input = { error, ...props } => <input
+  class={["input", error ? "error" : "valid"] |> join " "}
+  {...props}
+/>
+```

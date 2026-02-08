@@ -44,14 +44,14 @@ date + 1m
 When carrier type cannot disambiguate:
 
 ```aivi
-x + 1m  -- Error: x : Int, neither Calendar nor Physics apply
+x + 1m  // Error: x : Int, neither Calendar nor Physics apply
 ```
 
 When multiple domains match:
 
 ```aivi
--- If both Calendar and Physics define (+) over the same carrier
-ambiguous + 1m  -- Error: Ambiguous domain for (+)
+// If both Calendar and Physics define (+) over the same carrier
+ambiguous + 1m  // Error: Ambiguous domain for (+)
 ```
 
 Resolution: Use qualified literals or operators.
@@ -68,8 +68,8 @@ position + Physics.1m
 Domain operators follow standard precedence. Domains do not redefine precedence — only semantics:
 
 ```aivi
-date + 1m * 2  -- Parsed as: date + (1m * 2)
-               -- Error if (*) not defined for Delta
+date + 1m * 2  // Parsed as: date + (1m * 2)
+               // Error if (*) not defined for Delta
 ```
 
 ---

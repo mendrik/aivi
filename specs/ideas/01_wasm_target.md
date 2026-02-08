@@ -28,7 +28,7 @@ AIVI leverages the WasmGC proposal for:
 ### Component Model
 
 AIVI modules map directly to WASM components:
-- `module aivi/std/calendar` → standalone `.wasm` component
+- `module aivi.std.calendar` → standalone `.wasm` component
 - Shared types via component interfaces
 - Composable without recompilation
 

@@ -42,3 +42,34 @@ vector1 + vector2
 ```
 
 Valid only if the domain defines the operation.
+## 6.3 Expressive Domain Logic
+
+Domains allow for "semantic arithmetic" where the types ensure that only operations that make sense in that domain are permitted.
+
+### Semantic Time Calculation
+```aivi
+// Domains handle complex calendars (Leap years, DST) automatically
+deadline = now + 2w + 3d
+isLate = current_time > deadline
+
+// Interval calculations
+remaining = deadline - now // Returns a Duration
+```
+
+### Visual and Spatial Logic
+```aivi
+// Color blending and manipulation
+highlight = baseColor + 20l - 10s // Lighter, less saturated
+transparent = activeColor <= { alpha: 0.5 }
+
+// Vector arithmetic
+velocity = (10, 5) // Inferred as Vector
+position2 = position1 + (velocity * 2.0s)
+```
+
+### Typed Custom Domains
+```aivi
+// Financial domain prevents adding different currencies
+total = usd 100 + usd 50 // OK
+err = usd 100 + eur 50   // Compile-time Error
+```

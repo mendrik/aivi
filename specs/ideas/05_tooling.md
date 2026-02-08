@@ -38,9 +38,9 @@ Advantages:
 Once AIVI can compile itself:
 
 ```aivi
-module aivi/lsp = {
-  use aivi/compiler/parser
-  use aivi/compiler/types
+module aivi.lsp = {
+  use aivi.compiler/parser
+  use aivi.compiler/types
   
   handleCompletion : Request -> Effect Lsp Response
   handleHover : Request -> Effect Lsp Response
@@ -60,11 +60,11 @@ AIVI has **built-in MCP server capability**.
 ```aivi
 @mcp_tool
 fetchWeather : City -> Effect Http WeatherData
-fetchWeather city = http.get `https://api.weather.com/{city.id}`
+fetchWeather city = http.get "https://api.weather.com/{city.id}"
 
 @mcp_resource
 configFile : Source File Config
-configFile = file.read `./config.aivi`
+configFile = file.read "./config.aivi"
 ```
 
 Decorators register functions as MCP tools/resources.
@@ -76,8 +76,8 @@ AIVI types automatically generate JSON Schema for MCP:
 ```aivi
 City = { id: Text, name: Text, country: Text }
 
--- Generates:
--- { "type": "object", "properties": { "id": {...}, ... } }
+// Generates:
+// { "type": "object", "properties": { "id": {...}, ... } }
 ```
 
 ### Runtime
@@ -93,12 +93,12 @@ Spawns an MCP-compliant server exposing all `@mcp_tool` functions.
 ## Development Workflow
 
 ```text
-aivi check   -- Type check, no emit
-aivi build   -- Compile to WASM
-aivi run     -- Execute via Wasmtime
-aivi lsp     -- Start language server
-aivi mcp     -- Start MCP server
-aivi repl    -- Interactive REPL
+aivi check   // Type check, no emit
+aivi build   // Compile to WASM
+aivi run     // Execute via Wasmtime
+aivi lsp     // Start language server
+aivi mcp     // Start MCP server
+aivi repl    // Interactive REPL
 ```
 
 ---

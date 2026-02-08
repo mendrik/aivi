@@ -16,7 +16,7 @@ Examples:
 ```aivi
 price > 80
 _.price > 80
-email == Some `x`
+email == Some "x"
 Some _
 Ok { value } when value > 10
 ```
@@ -31,7 +31,7 @@ Inside a predicate expression:
 * bare field names are resolved as `_ . field`
 
 ```aivi
-price > 80        -- _.price > 80
+price > 80        // _.price > 80
 ```
 
 ---
@@ -67,8 +67,8 @@ Applies to:
 Predicates do **not** auto-lift over `Option` or `Result`.
 
 ```aivi
-filter (email == `x`)      -- ❌ if email : Option String
-filter (email == Some `x`) -- ✅
+filter (email == "x")      // ❌ if email : Option String
+filter (email == Some "x") // ✅
 ```
 
 Reason: predicates affect **cardinality**.

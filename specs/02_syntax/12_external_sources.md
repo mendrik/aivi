@@ -1,10 +1,8 @@
 # External Sources
 
-External data enters AIVI through typed **Sources**.
+External data enters AIVI through typed **Sources**. A source represents a persistent connection or a one-off fetch to an external system, with full type safety enforced during decoding.
 
----
-
-## 12.1 Source Types
+## 12.1 The Source Type
 
 ```aivi
 Source K A
@@ -13,156 +11,174 @@ Source K A
 - `K` — the **kind** of source (File, Http, Db, etc.)
 - `A` — the **decoded type** of the content
 
-Sources are effectful but typed at compile time.
+Sources are effectful. Loading a source performs I/O and returns a `Result Error A`. All source interactions must occur within an `effect` block.
 
 ---
 
-## 12.2 JSON Sources
+## 12.2 File Sources
 
-### Schema Inference
+Used for local system access. Supports structured (JSON, CSV) and unstructured (Bytes, Text) data.
 
 ```aivi
+// Read entire file as text
+readme : Source File Text
+readme = file.read "./README.md"
+
+// Stream bytes from a large file
+blob : Source File (Generator Bytes)
+blob = file.stream "./large.bin"
+
+// Read structured CSV with schema
+@schema "id:Int,name:Text,email:Text"
+users : Source File (List User)
+users = file.csv "./users.csv"
+```
+
+---
+
+## 12.3 HTTP Sources
+
+Typed REST/API integration.
+
+```aivi
+type User = { id: Int, name: Text }
+
+// Typed GET request (inferred type)
 users : Source Http (List User)
-users = http.get `https://api.example.com/users`
-```
+users = http.get "https://api.example.com/v1/users"
 
-The compiler infers/validates that the response matches `List User`.
-
-### Inline Schema
-
-```aivi
-config : Source File { port: Int, host: Text }
-config = file.json `./config.json`
-```
-
-Type mismatch at runtime produces a typed error:
-
-```aivi
-Result (SourceError File) { port: Int, host: Text }
-```
-
-### Dynamic JSON
-
-When schema is unknown:
-
-```aivi
-raw : Source File Json
-raw = file.json `./unknown.json`
-
--- Access dynamically
-port = raw.get `port` |> Json.asInt
-```
-
----
-
-## 12.3 Image Sources
-
-Images are typed by their metadata:
-
-```aivi
-ImageMeta = { width: Int, height: Int, format: ImageFormat, channels: Int }
-ImageFormat = Png | Jpeg | Webp | Gif
-
-logo : Source File (Image { width: 512, height: 512, format: Png })
-logo = file.image `./logo.png`
-```
-
-The type encodes expected dimensions/format. Mismatches are compile-time errors when knowable, runtime errors otherwise.
-
-### Pixel Access
-
-```aivi
-domain Image over ImageData = {
-  (!) : ImageData -> (Int, Int) -> Rgba
-  (!) img (x, y) = getPixel img x y
-}
-
-pixel = logo ! (10, 20)
-```
-
----
-
-## 12.4 HTTP Sources
-
-```aivi
-Http = { method: Method, url: Url, headers: Headers, body: Option Body }
-Method = Get | Post | Put | Delete | Patch
-
-api : Source Http (Result ApiError User)
-api = http.request {
-  method: Get
-  url: `https://api.example.com/user/1`
-  headers: [ (`Authorization`, `Bearer {token}`) ]
+// Request with headers and body
+req = http.request {
+  method: Post
+  url: "https://api.example.com/v1/users"
+  headers: [("Content-Type", "application/json")]
+  body: Some (Json.encode { name: "New User" })
 }
 ```
 
-### Response Typing
+---
+
+## 12.4 Database Sources (Db)
+
+Integration with relational and document stores. Uses carrier-specific domains for querying.
 
 ```aivi
-HttpResponse A = {
-  status: Int
-  headers: Headers
-  body: A
+// SQLite connection
+db = sqlite.open "./local.db"
+
+// Typed query source
+@sql "SELECT id, name FROM users WHERE active = 1"
+activeUsers : Source Db (List User)
+activeUsers = db.query
+```
+
+---
+
+## 12.5 Email Sources
+
+Interacting with mail servers (IMAP/SMTP).
+
+```aivi
+// Fetch unread emails
+inbox : Source Email (List Message)
+inbox = email.imap {
+  host: "imap.gmail.com"
+  filter: "UNSEEN"
 }
 
--- Explicit response wrapper
-fullResponse : Source Http (HttpResponse User)
-fullResponse = http.getWithMeta `https://api.example.com/user/1`
+// Sending as a sink effect
+sendWelcome = user => email.send {
+  to: user.email
+  subject: "Welcome!"
+  body: "Glad to have you, {user.name}"
+}
 ```
 
 ---
 
-## 12.5 File Streams
+## 12.6 LLM Sources
 
-For large files, stream instead of loading:
+AIVI treats Large Language Models as typed probabilistic sources. This is a core part of the AIVI vision for intelligent data pipelines.
 
 ```aivi
-lines : Source File (Generator Text)
-lines = file.lines `./large.csv`
+// Define expected output shape
+type Analysis = { 
+  sentiment: Positive | Negative | Neutral
+  summary: Text 
+}
 
--- Process lazily
-processed = lines |> map parseCsvRow |> filter _.valid
+// LLM completion with strict schema enforcement
+@model "gpt-4o"
+analyze : Text -> Source Llm Analysis
+analyze input = llm.complete {
+  prompt: "Analyze this feedback: {input}"
+  schema: Analysis
+}
 ```
-
-Generators integrate with Source for backpressure-aware processing.
 
 ---
 
-## 12.6 Binary Sources
+## 12.7 Image Sources
+
+Images are typed by their metadata and pixel data format.
 
 ```aivi
-wasm : Source File Bytes
-wasm = file.bytes `./module.wasm`
+Image A = { width: Int, height: Int, format: ImageFormat, pixels: A }
 
--- Typed binary parsing
-header : WasmHeader
-header = wasm |> Bytes.take 8 |> parseWasmHeader
+// Load image metadata only
+meta : Source File ImageMeta
+meta = file.imageMeta "./photo.jpg"
+
+// Load full image with RGB pixel access
+photo : Source File (Image ImageData)
+photo = file.image "./photo.jpg"
 ```
 
 ---
 
-## 12.7 Source Composition
+## 12.8 S3 / Cloud Storage Sources
 
-Sources can be chained:
+Integration with object storage.
 
 ```aivi
--- Fetch config, then use it to fetch data
-pipeline = do
-  cfg <- file.json `./config.json`
-  users <- http.get cfg.apiUrl
-  pure users
+// Bucket listings
+images : Source S3 (List S3Object)
+images = s3.bucket "my-assets" |> s3.list "thumbnails/"
+
+// Fetch object content
+logo : Source S3 Bytes
+logo = s3.get "my-assets" "branding/logo.png"
 ```
 
 ---
 
-## 12.8 Compile-Time Sources
+## 12.9 Browser / Web Automation Sources
 
-Some sources resolve at compile time:
+Headless browser interaction for scraping, testing, or rendering.
+
+```aivi
+// Scrape a dynamic page using CSS selectors
+@selector ".price-tag"
+price : Source Browser Float
+price = browser.scrape "https://shop.com/item/1"
+
+// Capture full page screenshot
+shot : Source Browser Image
+shot = browser.screenshot "https://dashboard.io"
+```
+
+---
+
+## 12.10 Compile-Time Sources (@static)
+
+Some sources are resolved at compile time and embedded into the binary. This ensures zero latency/failure at runtime.
 
 ```aivi
 @static
 version : Text
-version = file.read `./VERSION`
-```
+version = file.read "./VERSION"
 
-The `@static` decorator embeds the file content into the compiled WASM.
+@static
+locales : Json
+locales = file.json "./i18n/en.json"
+```

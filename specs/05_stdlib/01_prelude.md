@@ -3,23 +3,23 @@
 The prelude is implicitly imported by all AIVI programs.
 
 ```aivi
-module aivi/prelude = {
-  -- Core types
+module aivi.prelude = {
+  // Core types
   export Int, Float, Bool, Text, Char
   export List, Maybe, Result, Tuple
   
-  -- Standard domains
+  // Standard domains
   export domain Calendar
   export domain Duration
   export domain Color
   export domain Vector
   
-  -- Re-exports
-  use aivi/std/core
-  use aivi/std/calendar
-  use aivi/std/duration
-  use aivi/std/color
-  use aivi/std/vector
+  // Re-exports
+  use aivi.std.core
+  use aivi.std.calendar
+  use aivi.std.duration
+  use aivi.std.color
+  use aivi.std.vector
 }
 ```
 
@@ -27,9 +27,9 @@ module aivi/prelude = {
 
 ```aivi
 @no_prelude
-module my/custom/module = {
-  -- Nothing imported automatically
-  use aivi/std/core (Int, Bool)
+module my.custom/module = {
+  // Nothing imported automatically
+  use aivi.std.core (Int, Bool)
 }
 ```
 

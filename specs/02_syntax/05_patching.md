@@ -62,8 +62,8 @@ If the constructor does not match, the value is unchanged.
 
 ```aivi
 user2 = user <= {
-  name: `Grace`
-  profile.avatar.url: `https://img`
+  name: "Grace"
+  profile.avatar.url: "https://img"
 }
 ```
 
@@ -95,16 +95,36 @@ Removal is structural and reflected in the resulting type.
 
 ---
 
-## 5.6 Automatic lifting
+## 5.7 Expressive Data Manipulation
 
-If a patch path targets a value inside `Option` or `Result`, the instruction is **automatically lifted**.
+Patching allows for very concise updates to deeply nested data structures and collections.
 
+### Deep Collection Updates
 ```aivi
-user <= { email: toUpper }
+// Increase prices of all active items in a category
+store2 = store <= {
+  categories[_.name == "Hardware"]
+    .items[_.active]
+    .price: _ * 1.1
+}
 ```
 
-Works for:
+### Complex Sum-Type Patching
+```aivi
+// Move all shapes to the origin
+scene2 = scene <= {
+  shapes[*]
+    .Circle.center: origin
+    .Square.origin: origin
+}
+```
 
-* `String`
-* `Option String`
-* `Result E String`
+### Record Bulk Update
+```aivi
+// Set multiple fields based on previous state
+user2 = user <= {
+  name: toUpper
+  status: if admin then SuperUser else Normal
+  stats.lastVisit: now
+}
+```

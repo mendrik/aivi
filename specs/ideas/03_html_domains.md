@@ -16,10 +16,10 @@ domain Style css
 ### Composition
 
 ```aivi
--- + concatenates children
+// + concatenates children
 list = ul [] +
-  (li [] [`Item 1`]) +
-  (li [] [`Item 2`])
+  (li [] ["Item 1"]) +
+  (li [] ["Item 2"])
 ```
 
 ### Attribute Merging
@@ -27,10 +27,10 @@ list = ul [] +
 Deltas can represent style updates.
 
 ```aivi
-baseBtn = button [ class `btn` ]
+baseBtn = button [ class "btn" ]
 
--- + merges attributes
-primaryBtn = baseBtn + { class: `primary`, disabled: False }
+// + merges attributes
+primaryBtn = baseBtn + { class: "primary", disabled: False }
 ```
 
 ### Units for CSS

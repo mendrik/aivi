@@ -38,8 +38,8 @@ update = msg model =>
 
 view = model =>
   div [
-    button [onClick Dec] [- `1`]
-    span [] [`Count: {model.count}`]
-    button [onClick Inc] [+ `1`]
+    button [onClick Dec] [- "1"]
+    span [] ["Count: {model.count}"]
+    button [onClick Inc] [+ "1"]
   ]
 ```

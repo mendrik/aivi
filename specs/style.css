@@ -1,22 +1,37 @@
 /* AIVI Specification - PDF Stylesheet */
 
+@page {
+  size: A4;
+  margin: 20mm 15mm;
+  @bottom-center {
+    content: counter(page);
+    font-size: 9pt;
+    color: #666;
+  }
+}
+
 body {
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
   font-size: 11pt;
   line-height: 1.6;
   color: #1a1a2e;
-  max-width: 210mm;
+  max-width: 170mm;
   margin: 0 auto;
-  padding: 20mm;
+  orphans: 4;
+  widows: 4;
 }
 
 h1 {
-  font-size: 24pt;
+  font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
+  font-size: 23pt;
   color: #16213e;
   border-bottom: 3px solid #0f3460;
   padding-bottom: 10px;
   margin-top: 40px;
+  margin-bottom: 16px;
   page-break-before: always;
+  page-break-after: avoid;
+  page-break-inside: avoid;
 }
 
 h1:first-of-type {
@@ -24,27 +39,39 @@ h1:first-of-type {
 }
 
 h2 {
-  font-size: 18pt;
+  font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
+  font-size: 17pt;
   color: #0f3460;
   border-bottom: 1px solid #e4e4e4;
   padding-bottom: 6px;
-  margin-top: 30px;
+  margin-top: 28px;
+  margin-bottom: 12px;
+  page-break-after: avoid;
+  page-break-inside: avoid;
 }
 
 h3 {
-  font-size: 14pt;
+  font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
+  font-size: 13pt;
   color: #533483;
-  margin-top: 24px;
+  margin-top: 20px;
+  margin-bottom: 8px;
+  page-break-after: avoid;
+  page-break-inside: avoid;
 }
 
 h4 {
+  font-family: 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
   font-size: 12pt;
   color: #666;
-  margin-top: 18px;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  page-break-after: avoid;
+  page-break-inside: avoid;
 }
 
 code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
   background: #f5f5f5;
   padding: 2px 6px;
   border-radius: 3px;
@@ -54,12 +81,13 @@ code {
 pre {
   background: #1a1a2e;
   color: #e4e4e4;
-  padding: 16px;
-  border-radius: 8px;
+  padding: 14px;
+  border-radius: 6px;
   overflow-x: auto;
   font-size: 10pt;
   line-height: 1.4;
   page-break-inside: avoid;
+  margin: 12px 0;
 }
 
 pre code {
@@ -69,15 +97,17 @@ pre code {
 }
 
 /* Syntax highlighting for AIVI code */
-pre.aivi {
+pre.aivi, code.aivi {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
-.keyword { color: #e94560; }
-.type { color: #ff9f1c; }
-.string { color: #2ec4b6; }
-.comment { color: #6c757d; font-style: italic; }
+.keyword { color: #ff79c6; font-weight: 600; }
+.type { color: #8be9fd; }
+.string { color: #f1fa8c; }
+.comment { color: #6272a4; font-style: italic; }
 .operator { color: #ff6b6b; }
+.number { color: #bd93f9; }
+.decorator { color: #50fa7b; }
 
 table {
   width: 100%;
@@ -124,7 +154,7 @@ a:hover {
 hr {
   border: none;
   border-top: 1px solid #e4e4e4;
-  margin: 30px 0;
+  margin: 0;
 }
 
 /* Table of Contents */

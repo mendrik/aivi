@@ -27,6 +27,7 @@ A high-integrity functional language targeting WebAssembly.
 12. [Domain Definitions](02_syntax/11_domain_definition.md)
 13. [External Sources](02_syntax/12_external_sources.md)
 14. [JSX Literals](02_syntax/13_jsx_literals.md)
+15. [Decorators](02_syntax/14_decorators.md)
 
 ### Kernel (Core Calculus)
 

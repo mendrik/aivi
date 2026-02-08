@@ -3,7 +3,7 @@
 ## Module
 
 ```aivi
-module aivi/std/html = {
+module aivi.std.html = {
   export domain Html
   export Element, Attribute, Children
   export div, span, p, a, ul, li, button, input, form
@@ -28,15 +28,15 @@ Children = TextNode Text | Elements (List Element) | Empty
 
 ```aivi
 domain Html over Element = {
-  -- Concatenate children
+  // Concatenate children
   (+) : Element -> Element -> Element
   (+) parent child = { parent | children: append parent.children child }
   
-  -- Merge attributes
+  // Merge attributes
   (+) : Element -> Attribute -> Element
   (+) el attr = { el | attrs: el.attrs + [attr] }
   
-  -- Merge attribute records
+  // Merge attribute records
   (+) : Element -> { ... } -> Element
   (+) el rec = { el | attrs: mergeAttrs el.attrs rec }
 }
@@ -46,31 +46,31 @@ domain Html over Element = {
 
 ```aivi
 div : List Attribute -> Children -> Element
-div attrs children = { tag: `div`, attrs, children }
+div attrs children = { tag: "div", attrs, children }
 
 span : List Attribute -> Children -> Element
-span attrs children = { tag: `span`, attrs, children }
+span attrs children = { tag: "span", attrs, children }
 
 p : List Attribute -> Children -> Element
-p attrs children = { tag: `p`, attrs, children }
+p attrs children = { tag: "p", attrs, children }
 
 a : List Attribute -> Children -> Element
-a attrs children = { tag: `a`, attrs, children }
+a attrs children = { tag: "a", attrs, children }
 
 ul : List Attribute -> Children -> Element
-ul attrs children = { tag: `ul`, attrs, children }
+ul attrs children = { tag: "ul", attrs, children }
 
 li : List Attribute -> Children -> Element
-li attrs children = { tag: `li`, attrs, children }
+li attrs children = { tag: "li", attrs, children }
 
 button : List Attribute -> Children -> Element
-button attrs children = { tag: `button`, attrs, children }
+button attrs children = { tag: "button", attrs, children }
 
 input : List Attribute -> Element
-input attrs = { tag: `input`, attrs, children: Empty }
+input attrs = { tag: "input", attrs, children: Empty }
 
 form : List Attribute -> Children -> Element
-form attrs children = { tag: `form`, attrs, children }
+form attrs children = { tag: "form", attrs, children }
 ```
 
 ## Usage Examples
@@ -78,18 +78,18 @@ form attrs children = { tag: `form`, attrs, children }
 With [JSX literals](../02_syntax/13_jsx_literals.md), HTML becomes natural:
 
 ```aivi
-use aivi/std/html
+use aivi.std.html
 
-header = <div class=`header`>
+header = <div class="header">
   <span>AIVI</span>
 </div>
 
-nav = <ul class=`nav`>
-  <li><a href=`/home`>Home</a></li>
-  <li><a href=`/about`>About</a></li>
+nav = <ul class="nav">
+  <li><a href="/home">Home</a></li>
+  <li><a href="/about">About</a></li>
 </ul>
 
-page = <div class=`container`>
+page = <div class="container">
   {header}
   {nav}
 </div>
@@ -100,7 +100,7 @@ page = <div class=`container`>
 ```aivi
 UserList = users => <ul>
   {users |> map (u => <li>
-    <a href={`/user/{u.id}`}>{u.name}</a>
+    <a href={"/user.{u.id}"}>{u.name}</a>
   </li>)}
 </ul>
 
@@ -117,8 +117,8 @@ Dashboard = { user, posts } => <main>
 JSX desugars to these constructors (rarely used directly):
 
 ```aivi
-header = div [ class `header` ] (
-  span [] (TextNode `AIVI`)
+header = div [ class "header" ] (
+  span [] (TextNode "AIVI")
 )
 ```
 

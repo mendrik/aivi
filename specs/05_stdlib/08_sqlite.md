@@ -1,28 +1,24 @@
 # Standard Library: SQLite Domain
 
-SQLite as a **domain-backed type system** — tables become types, rows become patchable records, queries become predicates.
+SQLite as a **domain-backed type system** — tables become types, rows become patchable records, and operations align with core language traversals.
 
 ---
 
-## Architecture
+## Conceptual Model: Tables as Arrays
 
-```text
-┌─────────────────┐     ┌─────────────────┐
-│   AIVI (WASM)   │────▶│  SQLite (WASM)  │
-└─────────────────┘     └─────────────────┘
-         │                       │
-         └───── Component ───────┘
-              Composition
+In AIVI, a `Table A` is conceptually equivalent to a `List (Row A)`. This allows all standard list operations (`map`, `filter`, `take`) to compile directly to efficient SQL.
+
+```aivi
+// Conceptually:
+Table A ≈ List (Row A)
 ```
-
-Both AIVI and SQLite run as WASM modules. Communication via WASM Component Model — no FFI overhead.
 
 ---
 
 ## Module
 
-```aivi
-module aivi/std/sqlite = {
+```aivi.std.sqlite
+module aivi.std.sqlite = {
   export domain Db
   export Table, Row, Query, Column
   export connect, query, insert, update, delete
@@ -33,31 +29,17 @@ module aivi/std/sqlite = {
 
 ## Type-Safe Schema
 
-### Table Definition
-
 ```aivi
-@table `users`
+@table "users"
 User = {
   id: Int @primary @auto
   name: Text
   email: Text @unique
-  createdAt: Instant @default now
+  status: Active | Inactive
 }
-```
 
-The `@table` decorator generates:
-- Type `User`
-- Table creation SQL
-- Query builders
-
-### Compile-Time Schema Validation
-
-```aivi
 db : Source Db { users: Table User, posts: Table Post }
-db = sqlite.connect `./app.db`
-
--- Compiler verifies table exists and has correct schema
-users = db.users
+db = sqlite.connect "./app.db"
 ```
 
 ---
@@ -66,129 +48,87 @@ users = db.users
 
 ```aivi
 domain Db over (Table A) = {
-  -- Query predicate
-  (?) : Table A -> (A -> Bool) -> Query A
-  (?) table pred = queryWhere table pred
+  // Query via filter
+  filter : Table A -> (A -> Bool) -> Query A
+  filter table pred = queryWhere table pred
   
-  -- Patching rows (uses language patch operator)
-  (<=) : Row A -> Patch A -> Effect Db (Row A)
-  (<=) row patch = updateRow row patch
-  
-  -- Insert
-  (+) : Table A -> A -> Effect Db (Row A)
-  (+) table record = insertRow table record
-  
-  -- Delete
-  (-) : Table A -> (A -> Bool) -> Effect Db Int
-  (-) table pred = deleteWhere table pred
+  // Row fetching / lookup
+  (<=) : Table A -> { id: Int } -> Row A
+  (<=) table { id } = fetchRowById table id
+
+  // Mutations via traversal (see Traversal section)
+  traverse : Query A -> (Row A -> Effect Db B) -> Effect Db (List B)
+  traverse query fn = runEffectfulMutation query fn
 }
 ```
 
 ---
 
-## Query via Predicates
+## Operations
 
-AIVI predicates compile directly to SQL WHERE clauses:
+### Query (filter)
+
+AIVI predicates in `filter` compile directly to SQL `WHERE` clauses:
 
 ```aivi
--- Find active users
-activeUsers = db.users ? (_.status == Active)
+// Find active users
+activeUsers = db.users filter (status == Active)
 
--- Compile to: SELECT * FROM users WHERE status = 'active'
+// Compile to: SELECT * FROM users WHERE status = "active"
 ```
 
-### Complex Predicates
+### Lookup (<=)
+
+Directly retrieve a single record by its primary key:
 
 ```aivi
--- Multiple conditions
-results = db.users ? (u => u.age > 18 && u.verified == True)
+// Fetch user with ID 1
+user = db.users <= { id: 1 }
 
--- Compile to: SELECT * FROM users WHERE age > 18 AND verified = true
+// Compile to: SELECT * FROM users WHERE id = 1 LIMIT 1
 ```
 
-### Joins via Record Composition
+### Patching Rows
+
+Use the standard patch operator on a fetched row to trigger an `UPDATE`:
 
 ```aivi
-userWithPosts = db.users
-  |> map (u => { u, posts: db.posts ? (_.userId == u.id) })
+user = db.users <= { id: 1 }
 
--- Eager load posts for each user
-```
-
----
-
-## Patching Rows
-
-Use AIVI's `<=` patch syntax to update rows:
-
-```aivi
-user = db.users ? (_.id == 1) |> head
-
--- Patch the row
-updated = user <= { name: `New Name`, email: `new@example.com` }
-```
-
-### Batch Updates
-
-```aivi
--- Update all matching rows
-db.users
-  |> filter (_.status == Inactive)
-  |> map (_ <= { status: Archived })
+// Patching a Row record triggers an effectful update
+effect {
+  user <= { name: "Grace" }
+}
 ```
 
 ---
 
-## Insert and Delete
+## Insert and Delete via Traverse
+
+Instead of dedicated operators, mutations are modeled as traversing the table.
+
+### Insert
 
 ```aivi
--- Insert new row
-newUser = db.users + { name: `Alice`, email: `alice@example.com` }
-
--- Delete by predicate
-deleted = db.users - (_.createdAt < cutoffDate)
+// Inserting is a traversal that yields a new row
+effect {
+  db.users |> traverse (_ => Insert { 
+    name: "Alice", 
+    email: "alice@example.com",
+    status: Active 
+  })
+}
 ```
 
----
-
-## Transactions
+### Delete
 
 ```aivi
-transfer : Account -> Account -> Decimal -> Effect Db Unit
-transfer from to amount = db.transaction do
-  from <= { balance: from.balance - amount }
-  to <= { balance: to.balance + amount }
-  pure Unit
-```
-
-If any operation fails, entire transaction rolls back.
-
----
-
-## Migrations
-
-```aivi
-@migration `001_add_verified_column`
-addVerified : Effect Db Unit
-addVerified = db.alter `users` do
-  add `verified` Bool @default False
-```
-
-Migrations are AIVI code, tracked by the compiler.
-
----
-
-## Type Safety Examples
-
-```aivi
--- Compile error: 'age' field doesn't exist on User
-bad = db.users ? (_.age > 18)
-
--- Compile error: comparing Text to Int
-bad2 = db.users ? (_.name == 42)
-
--- Compile error: missing required field
-bad3 = db.users + { name: `Bob` }  -- email required
+// Deleting is a filtered traversal
+effect {
+  db.users 
+    filter (status == Inactive)
+    |> traverse delete
+}
 ```
 
 ---
@@ -198,16 +138,45 @@ bad3 = db.users + { name: `Bob` }  -- email required
 AIVI queries optimize to efficient SQL:
 
 ```aivi
--- AIVI
+// AIVI
 recentActive = db.users
-  ? (u => u.status == Active && u.lastLogin > yesterday)
+  filter (u => u.status == Active && u.lastLogin > yesterday)
   |> take 10
   |> map _.email
 
--- Generated SQL
--- SELECT email FROM users 
--- WHERE status = 'active' AND last_login > ? 
--- LIMIT 10
+// Generated SQL
+// SELECT email FROM users 
+// WHERE status = "active" AND last_login > ? 
+// LIMIT 10
 ```
 
-Only selected columns are fetched. Predicates pushed down.
+Only selected columns are fetched. Predicates are pushed down to the engine.
+## Expressive Data Access
+
+SQLite domains leverage AIVI's patching and pipelines for very concise data orchestration.
+
+### Fluent Joins
+```aivi
+// Fetch user with posts in one pipeline
+user1 = db.users <= { id: 1 }
+  |> map (u => { u, posts: db.posts filter (_.userId == u.id) })
+```
+
+### Conditional Batch Updates
+```aivi
+// Reactivate all users who logged in recently but are marked inactive
+effect {
+  db.users
+    filter (u => u.status == Inactive && u.lastLogin > thirtyDaysAgo)
+    |> traverse (_ <= { status: Active })
+}
+```
+
+### Expressive Existence Checks
+```aivi
+// Boolean check for record existence
+userExists = email => db.users 
+  filter (_.email == email) 
+  |> head 
+  |> isSome
+```

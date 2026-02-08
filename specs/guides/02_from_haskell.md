@@ -24,7 +24,7 @@ data User = User { id :: Int, name :: String }
 **AIVI:**
 ```aivi
 User = { id: Int, name: String }
--- Just an alias, not a nominal type
+// Just an alias, not a nominal type
 ```
 
 ### ADTs

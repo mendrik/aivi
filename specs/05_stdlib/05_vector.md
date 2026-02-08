@@ -3,7 +3,7 @@
 ## Module
 
 ```aivi
-module aivi/std/vector = {
+module aivi.std.vector = {
   export domain Vector
   export Vec2, Vec3, Vec4
   export magnitude, normalize, dot, cross
@@ -75,11 +75,11 @@ cross v1 v2 = {
 ## Usage Examples
 
 ```aivi
-use aivi/std/vector
+use aivi.std.vector
 
 position = { x: 10.0, y: 20.0 }
 velocity = { x: 1.0, y: 0.5 }
 
-newPos = position + velocity * 0.016  -- 60fps frame
+newPos = position + velocity * 0.016  // 60fps frame
 direction = normalize velocity
 ```

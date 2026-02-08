@@ -42,40 +42,40 @@ xs |> map inc |> filter (_ > 0)
 ### Basic Functions
 
 ```aivi
--- Identity
+// Identity
 id = x => x
 
--- Constant
+// Constant
 const = x _ => x
 
--- Flip arguments
+// Flip arguments
 flip = f => x y => f y x
 ```
 
 ### Composition
 
 ```aivi
--- Function composition
+// Function composition
 compose = f g => x => f (g x)
 
--- Or with operator
+// Or with operator
 (>>) = f g => x => g (f x)
 
--- Usage
+// Usage
 processName = trim >> lowercase >> capitalize
-result = processName `  HELLO  `
+result = processName "  HELLO  "
 ```
 
 ### Higher-Order Functions
 
 ```aivi
--- Apply function twice
+// Apply function twice
 twice = f => x => f (f x)
 
 increment = _ + 1
 addTwo = twice increment
 
--- Result: addTwo 5 = 7
+// Result: addTwo 5 = 7
 ```
 
 ### Partial Application
@@ -84,40 +84,68 @@ addTwo = twice increment
 add = x y => x + y
 add5 = add 5
 
--- add5 10 = 15
+// add5 10 = 15
 
--- With pipes
+// With pipes
 numbers = [1, 2, 3]
 result = numbers |> map (add 10)
--- [11, 12, 13]
+// [11, 12, 13]
 ```
 
 ### Complex Pipelines
 
+Pipelines allow building complex data transformations without nested function calls.
+
 ```aivi
 users = [
-  { name: `Alice`, age: 30, active: True }
-  { name: `Bob`, age: 25, active: False }
-  { name: `Carol`, age: 35, active: True }
+  { name: "Alice", age: 30, active: True }
+  { name: "Bob", age: 25, active: False }
+  { name: "Carol", age: 35, active: True }
 ]
 
+// Data processing pipeline
 activeNames = users
-  |> filter _.active
-  |> map _.name
-  |> sort
-  |> join `, `
--- `Alice, Carol`
+  filter _.active
+  map _.name
+  sort
+  join ", "
+// "Alice, Carol"
+
+// Mathematical series
+sigma = [1..100]
+  filter (_ % 2 == 0)
+  map (pow _ 2)
+  sum
+```
+
+### Expressive Logic: Point-Free Style
+
+Functions can be combined to form new functions without naming their arguments, leading to very concise code.
+
+```aivi
+// Boolean logic composition
+isAdmin = _.role == Admin
+isOwner = _.id == ownerId
+canDelete = isAdmin ∨ isOwner
+
+// Validation chains
+isEmail = contains "@"
+isLongEnough = len >> (_ > 8)
+isValidPassword = isEmail ∧ isLongEnough
+
+// Usage
+passwords |> filter isValidPassword
 ```
 
 ### Lambda Shorthand
 
 ```aivi
--- Single arg with _
+// Single arg with _
 double = _ * 2
 isEven = _ % 2 == 0
 getName = _.name
 
--- Equivalent explicit forms
+// Equivalent explicit forms
 double = x => x * 2
 isEven = x => x % 2 == 0
 getName = user => user.name

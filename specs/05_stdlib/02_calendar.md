@@ -3,7 +3,7 @@
 ## Module
 
 ```aivi
-module aivi/std/calendar = {
+module aivi.std.calendar = {
   export domain Calendar
   export Date, Day, Month, Year, EndOfMonth
   export isLeapYear, daysInMonth, endOfMonth
@@ -24,18 +24,18 @@ EndOfMonth = EndOfMonth
 domain Calendar over Date = {
   type Delta = Day Int | Month Int | Year Int | End EndOfMonth
   
-  -- Add delta to date
+  // Add delta to date
   (+) : Date -> Delta -> Date
   (+) date (Day n)   = addDays date n
   (+) date (Month n) = addMonths date n
   (+) date (Year n)  = addYears date n
   (+) date End       = endOfMonth date
   
-  -- Subtract delta from date
+  // Subtract delta from date
   (-) : Date -> Delta -> Date
   (-) date delta = date + (negateDelta delta)
   
-  -- Delta literals
+  // Delta literals
   1d = Day 1
   1m = Month 1
   1y = Year 1
@@ -60,10 +60,10 @@ endOfMonth : Date -> Date
 endOfMonth date = { date | day: daysInMonth date }
 
 addDays : Date -> Int -> Date
-addDays date n = -- normalize day overflow/underflow
+addDays date n = // normalize day overflow/underflow
 
 addMonths : Date -> Int -> Date
-addMonths date n = -- normalize month overflow, clamp days
+addMonths date n = // normalize month overflow, clamp days
 
 addYears : Date -> Int -> Date
 addYears { year, month, day } n = { year: year + n, month, day }
@@ -72,13 +72,13 @@ negateDelta : Delta -> Delta
 negateDelta (Day n)   = Day (-n)
 negateDelta (Month n) = Month (-n)
 negateDelta (Year n)  = Year (-n)
-negateDelta End       = End  -- idempotent
+negateDelta End       = End  // idempotent
 ```
 
 ## Usage Examples
 
 ```aivi
-use aivi/std/calendar
+use aivi.std.calendar
 
 today = { year: 2025, month: 2, day: 8 }
 

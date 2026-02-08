@@ -4,8 +4,8 @@
 
 ```aivi
 classify = _ ?
-  | 0 => `zero`
-  | _ => `nonzero`
+  | 0 => "zero"
+  | _ => "nonzero"
 ```
 
 This is a concise way to do case analysis, similar to `match` in Rust or `case` in Haskell/Elixir.
@@ -26,9 +26,9 @@ sum =
 
 ```aivi
 greet = _ ?
-  | { role: Admin, name } => `Welcome back, Admin {name}!`
-  | { role: Guest } => `Welcome, guest!`
-  | { name } => `Hello, {name}!`
+  | { role: Admin, name } => "Welcome back, Admin {name}!"
+  | { role: Guest } => "Welcome, guest!"
+  | { name } => "Hello, {name}!"
 ```
 
 ---
@@ -37,10 +37,10 @@ greet = _ ?
 
 ```aivi
 processResult = _ ?
-  | Ok { data: { users: [first, ...] } } => `First user: {first.name}`
-  | Ok { data: { users: [] } } => `No users found`
-  | Err { code: 404 } => `Not found`
-  | Err { code, message } => `Error {code}: {message}`
+  | Ok { data: { users: [first, ...] } } => "First user: {first.name}"
+  | Ok { data: { users: [] } } => "No users found"
+  | Err { code: 404 } => "Not found"
+  | Err { code, message } => "Error {code}: {message}"
 ```
 
 ---
@@ -51,11 +51,11 @@ Patterns can have guards using `when`:
 
 ```aivi
 classify = n ?
-  | _ when n < 0 => `negative`
-  | 0 => `zero`
-  | _ when n < 10 => `small`
-  | _ when n < 100 => `medium`
-  | _ => `large`
+  | _ when n < 0 => "negative"
+  | 0 => "zero"
+  | _ when n < 10 => "small"
+  | _ when n < 100 => "medium"
+  | _ => "large"
 ```
 
 ---
@@ -71,7 +71,7 @@ getOrDefault = default => _ ?
   | None => default
   | Some value => value
 
-userName = user.nickname |> getOrDefault `Anonymous`
+userName = user.nickname |> getOrDefault "Anonymous"
 ```
 
 ### Result Processing
@@ -83,7 +83,7 @@ handleResult = _ ?
   | Ok data => processData data
   | Err e => logError e
 
--- With chaining
+// With chaining
 fetchUser id
   |> handleResult
   |> renderView
@@ -92,18 +92,18 @@ fetchUser id
 ### List Processing
 
 ```aivi
--- Safe head
+// Safe head
 head = _ ?
   | [] => None
   | [x, ...] => Some x
 
--- Take first n
+// Take first n
 take = n => _ ?
   | _ when n <= 0 => []
   | [] => []
   | [x, ...xs] => [x, ...take (n - 1) xs]
 
--- Zip two lists
+// Zip two lists
 zip =
   | ([], _) => []
   | (_, []) => []
@@ -134,7 +134,40 @@ eval = _ ?
   | Add a b => eval a + eval b
   | Mul a b => eval a * eval b
 
--- (2 + 3) * 4 = 20
+// (2 + 3) * 4 = 20
 expr = Mul (Add (Num 2) (Num 3)) (Num 4)
 result = eval expr
+```
+## 8.7 Expressive Pattern Orchestration
+
+Pattern matching excels at simplifying complex conditional branches into readable declarations.
+
+### Deeply Nested Destructuring
+```aivi
+// Extract deeply buried data with fallback
+headerLabel = response ?
+  | { data: { user: { profile: { name } } } } => name
+  | { data: { guest: True } }               => "Guest"
+  | _                                       => "Unknown"
+```
+
+### Concise State Machines
+```aivi
+// Update application state based on event
+nextState = (state, event) => (state, event) ?
+  | (Idle, Start)    => Running
+  | (Running, Pause) => Paused
+  | (Paused, Resume) => Running
+  | (Running, Stop)  => Idle
+  | _                => state // Unchanged on invalid events
+```
+
+### Expressive Logic Branches
+```aivi
+// Business rule mapping
+discount = user ?
+  | { tier: Gold, age } when age > 65 => 0.3
+  | { tier: Gold }                    => 0.2
+  | { tier: Silver }                  => 0.1
+  | _                                 => 0.0
 ```

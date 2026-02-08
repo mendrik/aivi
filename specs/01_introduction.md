@@ -42,17 +42,6 @@ AIVI is a statically typed, purely functional language designed for **high-integ
 
 ---
 
-## 11. Modules
-
-```aivi
-module aivi/app/main = {
-  export main
-  use aivi/std/core
-}
-```
-
----
-
 ## Normative Principles
 
 > **Bindings are immutable.**

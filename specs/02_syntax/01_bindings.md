@@ -36,8 +36,9 @@ This introduces a new binding; no mutation exists. This is common in functional 
 Structural patterns may appear in bindings.
 
 ```aivi
-{ name: n } = user
-[h, ...t] = xs
+{ name } = user      // Shorthand for { name: name }
+{ name: n } = user   // Rename binding to 'n'
+[h, ...t] = xs       // List destructuring
 ```
 
 Rule:
@@ -70,7 +71,7 @@ Allowed in:
 Example:
 
 ```aivi
-describe = u@{ id, name } => `{id}: {name}`
+describe = u@{ id, name } => "{id}: {name}"
 ```
 
 ---
@@ -81,13 +82,13 @@ describe = u@{ id, name } => `{id}: {name}`
 
 ```aivi
 config = {
-  host: `localhost`
+  host: "localhost"
   port: 8080
   debug: True
 }
 
 { host, port } = config
-serverUrl = `http://{host}:{port}`
+serverUrl = "http://{host}:{port}"
 ```
 
 ### Tuple Destructuring
@@ -99,20 +100,35 @@ point = (10, 20)
 distance = sqrt (x * x + y * y)
 ```
 
-### Nested Destructuring
+### Nested Destructuring and Deep Exposure
+
+Nested patterns allow deep extraction. In AIVI, intermediate keys are **automatically exposed** as bindings unless explicitly renamed.
 
 ```aivi
 response = {
   data: {
-    user: { id: 1, name: `Alice` }
-    token: `abc123`
+    user: { id: 1, name: "Alice" }
+    token: "abc123"
   }
   status: 200
 }
 
 { data: { user: { name } } } = response
-greeting = `Hello, {name}!`
+// Binds:
+// name = "Alice"
+// user = { id: 1, name: "Alice" }
+// data = { user: ..., token: ... }
 ```
+
+If you wish to ignore intermediate bindings or rename them:
+```aivi
+{ data: _ @ { user: u @ { name } } } = response // (Experimental syntax for explicit focus)
+// OR just use renaming to hide them if needed
+{ data: { user: { name: n } } } = response // Only 'n' is bound if this is how the compiler is configured
+```
+
+> [!NOTE]
+> Deep exposure significantly reduces the need for multiple destructuring lines when you need both a record and its fields.
 
 ### List Head/Tail
 
@@ -120,19 +136,19 @@ greeting = `Hello, {name}!`
 numbers = [1, 2, 3, 4, 5]
 [first, second, ...rest] = numbers
 
--- first = 1, second = 2, rest = [3, 4, 5]
+// first = 1, second = 2, rest = [3, 4, 5]
 ```
 
 ### Function Definitions
 
 ```aivi
--- Named function
-greet = name => `Hello, {name}!`
+// Named function
+greet = name => "Hello, {name}!"
 
--- Multi-argument
+// Multi-argument
 add = x y => x + y
 
--- With type annotation
+// With type annotation
 multiply : Int -> Int -> Int
 multiply = a b => a * b
 ```
