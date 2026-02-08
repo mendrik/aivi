@@ -1,4 +1,4 @@
-# Generators and comprehensions
+# Generators
 
 ## Generator core encoding
 
@@ -20,11 +20,5 @@ Primitive “constructors” as definable macros:
 | :--- | :--- |
 | `generate { yield e }` | `genYield ⟦e⟧` |
 | `generate { s1; s2 }` | `genAppend ⟦gen s1⟧ ⟦gen s2⟧` |
-| `generate { for x in g; body }` | `genBind ⟦g⟧ (λx. ⟦generate { body }⟧)` where `genBind g f = ΛR. λk. λz. g (λacc a. (f a) k acc) z` |
-| `generate { when pred; body }` | `genFilter ⟦pred→λ⟧ ⟦generate { body }⟧` |
-
-Array comprehension (if present):
-
-| Surface | Desugaring |
-| :--- | :--- |
-| `[ e \| x <- g, when p ]` | `toArray (genFilter (λx. ⟦p⟧) (genMap (λx. ⟦e⟧) ⟦g⟧))` with `toArray g = g (λacc a. acc ++ [a]) []` |
+| `generate { x <- g; body }` | `genBind ⟦g⟧ (λx. ⟦generate { body }⟧)` where `genBind g f = ΛR. λk. λz. g (λacc a. (f a) k acc) z` |
+| `generate { x -> pred; body }` | `genFilter (λx. ⟦pred⟧[_ := x]) ⟦generate { body }⟧` |

@@ -64,7 +64,7 @@ predicateExpr
 Applies to:
 
 * `filter`, `find`, `takeWhile`, `dropWhile`
-* generator guards
+* generator guards (`x -> pred`)
 * patch predicates
 * user-defined functions
 
@@ -79,8 +79,8 @@ xs |> takeWhile (_ < 10)
 
 ```aivi
 generate {
-  for u in users
-  when active
+  u <- users
+  u -> active
   yield u
 }
 ```

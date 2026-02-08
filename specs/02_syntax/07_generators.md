@@ -33,10 +33,18 @@ Similar to `yield` syntax, but purely functional (no mutable iterator state).
 
 ## 7.4 Guards and predicates
 
+Generators use a Scala/Haskell-style binder:
+
+* `x <- xs` binds `x` to each element produced by `xs`
+* `x = e` is a plain (pure) local binding
+* `x -> pred` is a guard (filters `x`); multiple guards may appear
+
+In a guard, `pred` is a predicate expression with the implicit `_` bound to `x` (so bare fields like `active` resolve to `x.active`).
+
 ```aivi
 generate {
-  for x in xs
-  when price > 80
+  x <- xs
+  x -> price > 80
   yield x
 }
 ```
@@ -51,8 +59,8 @@ Async generators combine production with asynchronous effects.
 
 ```aivi
 stream = generate async {
-  for url in urls
-  data = http.get url
+  url <- urls
+  data <- http.get url
   yield data
 }
 ```
@@ -69,8 +77,8 @@ Generators provide a powerful, declarative way to build complex sequences withou
 ```aivi
 // Generate all pairs in a grid
 grid = generate {
-  for x in [0..width]
-  for y in [0..height]
+  x <- [0..width]
+  y <- [0..height]
   yield (x, y)
 }
 ```
@@ -79,10 +87,8 @@ grid = generate {
 ```aivi
 // Find active premium users with valid emails
 processed = generate {
-  for u in users
-  when u.active
-  when u.tier == Premium
-  when isValidEmail u.email
+  u <- users
+  u -> active && tier == Premium && isValidEmail email
   yield { 
     u.name, 
     u.email: toLower
