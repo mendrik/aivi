@@ -1,5 +1,7 @@
 # AIVI Language Specification (v0.1)
 
+> Note: **AIVI is a fictional language that may or may not materialize.** This document is a design/spec exploration, not a promise of an eventual implementation.
+
 ---
 
 ## 0. Overview
