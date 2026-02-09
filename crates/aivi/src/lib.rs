@@ -1,24 +1,29 @@
-use serde::Serialize;
+mod cst;
+mod diagnostics;
+mod formatter;
+mod hir;
+mod lexer;
+mod resolver;
+mod surface;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Serialize)]
-pub struct CstFile {
-    pub path: String,
-    pub byte_count: usize,
-    pub line_count: usize,
-    pub lines: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CstBundle {
-    pub files: Vec<CstFile>,
-}
+pub use cst::{CstBundle, CstFile, CstToken};
+pub use diagnostics::{
+    render_diagnostics, Diagnostic, DiagnosticLabel, FileDiagnostic, Position, Span,
+};
+pub use formatter::format_text;
+pub use hir::{HirModule, HirProgram};
+pub use resolver::check_modules;
+pub use surface::{parse_modules, parse_modules_from_tokens, Module};
 
 #[derive(Debug)]
 pub enum AiviError {
     Io(std::io::Error),
     InvalidPath(String),
+    Diagnostics,
+    InvalidCommand(String),
 }
 
 impl std::fmt::Display for AiviError {
@@ -26,6 +31,8 @@ impl std::fmt::Display for AiviError {
         match self {
             AiviError::Io(err) => write!(f, "IO error: {err}"),
             AiviError::InvalidPath(path) => write!(f, "Invalid path: {path}"),
+            AiviError::Diagnostics => write!(f, "Diagnostics emitted"),
+            AiviError::InvalidCommand(command) => write!(f, "Invalid command: {command}"),
         }
     }
 }
@@ -52,12 +59,67 @@ pub fn parse_file(path: &Path) -> Result<CstFile, AiviError> {
     let lines: Vec<String> = content.lines().map(|line| line.to_string()).collect();
     let byte_count = content.as_bytes().len();
     let line_count = lines.len();
+    let (tokens, mut diagnostics) = lexer::lex(&content);
+    let (_, parse_diags) = parse_modules_from_tokens(path, &tokens);
+    let mut parse_diags: Vec<Diagnostic> =
+        parse_diags.into_iter().map(|diag| diag.diagnostic).collect();
+    diagnostics.append(&mut parse_diags);
     Ok(CstFile {
         path: path.display().to_string(),
         byte_count,
         line_count,
         lines,
+        tokens,
+        diagnostics,
     })
+}
+
+pub fn load_modules(target: &str) -> Result<Vec<Module>, AiviError> {
+    let paths = expand_target(target)?;
+    let mut modules = Vec::new();
+    for path in paths {
+        let content = fs::read_to_string(&path)?;
+        let (mut file_modules, _) = parse_modules(&path, &content);
+        modules.append(&mut file_modules);
+    }
+    Ok(modules)
+}
+
+pub fn load_module_diagnostics(target: &str) -> Result<Vec<FileDiagnostic>, AiviError> {
+    let paths = expand_target(target)?;
+    let mut diagnostics = Vec::new();
+    for path in paths {
+        let content = fs::read_to_string(&path)?;
+        let (_, mut file_diags) = parse_modules(&path, &content);
+        diagnostics.append(&mut file_diags);
+    }
+    Ok(diagnostics)
+}
+
+pub fn desugar_target(target: &str) -> Result<HirProgram, AiviError> {
+    let paths = expand_target(target)?;
+    let mut modules = Vec::new();
+    for path in paths {
+        let content = fs::read_to_string(&path)?;
+        let (mut parsed, _) = parse_modules(&path, &content);
+        modules.append(&mut parsed);
+    }
+    Ok(hir::desugar_modules(&modules))
+}
+
+pub fn format_target(target: &str) -> Result<String, AiviError> {
+    let paths = expand_target(target)?;
+    if paths.len() != 1 {
+        return Err(AiviError::InvalidCommand(
+            "fmt expects a single file path".to_string(),
+        ));
+    }
+    let content = fs::read_to_string(&paths[0])?;
+    Ok(format_text(&content))
+}
+
+pub fn resolve_target(target: &str) -> Result<Vec<PathBuf>, AiviError> {
+    expand_target(target)
 }
 
 fn expand_target(target: &str) -> Result<Vec<PathBuf>, AiviError> {

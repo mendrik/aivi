@@ -21,6 +21,12 @@ cargo run -p aivi -- parse examples/hello.aivi
 
 # Parse all .aivi files under a directory (recursive)
 cargo run -p aivi -- parse examples/...
+
+# Check module name resolution
+cargo run -p aivi -- check examples/...
+
+# Desugar to a kernel-friendly HIR (JSON)
+cargo run -p aivi -- desugar examples/...
 ```
 
 ## Test

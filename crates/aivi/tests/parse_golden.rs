@@ -5,7 +5,8 @@ use aivi::parse_target;
 
 #[test]
 fn parse_hello_world_matches_golden() {
-    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir
         .parent()
         .and_then(|path| path.parent())
         .expect("workspace root");
