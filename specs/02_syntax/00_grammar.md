@@ -2,16 +2,57 @@
 
 This chapter is a **draft concrete grammar** for the surface language described in the Syntax section. It exists to make parsing decisions explicit and to highlight places where the compiler should emit helpful diagnostics.
 
-This is *not* intended as a complete lexical specification; it focuses on the constructs used throughout the spec examples.
+This chapter is intentionally pragmatic: it aims to be complete enough to build a real lexer/parser/LSP for the current spec and repo examples, even though many parts of the language are still evolving.
 
 
 ## 0.1 Lexical notes
 
+> These are **normative** for parsing. Typing/elaboration rules live elsewhere.
+
+### Whitespace and comments
+
+- Whitespace separates tokens and is otherwise insignificant (no indentation sensitivity in v0.1).
+- Line comments start with `//` and run to the end of the line.
+- Block comments start with `/*` and end with `*/` (nesting is not required).
+
 ### Identifiers
 
-- `lowerIdent` starts with a lowercase letter: values, functions, fields.
-- `UpperIdent` starts with an uppercase letter: types, constructors, domains, classes.
+- `lowerIdent` starts with a lowercase ASCII letter: values, functions, fields.
+- `UpperIdent` starts with an uppercase ASCII letter: types, constructors, modules, domains, classes.
+- After the first character, identifiers may contain ASCII letters, digits, and `_`.
 - Keywords are reserved and cannot be used as identifiers.
+
+### Keywords (v0.1)
+
+```text
+as case class do domain effect else export generate hiding if
+instance module over rec resource then type use when where yield
+```
+
+(`True`, `False`, `None`, `Some`, `Ok`, `Err` are ordinary constructors, not keywords.)
+
+### Literals (minimal set for v0.1)
+
+- `IntLit`: decimal digits (e.g. `0`, `42`).
+- `FloatLit`: digits with a fractional part (e.g. `3.14`).
+- `TextLit`: double-quoted with escapes and interpolation (see below).
+- `CharLit`: single-quoted (optional in v0.1; many examples can use `Text` instead).
+- `IsoInstantLit`: ISO-8601 instant-like token (e.g. `2024-05-21T12:00:00Z`), used by the `Calendar`/`Time` domains.
+- `SuffixedNumberLit`: `IntLit` or `FloatLit` followed immediately by a suffix (e.g. `10px`, `100%`, `30s`, `1min`).
+
+`SuffixedNumberLit` is *lexical*; its meaning is **domain-resolved** (see Domains). The lexer does not decide whether `1m` is “month” or “meter”.
+
+### Text literals and interpolation
+
+Text literals are delimited by `"` and support interpolation segments `{ Expr }`:
+
+```aivi
+"Hello"
+"Count: {n}"
+"{user.name}: {status}"
+```
+
+Inside a `TextLit`, `{` starts interpolation and `}` ends it; braces must be balanced within the interpolated expression.
 
 ### Separators (layout)
 
@@ -23,22 +64,45 @@ as a separator. The parser should treat consecutive separators as one.
 
 In addition, many comma-delimited forms allow `,` as an alternative separator.
 
+We name these separators in the grammar:
+
+```ebnf
+Sep        := ( Newline | ";" ) { ( Newline | ";" ) } ;
+FieldSep   := Sep | "," ;
+```
+
 
 ## 0.2 Top level
 
 ```ebnf
 Program        := { TopItem } ;
-TopItem        := { Decorator } (Definition | ModuleDef) ;
+TopItem        := { Decorator } (ModuleDef | Definition) ;
 
 Decorator      := "@" lowerIdent [ DecoratorArg ] Sep ;
 DecoratorArg   := Expr | RecordLit ;
 
-Definition     := TypeSig | Binding ;
-TypeSig        := lowerIdent ":" Type Sep ;
-Binding        := Pattern "=" Expr Sep ;
+Definition     := ValueSig
+               | ValueBinding
+               | TypeAlias
+               | TypeDef
+               | DomainDef
+               | ClassDef
+               | InstanceDef ;
+
+ValueSig       := lowerIdent ":" Type Sep ;
+ValueBinding   := Pattern "=" Expr Sep ;
+
+TypeAlias      := "type" UpperIdent [ TypeParams ] "=" TypeRhs Sep ;
+TypeDef        := UpperIdent [ TypeParams ] "=" TypeRhs Sep ;
+TypeParams     := UpperIdent { UpperIdent } ;
+TypeRhs        := Type
+               | RecordType
+               | [ Sep? "|" ] ConDef { Sep? "|" ConDef } ;
+ConDef         := UpperIdent { TypeAtom } ;
 
 ModuleDef      := "module" ModulePath "=" ModuleBody Sep ;
-ModulePath     := lowerIdent { "." lowerIdent } ;
+ModulePath     := ModuleSeg { "." ModuleSeg } ;
+ModuleSeg      := lowerIdent | UpperIdent ;
 ModuleBody     := "{" { ModuleItem } "}" ;
 ModuleItem     := ExportStmt | UseStmt | Definition | ModuleDef ;
 ExportStmt     := "export" ( "*" | ExportList ) Sep ;
@@ -50,6 +114,20 @@ UseSpec        := "as" UpperIdent
                | "hiding" "(" ImportList ")" ;
 ImportList     := ImportItem { "," ImportItem } ;
 ImportItem     := (lowerIdent | UpperIdent) [ "as" (lowerIdent | UpperIdent) ] ;
+
+DomainDef      := "domain" UpperIdent "over" Type "=" "{" { DomainItem } "}" Sep ;
+DomainItem     := TypeAlias | TypeDef | ValueSig | ValueBinding | OpDef | DeltaLitBinding ;
+OpDef          := "(" Operator ")" ":" Type Sep
+               | "(" Operator ")" Pattern { Pattern } "=" Expr Sep ;
+Operator       := "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "++" | "??"
+               | "&" | "|" | "^" | "~" | "<<" | ">>" ;
+DeltaLitBinding:= SuffixedNumberLit "=" Expr Sep ;
+
+ClassDef       := "class" UpperIdent ClassHead "=" "{" { ValueSig | ValueBinding } "}" Sep ;
+ClassHead      := "(" UpperIdent "*" { "*" } ")" { TypeAtom } ;
+
+InstanceDef    := "instance" [ UpperIdent ":" ] UpperIdent InstanceHead "=" RecordLit Sep ;
+InstanceHead   := "(" Type ")" ;
 ```
 
 
@@ -59,40 +137,92 @@ ImportItem     := (lowerIdent | UpperIdent) [ "as" (lowerIdent | UpperIdent) ] ;
 Expr           := IfExpr ;
 
 IfExpr         := "if" Expr "then" Expr "else" Expr
-               | MatchExpr ;
+               | LambdaExpr ;
 
-MatchExpr      := PatchExpr [ "?" MatchArms ] ;
+LambdaExpr     := LambdaArgs "=>" Expr
+               | MatchExpr ;
+LambdaArgs     := PatParam { PatParam } ;
+PatParam       := lowerIdent
+               | "_"
+               | RecordPat
+               | TuplePat
+               | ListPat
+               | "(" PatParam ")" ;
+
+MatchExpr      := PipeExpr [ "?" MatchArms ] ;
 MatchArms      := Sep? "|" Arm { Sep "|" Arm } ;
 Arm            := Pattern [ "when" Expr ] "=>" Expr ;
 
-PatchExpr      := PipeExpr { "<|" PatchLit } ;
-PipeExpr       := AppExpr { "|>" AppExpr } ;
+PipeExpr       := CoalesceExpr { "|>" CoalesceExpr } ;
 
-AppExpr        := Atom { Atom } ;
+CoalesceExpr   := OrExpr { "??" OrExpr } ;
+OrExpr         := AndExpr { "||" AndExpr } ;
+AndExpr        := EqExpr { "&&" EqExpr } ;
+EqExpr         := CmpExpr { ("==" | "!=") CmpExpr } ;
+CmpExpr        := BitOrExpr { ("<" | "<=" | ">" | ">=") BitOrExpr } ;
+BitOrExpr      := BitXorExpr { "|" BitXorExpr } ;
+BitXorExpr     := BitAndExpr { "^" BitAndExpr } ;
+BitAndExpr     := ShiftExpr { "&" ShiftExpr } ;
+ShiftExpr      := AddExpr { ("<<" | ">>") AddExpr } ;
+AddExpr        := MulExpr { ("+" | "-" | "++") MulExpr } ;
+MulExpr        := UnaryExpr { ("*" | "/" | "%") UnaryExpr } ;
+UnaryExpr      := ("!" | "-" | "~" ) UnaryExpr
+               | PatchExpr ;
+
+PatchExpr      := AppExpr { "<|" PatchLit } ;
+
+AppExpr        := PostfixExpr { PostfixExpr } ;
+PostfixExpr    := Atom { "." lowerIdent } ;
 
 Atom           := Literal
                | lowerIdent
                | UpperIdent
-               | "." lowerIdent
+               | "." lowerIdent                 (* accessor sugar *)
                | "(" Expr ")"
                | TupleLit
                | ListLit
                | RecordLit
                | Block
-               | EffectBlock ;
+               | EffectBlock
+               | GenerateBlock
+               | ResourceBlock
+               | JSXElement ;
 
 Block          := "do" "{" { Stmt } "}" ;
 EffectBlock    := "effect" "{" { Stmt } "}" ;
-Stmt           := BindStmt | Binding | Expr Sep ;
+GenerateBlock  := "generate" "{" { GenStmt } "}" ;
+ResourceBlock  := "resource" "{" { ResStmt } "}" ;
+
+Stmt           := BindStmt | ValueBinding | Expr Sep ;
 BindStmt       := Pattern "<-" Expr Sep ;
 
+GenStmt        := BindStmt
+               | GuardStmt
+               | ValueBinding
+               | "yield" Expr Sep
+               | "loop" Pattern "=" Expr "=>" "{" { GenStmt } "}" Sep ;
+GuardStmt      := lowerIdent "->" Expr Sep ;
+
+ResStmt        := ValueBinding
+               | BindStmt
+               | Expr Sep
+               | "yield" Expr Sep ;
+
 TupleLit       := "(" Expr "," Expr { "," Expr } ")" ;
-ListLit        := "[" [ Expr { "," Expr } | Range ] "]" ;
+ListLit        := "[" [ Expr { FieldSep Expr } | Range ] "]" ;
 Range          := Expr ".." Expr ;
 
 RecordLit      := "{" { RecordField } "}" ;
-RecordField    := lowerIdent ":" Expr [ FieldSep ] ;
-FieldSep       := Sep | "," ;
+RecordField    := lowerIdent [ ":" Expr ] [ FieldSep ] ;
+
+Literal        := "True"
+               | "False"
+               | IntLit
+               | FloatLit
+               | TextLit
+               | CharLit
+               | IsoInstantLit
+               | SuffixedNumberLit ;
 ```
 
 **Notes**
@@ -128,7 +258,7 @@ Select         := "[" ( "*" | Expr ) "]" ;
 A *unary* multi-clause function can be written using arms directly:
 
 ```ebnf
-Binding        := lowerIdent "=" FunArms Sep ;
+ValueBinding   := lowerIdent "=" FunArms Sep ;
 FunArms        := "|" Arm { Sep "|" Arm } ;
 ```
 
@@ -142,24 +272,25 @@ nextState =
   | (state, _)    => state
 ```
 
-
-## 0.6 Types (minimal)
+## 0.6 Types
 
 ```ebnf
 Type           := TypeArrow ;
-TypeArrow      := TypeApp [ "->" TypeArrow ] ;
+TypeArrow      := TypeAnd [ "->" TypeArrow ] ;
+TypeAnd        := TypeApp { "&" TypeApp } ;
 TypeApp        := TypeAtom { TypeAtom } ;
 TypeAtom       := UpperIdent
                | lowerIdent
+               | "*"
                | "(" Type ")"
                | TupleType
                | RecordType ;
 
 TupleType      := "(" Type "," Type { "," Type } ")" ;
 RecordType     := "{" { RecordTypeField } "}" ;
-RecordTypeField:= lowerIdent ":" Type [ FieldSep ] ;
+RecordTypeField:= lowerIdent ":" Type { FieldDecorator } [ FieldSep ] ;
+FieldDecorator := "@" lowerIdent [ DecoratorArg ] ;
 ```
-
 
 ## 0.7 Patterns
 
@@ -174,22 +305,23 @@ PatAtom        := "_"
                | RecordPat
                | ConPat ;
 
-ConPat         := UpperIdent Pattern ;
+ConPat         := UpperIdent { PatAtom } ;
 TuplePat       := "(" Pattern "," Pattern { "," Pattern } ")" ;
-ListPat        := "[" [ Pattern { "," Pattern } [ "," "..." lowerIdent ] ] "]" ;
+ListPat        := "[" [ Pattern { "," Pattern } [ "," "..." [ (lowerIdent | "_") ] ] ] "]" ;
 
 RecordPat      := "{" { RecordPatField } "}" ;
-RecordPatField := RecordPatKey [ ":" Pattern ] [ FieldSep ] ;
+RecordPatField := RecordPatKey [ (":" Pattern) | ("@" Pattern) ] [ FieldSep ] ;
 RecordPatKey   := lowerIdent { "." lowerIdent } ;
 ```
 
-**Notes**
+## 0.8 JSX (parsing note)
 
-- `v@p` binds the whole matched value to `v` while also matching `p`.
-- Record patterns permit dotted keys for deep destructuring (e.g. `{ data.user.profile@{ name } }`).
+JSX literals are a *secondary* syntax that is easiest to parse with a dedicated sub-parser once a `<` token is seen in an expression position.
+
+This grammar document treats JSX as a single `JSXElement` atom (see `specs/02_syntax/13_jsx_literals.md` for surface rules and desugaring intent).
 
 
-## 0.8 Diagnostics (where the compiler should nag)
+## 0.9 Diagnostics (where the compiler should nag)
 
 - **Likely-missed `do`**: if `{ ... }` contains `=` bindings or statement separators, error and suggest `do { ... }` (since `{ ... }` is record-shaped).
 - **Arms without a `?`**: `| p => e` is only valid after `?` *or* directly after `=` in the multi-clause unary function form.

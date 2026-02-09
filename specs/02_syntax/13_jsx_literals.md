@@ -1,3 +1,5 @@
+# JSX Literals
+
 AIVI supports **JSX-like syntax** as domain sugar for the `Html` domain. Tags like `div`, `span`, etc., are regular functions defined within the `aivi.std.html` module. Any domain can define its own syntax sugar by providing a mapping from tree structures to domain-specific constructors.
 
 
@@ -25,7 +27,8 @@ header = div [ class "header" ] (
 ```
 
 Attribute syntax:
-- `name=value` — value is any AIVI expression
+- `name="text"` — attribute value as text
+- `name={expr}` — attribute value as an AIVI expression
 - `name` alone — shorthand for `name=True`
 - `{...record}` — spread attributes from a record
 
@@ -50,7 +53,7 @@ userAge = user => <p>Age: {user.age ?? "Unknown"}</p>
 
 ```aivi
 badge = user => <div>
-  {user.verified ? <span class="verified">✓</span> : <></>}
+  {if user.verified then <span class="verified">✓</span> else <></>}
   <span>{user.name}</span>
 </div>
 ```
@@ -130,7 +133,7 @@ items = fragment [
 | :--- | :--- |
 | `<div>` | `div []` |
 | `<div class=x>` | `div [ class x ]` |
-| `<div>text</div>` | `div [] (TextNode \`text\`)` |
+| `<div>text</div>` | `div [] (TextNode "text")` |
 | `<div>{expr}</div>` | `div [] expr` |
 | `<div>{a}{b}</div>` | `div [] (fragment [a, b])` |
 | `<><A/><B/></>` | `fragment [A, B]` |
@@ -146,7 +149,7 @@ UserCard = user => <div class="user-card">
   <img src={user.avatar} alt={user.name} />
   <h3>{user.name}</h3>
   <p class="bio">{user.bio ?? "No bio provided"}</p>
-  {user.verified ? <span class="badge">Verified</span> : <></>}
+  {if user.verified then <span class="badge">Verified</span> else <></>}
   <ul class="stats">
     {user.stats |> map (s => <li>
       <strong>{s.label}:</strong> {s.value}
@@ -193,8 +196,8 @@ Sidebar = { items } => <aside>
 ### Expressive Attribute Binding
 ```aivi
 // Dynamic class names and spread attributes
-Input = { error, ...props } => <input
-  class={["input", error ? "error" : "valid"] |> join " "}
-  {...props}
+Input = { error, attrs } => <input
+  class={if error then "input error" else "input valid"}
+  {...attrs}
 />
 ```

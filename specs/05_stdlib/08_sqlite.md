@@ -87,14 +87,18 @@ user = db.users <= { id: 1 }
 
 ### Patching Rows
 
-Use the standard patch operator on a fetched row to trigger an `UPDATE`:
+Patching is **pure**: it computes an updated row value.
+
+Persisting the change is a separate effectful operation (domain/API-defined), which makes the boundary between “compute” and “do I/O” explicit:
 
 ```aivi
 user = db.users <= { id: 1 }
 
-// Patching a Row record triggers an effectful update
+user2 = user <| { name: "Grace" }
+
 effect {
-  user <| { name: "Grace" }
+  _ <- db.update user2
+  pure Unit
 }
 ```
 

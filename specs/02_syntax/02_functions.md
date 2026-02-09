@@ -50,11 +50,11 @@ const = x _ => x
 
 // Flip arguments
 flip = f => x y => f y x
-```
-
+ 
 // Function composition is most common via the pipe operator:
 processName = name => name |> trim |> lowercase |> capitalize
 result = processName "  HELLO  "
+```
 
 
 ### Higher-Order Functions
@@ -98,7 +98,7 @@ users = [
 // Data processing pipeline
 activeNames = users
   |> filter active
-  |> map name
+  |> map .name
   |> sort
   |> join ", "
 // "Alice, Carol"
@@ -106,7 +106,7 @@ activeNames = users
 // Mathematical series
 sigma = [1..100]
   |> filter (_ % 2 == 0)
-  |> map (pow _ 2) // or map _²
+  |> map (n => pow n 2)
   |> sum
 ```
 
@@ -116,14 +116,14 @@ Functions can be combined to form new functions without naming their arguments, 
 
 ```aivi
 // Boolean logic composition
-isAdmin = .role == Admin
-isOwner = .id == ownerId
-canDelete = isAdmin or isOwner 
+isAdmin = role == Admin
+isOwner = id == ownerId
+canDelete = isAdmin || isOwner
 
 // Validation chains
 isEmail = contains "@"
-isLongEnough = len >> (_ > 8)
-isValidPassword = isEmail and isLongEnough
+isLongEnough = x => x |> len |> (_ > 8)
+isValidPassword = x => isEmail x && isLongEnough x
 
 // Usage
 passwords |> filter isValidPassword

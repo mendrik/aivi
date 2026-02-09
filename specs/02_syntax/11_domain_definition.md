@@ -1,4 +1,6 @@
-Domain operators are defined using standard function signatures and pattern matching. The syntax `(+) : Carrier -> Delta -> Carrier` specifies that the plus operator maps a carrier and a delta to a new carrier value. This allows for semantic arithmetic where the behavior of `+` changes based on the types involved.
+Domain operators are defined using standard function signatures and pattern matching.
+
+Operators are **not** restricted to a single “carrier + delta → carrier” shape; they are ordinary functions with ordinary types. Domain resolution uses the carrier type of the left operand (or a domain-declared carrier) to pick an implementation for an operator token like `+` or `<=`.
 
 ## 11.1 Domain Declaration Syntax
 
@@ -49,7 +51,7 @@ The carrier type determines when domain operators apply:
 
 ```aivi
 myColor : Rgb
-myColor = #ff5500
+myColor = { r: 255, g: 85, b: 0 }
 
 // Resolved via Color domain because myColor : Rgb
 result = myColor + 10l
@@ -72,7 +74,11 @@ When multiple domains define overlapping literals, resolution follows import ord
 
 ## 11.4 Multi-Carrier Domains
 
-Some domains span multiple carrier types:
+Some domains conceptually span multiple carrier types.
+
+In v0.1, the simplest (and most parser-friendly) form is: **one `domain` definition per carrier type**.
+
+More advanced “multi-carrier” syntax with constraints (e.g. `where a in (...)`) is a future extension; examples below are illustrative only.
 
 ```aivi
 domain Vector over (Vec2 | Vec3 | Vec4) = {

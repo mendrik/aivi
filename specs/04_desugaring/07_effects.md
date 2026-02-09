@@ -1,17 +1,10 @@
-# Effects: `effect` block and `do`
+# Effects: `effect` block
 
 Kernel effect primitives:
 
 * `pure : A -> Effect E A`
 * `bind : Effect E A -> (A -> Effect E B) -> Effect E B`
-
-## `do` (Monad comprehension)
-
-| Surface | Desugaring |
-| :--- | :--- |
-| `do { x <- mx; body }` | `flatMap ⟦mx⟧ (λx. ⟦do { body }⟧)` |
-| `do { x = e; body }` | `let x = ⟦e⟧ in ⟦do { body }⟧` |
-| `do { e }` | `⟦e⟧` |
+* `fail : E -> Effect E A`
 
 ## `effect { … }`
 
@@ -21,6 +14,8 @@ Kernel effect primitives:
 | :--- | :--- |
 | `effect { x <- e; body }` | `bind ⟦e⟧ (λx. ⟦effect { body }⟧)` |
 | `effect { x = e; body }` | `let x = ⟦e⟧ in ⟦effect { body }⟧` |
-| `effect { e }` | `⟦e⟧` |
+| `effect { e }` | `⟦e⟧` (the final expression must already be an `Effect`) |
+
+If you want to return a pure value from an effect block, write `pure value` as the final expression.
 
 If the surface allows `print` etc as effectful calls, those are already `Effect`-typed; no special desugaring beyond `bind`.

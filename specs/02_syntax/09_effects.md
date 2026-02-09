@@ -11,6 +11,18 @@ Effectful operations in AIVI are modeled using the `Effect E A` type, where:
 - **Cancellation**: Cancellation is an asynchronous signal that stops the execution of an effect. When cancelled, the effect is guaranteed to run all registered cleanup (see [Resources](15_resources.md)).
 - **Transparent Errors**: Errors in `E` are part of the type signature, forcing explicit handling or propagation.
 
+### Core operations (surface names)
+
+Effect sequencing is expressed via `effect { ... }` blocks, but the underlying interface is:
+
+- `pure : A -> Effect E A` (return a value)
+- `bind : Effect E A -> (A -> Effect E B) -> Effect E B` (sequence)
+- `fail : E -> Effect E A` (abort with an error)
+
+For *handling* an effect error as a value, the standard library provides:
+
+- `attempt : Effect E A -> Effect E (Result E A)`
+
 
 ## 9.2 `effect` blocks
 
@@ -18,6 +30,7 @@ Effectful operations in AIVI are modeled using the `Effect E A` type, where:
 main = effect {
   cfg <- load (file.json "config.json")
   _ <- print "loaded"
+  pure Unit
 }
 ```
 
@@ -29,6 +42,7 @@ Inside an `effect { ... }` block:
 - `x = e` is a pure local binding
 - `x <- res` acquires a `Resource` (see [Resources](15_resources.md))
 - Branching is done with ordinary expressions (`if`, `case`, `?`); `->` guards are generator-only.
+- The final expression must be an `Effect` (commonly `pure value` or an effect call like `print "..."`).
 
 Compiler checks:
 
@@ -37,22 +51,19 @@ Compiler checks:
 
 ### `if` with nested blocks inside `effect`
 
-`if` is an expression, so you can branch inside an `effect { … }` block. When a branch needs multiple statements, use a `do { … }` block to group them (since `{ … }` is reserved for record-shaped forms). The `do { … }` is still inside the surrounding `effect { … }`, so it may contain:
-
-- effect binds (`x <- eff`)
-- pure local bindings (`x = e`)
-- a final expression that becomes the branch result
+`if` is an expression, so you can branch inside an `effect { … }` block. When a branch needs multiple steps, use a nested `effect { … }` block (since `{ … }` is reserved for record-shaped forms).
 
 This pattern is common when a branch needs multiple effectful steps:
 
 ```aivi
 main = effect {
   u <- loadUser
-  if u.isAdmin then do {
+  token <- if u.isAdmin then effect {
     _ <- log "admin login"
     token <- mintToken u
-    token
-  } else "guest"
+    pure token
+  } else pure "guest"
+  pure token
 }
 ```
 
@@ -64,8 +75,8 @@ An explicit `effect { … }` is itself an expression of type `Effect E A`. If yo
 
 ```aivi
 main = effect {
-  token <- if shouldMint then effect { mintToken user } else effect { "guest" }
-  token
+  token <- if shouldMint then mintToken user else pure "guest"
+  pure token
 }
 ```
 
@@ -99,11 +110,11 @@ Example translation:
 // Sequence with effect block
 transfer fromAccount toAccount amount = effect {
   balance <- getBalance fromAccount
-  if balance >= amount then do {
+  if balance >= amount then effect {
     _ <- withdraw fromAccount amount
     _ <- deposit toAccount amount
-    Ok Unit
-  } else Err InsufficientFunds
+    pure Unit
+  } else fail InsufficientFunds
 }
 
 // Equivalent functional composition
@@ -112,9 +123,9 @@ transfer fromAccount toAccount amount =
     if balance >= amount then
       withdraw fromAccount amount |> bind (_ =>
         deposit toAccount amount |> bind (_ =>
-          pure (Ok Unit)))
+          pure Unit))
     else
-      pure (Err InsufficientFunds)
+      fail InsufficientFunds
   )
 ```
 ## 9.5 Expressive Effect Composition
@@ -128,7 +139,7 @@ setup = effect {
   cfg <- loadConfig "prod.json"
   data <- fetchRemoteData cfg
   _ <- logSuccess data
-  Unit
+  pure Unit
 }
 ```
 
@@ -136,14 +147,14 @@ setup = effect {
 ```aivi
 // Attempt operation, providing a typed default on error
 getUser = id => effect {
-  res <- api.fetchUser id
+  res <- attempt (api.fetchUser id)
   res ?
-    | Ok user => user
-    | Err _   => GuestUser
+    | Ok user => pure user
+    | Err _   => pure GuestUser
 }
 
 validatedUser = effect {
   u <- getUser 123
-  if u.age > 18 then Ok (toAdmin u) else Err TooYoung
+  if u.age > 18 then pure (toAdmin u) else fail TooYoung
 }
 ```

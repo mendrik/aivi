@@ -4,6 +4,7 @@
 | :--- | :--- |
 | Lambdas | λ |
 | Multi-arg functions | currying |
+| Recursion | `let rec` |
 | Patterns | case |
 | `@` binding | primitive |
 | Records | row types + update |

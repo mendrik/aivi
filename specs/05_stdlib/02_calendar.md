@@ -51,13 +51,17 @@ isLeapYear { year } =
   (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0))
 
 daysInMonth : Date -> Int
-daysInMonth { year, month } = match month with
-  | 2 -> if isLeapYear { year } then 29 else 28
-  | 4 | 6 | 9 | 11 -> 30
-  | _ -> 31
+daysInMonth { year, month } =
+  month ?
+  | 2  => if isLeapYear { year } then 29 else 28
+  | 4  => 30
+  | 6  => 30
+  | 9  => 30
+  | 11 => 30
+  | _  => 31
 
 endOfMonth : Date -> Date
-endOfMonth date = { date | day: daysInMonth date }
+endOfMonth date = date <| { day: daysInMonth date }
 
 addDays : Date -> Int -> Date
 addDays date n = // normalize day overflow/underflow

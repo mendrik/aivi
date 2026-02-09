@@ -2,13 +2,23 @@
 
 ## 3.1 Primitive Types
 
-AIVI includes a comprehensive set of primitive types for high-integrity data handling. Type combinators (like `&` for record/type composition, or domain-specific type transformations) are handled via the Domain system.
+AIVI distinguishes:
+
+- **Compiler primitives**: types the compiler/runtime must know about to execute code.
+- **Standard library types**: types defined in AIVI source (possibly with compiler-known representation in early implementations).
+
+In v0.1, the recommended minimal set of **compiler primitives** is:
 
 ```aivi
 Unit
 Bool
 Int
 Float
+```
+
+Everything else below should be treated as a **standard library type** (even if an implementation chooses to represent it specially at first for performance/interop).
+
+```aivi
 Decimal
 BigInt
 Text
@@ -24,7 +34,7 @@ ZonedDateTime
 Numeric suffixes:
 
 * `42n` → `BigInt`
-* `3.14d` → `Decimal`
+* `3.14dec` → `Decimal`
 
 
 ## 3.2 Algebraic Data Types

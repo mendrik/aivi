@@ -29,7 +29,7 @@ Deltas represent **change**, not quantities.
 Properties:
 
 * deltas are not numbers
-* deltas have no arithmetic
+* deltas have no intrinsic arithmetic (any operators must be domain-defined)
 * deltas are interpreted by domains
 
 
@@ -66,7 +66,7 @@ transparent = activeColor <| { alpha: 0.5 }
 
 // Vector arithmetic
 velocity = (10, 5) // Inferred as Vector
-position2 = position1 + (velocity * 2.0s)
+position2 = position1 + (velocity * 2.0)
 ```
 
 ### Typed Custom Domains
@@ -76,12 +76,7 @@ total = usd 100 + usd 50 // OK
 err = usd 100 + eur 50   // Compile-time Error
 ```
 
-If you want more literal-style surface syntax, the same idea could be expressed with currency suffixes (as sugar):
-
-```aivi
-total = 100$ + 50$ // OK
-err = 100$ + 50€   // Compile-time Error
-```
+Currency suffix literals (e.g. `100$`) are a possible future extension, but are out of scope for the v0.1 lexer rules (which restrict suffix literals to ASCII identifier-like suffixes plus `%`).
 
 ### Built-in operator domains
 

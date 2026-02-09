@@ -11,7 +11,24 @@ Source K A
 - `K` — the **kind** of source (File, Http, Db, etc.)
 - `A` — the **decoded type** of the content
 
-Sources are effectful. Loading a source performs I/O and returns a `Result Error A`. All source interactions must occur within an `effect` block.
+Sources are effectful. Loading a source performs I/O and returns an `Effect E A` (where `E` captures the possible source errors). All source interactions must occur within an `effect` block.
+
+Typical API shape:
+
+```aivi
+load : Source K A -> Effect (SourceError K) A
+```
+
+To handle errors as values, use `attempt` (see [Effects](09_effects.md)):
+
+```aivi
+effect {
+  res <- attempt (load (file.read "./README.md"))
+  res ?
+    | Ok txt => pure txt
+    | Err _  => pure "(missing)"
+}
+```
 
 
 ## 12.2 File Sources

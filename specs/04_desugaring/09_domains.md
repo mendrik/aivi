@@ -65,8 +65,8 @@ position + Physics.1m
 Domain operators follow standard precedence. Domains do not redefine precedence — only semantics:
 
 ```aivi
-date + 1m * 2  // Parsed as: date + (1m * 2)
-               // Error if (*) not defined for Delta
+1 + 2 * 3      // Parsed as: 1 + (2 * 3)
+date + 1m      // Parsed as: (date + 1m)
 ```
 
 
@@ -76,4 +76,3 @@ date + 1m * 2  // Parsed as: date + (1m * 2)
 2. **Delta expansion** — Replace literals with constructors
 3. **Domain resolution** — Match (operator, carrier) to domain
 4. **Function substitution** — Replace operator with implementation
-

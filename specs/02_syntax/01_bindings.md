@@ -28,6 +28,24 @@ x = x + 1
 
 This introduces a new binding; no mutation exists. This is common in functional languages like OCaml and Rust (re-binding) but distinct from mutation.
 
+## 1.2.1 Recursion (module level)
+
+Within a `module ... = { ... }` body, top-level value bindings are **recursive**: a binding may refer to itself and to bindings that appear later in the same module body.
+
+This supports ordinary recursive functions:
+
+```aivi
+module demo.recursion = {
+  export sum
+
+  sum =
+    | []        => 0
+    | [h, ...t] => h + sum t
+}
+```
+
+Local recursion inside `do { ... }` / `effect { ... }` blocks is a future surface feature; in v0.1, prefer defining recursive helpers at module scope.
+
 
 ## 1.3 Pattern Bindings
 
@@ -96,7 +114,7 @@ serverUrl = "http://{host}:{port}"
 point = (10, 20)
 (x, y) = point
 
-distance = sqrt (x² + y²) // Unicode powers (², ³, etc.) are supported as syntactic sugar for `pow x 2`.
+distance = sqrt ((x * x) + (y * y))
 ```
 
 ### Deep path destructuring

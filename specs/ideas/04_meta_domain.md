@@ -10,7 +10,7 @@ A **meta-domain** allows AIVI to express domain definitions as first-class data 
 ## The Domain Domain
 
 ```aivi
-module aivi.meta/domain = {
+module aivi.meta.domain = {
   export domain Domain
   export DomainDef, Rule, Operator
   
@@ -32,14 +32,14 @@ module aivi.meta/domain = {
   
   domain Domain over DomainDef = {
     (+) : DomainDef -> Rule -> DomainDef
-    (+) def rule = { def | rules: def.rules + [rule] }
+    (+) def rule = def <| { rules: def.rules ++ [rule] }
     
     (++) : DomainDef -> DomainDef -> DomainDef
     (++) base ext = {
       name: ext.name
-      carriers: base.carriers + ext.carriers
-      deltas: base.deltas + ext.deltas
-      rules: base.rules + ext.rules
+      carriers: base.carriers ++ ext.carriers
+      deltas: base.deltas ++ ext.deltas
+      rules: base.rules ++ ext.rules
     }
   }
 }
@@ -48,7 +48,7 @@ module aivi.meta/domain = {
 ## Usage: Domain Composition
 
 ```aivi
-use aivi.meta/domain
+use aivi.meta.domain
 
 // Define a base numeric domain
 numericDomain = {

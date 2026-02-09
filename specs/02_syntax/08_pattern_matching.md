@@ -20,7 +20,7 @@ Compiler checks:
 
 ```aivi
 sum =
-  | [] => 0
+  | []        => 0
   | [h, ...t] => h + sum t
 ```
 
@@ -30,8 +30,8 @@ sum =
 ```aivi
 greet =
   | { role: Admin, name } => "Welcome back, Admin {name}!"
-  | { role: Guest } => "Welcome, guest!"
-  | { name } => "Hello, {name}!"
+  | { role: Guest }       => "Welcome, guest!"
+  | { name }              => "Hello, {name}!"
 ```
 
 
@@ -42,9 +42,9 @@ Record patterns support dotted keys, so nested patterns can often be written wit
 ```aivi
 processResult =
   | Ok { data.users: [first, ...] } => "First user: {first.name}"
-  | Ok { data.users: [] } => "No users found"
-  | Err { code: 404 } => "Not found"
-  | Err { code, message } => "Error {code}: {message}"
+  | Ok { data.users: [] }           => "No users found"
+  | Err { code: 404 }               => "Not found"
+  | Err { code, message }           => "Error {code}: {message}"
 ```
 
 
@@ -70,7 +70,7 @@ classify =
 Option A = None | Some A
 
 getOrDefault = default => v => v ?
-  | None => default
+  | None       => default
   | Some value => value
 
 userName = user.nickname |> getOrDefault "Anonymous"
@@ -132,7 +132,7 @@ flatten =
 Expr = Num Int | Add Expr Expr | Mul Expr Expr
 
 eval =
-  | Num n => n
+  | Num n   => n
   | Add a b => eval a + eval b
   | Mul a b => eval a * eval b
 
@@ -146,9 +146,9 @@ Pattern matching excels at simplifying complex conditional branches into readabl
 
 ```aivi
 headerLabel = response ?
-  | { data.user.profile.{name} } => name
-  | { data.guest: True }         => "Guest"
-  | _                            => "Unknown"
+  | { data.user.profile@{ name } } => name
+  | { data.guest: True }           => "Guest"
+  | _                              => "Unknown"
 ```
 
 ### Concise State Machines

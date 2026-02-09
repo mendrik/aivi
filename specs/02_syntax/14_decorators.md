@@ -19,7 +19,7 @@ Decorators appear before the binding they annotate.
 
 | Decorator | Usage | Meaning |
 | :--- | :--- | :--- |
-| `@static` | `@static x = file.read \`...\`` | Embed at compile time |
+| `@static` | `@static x = file.read "..."` | Embed at compile time |
 | `@inline` | `@inline f = ...` | Always inline function |
 | `@deprecated` | `@deprecated msg` | Emit warning on use |
 
@@ -27,12 +27,12 @@ Decorators appear before the binding they annotate.
 
 | Decorator | Usage | Meaning |
 | :--- | :--- | :--- |
-| `@table` | `@table \`users\`` | Bind type to SQL table |
+| `@table` | `@table "users"` | Bind type to SQL table |
 | `@primary` | `id: Int @primary` | Primary key column |
 | `@auto` | `id: Int @auto` | Auto-increment |
 | `@unique` | `email: Text @unique` | Unique constraint |
 | `@default` | `createdAt: Instant @default now` | Default value |
-| `@migration` | `@migration \`001_name\`` | Database migration |
+| `@migration` | `@migration "001_name"` | Database migration |
 
 ### Tooling (MCP)
 
@@ -86,7 +86,7 @@ Decorators desugar to compile-time metadata:
 
 | Surface | Desugared |
 | :--- | :--- |
-| `@table \`users\` User = {...}` | `User` + `TableMeta User "users"` |
+| `@table "users" User = {...}` | `User` + `TableMeta User "users"` |
 | `@static x = file.read ...` | Compile-time evaluation |
 | `@mcp_tool f = ...` | Register in MCP manifest |
 

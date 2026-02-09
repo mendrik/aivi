@@ -1,4 +1,6 @@
-Generators are **pure, pull-based sequence producers**. They are distinct from effects: regular `generate` blocks are purely functional and cannot perform I/O, while `generate async` blocks (see 7.6) are effectful and can await external data.
+# Generators
+
+Generators are **pure, pull-based sequence producers**. They are distinct from effects: a `generate { ... }` block is purely functional and cannot perform I/O.
 
 They:
 
@@ -7,14 +9,13 @@ They:
 * model finite or infinite data
 
 
-## 7.2 Generator type
+## 7.1 Generator type
 
 ```aivi
 Generator A
 ```
 
-
-## 7.3 Generator expressions
+## 7.2 Generator expressions
 
 ```aivi
 gen = generate {
@@ -47,7 +48,7 @@ generate {
 ```
 
 
-## 7.4 Guards and predicates
+## 7.3 Guards and predicates
 
 Generators use a Scala/Haskell-style binder:
 
@@ -78,23 +79,17 @@ generate {
 Predicate rules are identical to `filter`.
 
 
-## 7.6 Async Generators
+## 7.4 Effectful streaming (future direction)
 
-Async generators combine production with asynchronous effects.
+The v0.1 surface syntax does **not** include `generate async`.
 
-```aivi
-stream = generate async {
-  url <- urls
-  data <- http.get url
-  yield data
-}
-```
+The recommended model is:
 
-### Safety and Cleanup
-Async generators are integrated with the AIVI concurrency tree:
-- **Cancellation**: If the consumer of an async generator stops (or is cancelled), the generator's current execution point is cancelled.
-- **Cleanup**: Use `resource { ... }` blocks (and `<-` acquisition) inside `generate async` to ensure resources are released during early termination.
-## 7.7 Expressive Sequence Logic
+- keep `Generator` pure, and
+- represent async / I/O-backed streams as an `Effect` that *produces* a generator, or via a dedicated `Stream` type in the standard library.
+
+This aligns with `specs/OPEN_QUESTIONS.md` (“generators should be pure; use `Effect` for async pull”).
+## 7.5 Expressive Sequence Logic
 
 Generators provide a powerful, declarative way to build complex sequences without intermediate collections or mutation.
 
@@ -114,10 +109,7 @@ grid = generate {
 processed = generate {
   u <- users
   u -> active && tier == Premium && isValidEmail email
-  yield { 
-    u.name, 
-    u.email: toLower
-  }
+  yield { name: u.name, email: toLower u.email }
 }
 ```
 
@@ -125,12 +117,12 @@ processed = generate {
 ```aivi
 // Infinite sequence of Fibonacci numbers
 fibs = generate {
-  loop (a, b) = (0, 1) => do {
+  loop (a, b) = (0, 1) => {
     yield a
     recurse (b, a + b)
   }
 }
 ```
 
-`loop (pat) = init => do { ... }` introduces a local tail-recursive loop for generators.
+`loop (pat) = init => { ... }` introduces a local tail-recursive loop for generators.
 Inside the loop body, `recurse next` continues with the next state.

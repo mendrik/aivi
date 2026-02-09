@@ -4,7 +4,7 @@
 
 - [x] Define module import/resolution semantics precisely.
 - [x] Specify strictness/evaluation order of `let` bindings formally.
-- [ ] Define the exact set of "primitive types" vs "standard library types".
+- [x] Define the exact set of "primitive types" vs "standard library types".
 - [x] Specify error handling for `Effect` (using `Effect E A`).
 
 ## Tooling

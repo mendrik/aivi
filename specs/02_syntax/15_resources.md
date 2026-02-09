@@ -12,9 +12,9 @@ The code after `yield` is guaranteed to run when the resource goes out of scope.
 ```aivi
 // Define a reusable resource
 managedFile path = resource {
-  handle = file.open path   // Acquire
+  handle <- file.open path  // Acquire
   yield handle              // Provide to user
-  handle.close ()           // Release
+  _ <- file.close handle    // Release
 }
 ```
 
@@ -31,8 +31,9 @@ main = effect {
   f <- managedFile "data.txt"
   
   // Use resource
-  content = f.readAll ()
+  content <- file.readAll f
   _ <- print content
+  pure Unit
 } // f is automatically closed here
 ```
 
@@ -45,7 +46,8 @@ copy src dest = effect {
   input  <- managedFile src
   output <- managedFile dest
   
-  input.copyTo output
+  _ <- file.copyTo input output
+  pure Unit
 }
 ```
 
@@ -57,13 +59,13 @@ Instead of a `defer` statement, define a small inline `resource` and bind it wit
 ```aivi
 main = effect {
   s <- resource {
-    sock = socket.connect "localhost" 8080
+    sock <- socket.connect "localhost" 8080
     yield sock
-    sock.close ()
+    _ <- socket.close sock
   }
 
-  _ <- s.send "Hello"
-  Unit
+  _ <- socket.send s "Hello"
+  pure Unit
 }
 ```
 

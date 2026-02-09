@@ -112,7 +112,5 @@ Recommendation:
 Avoid leaking WASI specifics into user code:
 - define AIVI-level types (`Path`, `Instant`, `Duration`, `FileHandle`)
 - define effectful operations in terms of those types
-- implement them using:
-  - WASI Preview 1 initially, if easiest
-  - migrate to WASI Preview 2 + component model as a later milestone
+- implement them using: WASI Preview 2 + component model
 

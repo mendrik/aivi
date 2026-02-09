@@ -15,8 +15,15 @@ Opaque in the kernel.
 bind : Effect E A → (A → Effect E B) → Effect E B
 ```
 
+## 8.3 Effect pure / failure
 
-## 8.3 Effect sequencing
+```text
+pure : A → Effect E A
+fail : E → Effect E A
+```
+
+
+## 8.4 Effect sequencing
 
 Everything desugars to `bind`.
 

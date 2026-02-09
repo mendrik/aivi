@@ -3,7 +3,7 @@
 Kernel record primitives:
 
 * `update(e, l, f)` : update/insert field `l` by applying `f` to old value (or a sentinel for missing)
-* `delete(e, l)` : remove field `l` (row shrink)
+* field removal is a **typing/elaboration** operation (row shrink) plus a runtime representation choice; a compiler may lower `-` either to a dedicated `delete(e, l)` primitive or to an `update` that drops the field in a representation-specific way.
 
 For nested paths, desugar into nested `update`/`delete`.
 
@@ -13,7 +13,7 @@ For nested paths, desugar into nested `update`/`delete`.
 | :--- | :--- |
 | `r <| { a: v }` | `update ⟦r⟧ "a" (λ_. ⟦v⟧)` (replace/insert) |
 | `r <| { a: f }` where `f` is a function | `update ⟦r⟧ "a" ⟦f⟧` (transform) |
-| `r <| { a: - }` | `delete ⟦r⟧ "a"` |
+| `r <| { a: - }` | `removeField ⟦r⟧ "a"` (derived; shrinks row type) |
 
 Nested:
 
@@ -21,7 +21,7 @@ Nested:
 | :--- | :--- |
 | `r <| { a.b: v }` | `update ⟦r⟧ "a" (λa0. update a0 "b" (λ_. ⟦v⟧))` |
 | `r <| { a.b: f }` | `update ⟦r⟧ "a" (λa0. update a0 "b" ⟦f⟧)` |
-| `r <| { a.b: - }` | `update ⟦r⟧ "a" (λa0. delete a0 "b")` |
+| `r <| { a.b: - }` | `update ⟦r⟧ "a" (λa0. removeField a0 "b")` |
 
 ## Function-as-data disambiguation `:=`
 

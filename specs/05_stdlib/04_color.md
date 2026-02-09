@@ -45,15 +45,24 @@ domain Color over Rgb = {
 ```aivi
 adjustLightness : Rgb -> Int -> Rgb
 adjustLightness col n = 
-  col |> toHsl |> (\hsl -> { hsl | l: clamp 0 1 (hsl.l + n / 100) }) |> toRgb
+  col
+    |> toHsl
+    |> (hsl => hsl <| { l: clamp 0 1 (hsl.l + n / 100) })
+    |> toRgb
 
 adjustSaturation : Rgb -> Int -> Rgb
 adjustSaturation col n =
-  col |> toHsl |> (\hsl -> { hsl | s: clamp 0 1 (hsl.s + n / 100) }) |> toRgb
+  col
+    |> toHsl
+    |> (hsl => hsl <| { s: clamp 0 1 (hsl.s + n / 100) })
+    |> toRgb
 
 adjustHue : Rgb -> Int -> Rgb
 adjustHue col n =
-  col |> toHsl |> (\hsl -> { hsl | h: (hsl.h + n) % 360 }) |> toRgb
+  col
+    |> toHsl
+    |> (hsl => hsl <| { h: (hsl.h + n) % 360 })
+    |> toRgb
 
 toRgb : Hsl -> Rgb
 toRgb { h, s, l } = // HSL to RGB conversion

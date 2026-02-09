@@ -30,15 +30,15 @@ Children = TextNode Text | Elements (List Element) | Empty
 domain Html over Element = {
   // Concatenate children
   (+) : Element -> Element -> Element
-  (+) parent child = { parent | children: append parent.children child }
+  (+) parent child = parent <| { children: append parent.children child }
   
   // Merge attributes
   (+) : Element -> Attribute -> Element
-  (+) el attr = { el | attrs: el.attrs + [attr] }
+  (+) el attr = el <| { attrs: el.attrs ++ [attr] }
   
   // Merge attribute records
-  (+) : Element -> { ... } -> Element
-  (+) el rec = { el | attrs: mergeAttrs el.attrs rec }
+  (+) : Element -> {} -> Element
+  (+) el rec = el <| { attrs: mergeAttrs el.attrs rec }
 }
 ```
 
@@ -106,9 +106,9 @@ UserList = users => <ul>
 
 Dashboard = { user, posts } => <main>
   <h1>Welcome, {user.name}!</h1>
-  {posts |> isEmpty ? 
-    <p>No posts yet.</p> : 
-    <PostList posts={posts} />}
+  {if posts |> isEmpty
+    then <p>No posts yet.</p>
+    else <PostList posts={posts} />}
 </main>
 ```
 
@@ -121,4 +121,3 @@ header = div [ class "header" ] (
   span [] (TextNode "AIVI")
 )
 ```
-
