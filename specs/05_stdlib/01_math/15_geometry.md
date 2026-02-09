@@ -2,16 +2,12 @@
 
 Primitives for shapes (`Sphere`, `Ray`, `Rect`) and collision detection.
 
-## What is this?
-
 This domain deals with the "physical" side of math: shapes and where they are. It differs from the `Vector` domain (which handles raw direction/magnitude) by introducing **surfaces** and **volumes**.
 
 Common questions this domain answers:
 *   "Did the user click on this button?" (Point vs Rectangle overlap)
 *   "Did the laser hit the enemy?" (Ray vs Sphere intersection)
 *   "What is the center of this polygon?"
-
-## Why this exists
 
 Almost every visual application needs to check if two things touch. Providing standard definitions for shapes like `Ray` and `AABB` (Axis-Aligned Bounding Box) allows for highly optimized intersection code that powers games and UI hit-testing.
 

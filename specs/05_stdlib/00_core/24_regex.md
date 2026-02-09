@@ -1,6 +1,6 @@
 # Regex Domain
 
-The `Regex` domain provides text pattern matching.
+The `Regex` domain handles **Pattern Matching** for text. Whether you're validating emails, scraping data, or searching logs, simple substring checks often aren't enough. Regex gives you a powerful, concise language to describe *shapes* of text. AIVI's regex support is safe (checked at compile-time with `~r/.../`) and fast (compiling to native matching engines), so you don't have to worry about runtime crashes from bad patterns.
 
 ## Overview
 
@@ -13,10 +13,3 @@ let match = Regex.test(email_pattern, "user@example.com")
 // With flags (example: case-insensitive)
 let email_ci = ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/i
 ```
-
-## Why this exists
-
-Text processing often requires pattern matching beyond simple substring searches. The `Regex` domain provides a safe, efficient way to find and extract data from text.
-
-- **Compile-time safety**: Using the `~r/.../` sigil ensures your regex is valid before the code runs.
-- **Efficiency**: Compiles to optimized native matching engines.

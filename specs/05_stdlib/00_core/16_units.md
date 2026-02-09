@@ -1,17 +1,6 @@
 # Units Domain
 
-The `Units` domain adds **Dimensional Analysis** to your code.
-
-## What is this?
-
-A common number like `10` is ambiguous. Is it 10 meters? 10 seconds? 10 kilograms?
-In standard programming, we often confuse them, leading to bugs (e.g., the Mars Climate Orbiter crash caused by mixing metric and imperial units).
-
-This domain lets you attach "tags" to numbers. It understands that `Meters / Seconds = Speed`, but `Meters + Seconds` is impossible nonsense.
-
-## Why this exists
-
-To bake physics and logic rules into the type system. If you try to assign a Time value to a Distance variable, AIVI will stop you *before* the code even runs.
+The `Units` domain brings **Dimensional Analysis** to your code, solving the "Mars Climate Orbiter" problem. A bare number like `10` is dangerous—is it meters? seconds? kilograms? By attaching physical units to your values, AIVI understands the laws of physics at compile time. It knows that `Meters / Seconds = Speed`, but `Meters + Seconds` is nonsense, catching bugs before they ever run.
 
 ## Overview
 

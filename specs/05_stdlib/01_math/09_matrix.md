@@ -2,16 +2,12 @@
 
 The `Matrix` domain provides grids of numbers (`Mat3`, `Mat4`) used primarily for **Transformations**.
 
-## What is a Matrix?
-
 In computer graphics, a Matrix is like a "instruction set" for moving points around in space. A single 4x4 Matrix can describe a complex combination of:
 *   Translation (Moving)
 *   Rotation (Spinning)
 *   Scaling (Growing/Shrinking)
 
 By multiplying a vector by a matrix, you apply all these changes at once. By multiplying two matrices together, you combine their effects.
-
-## Why this exists
 
 Manually calculating the new position of a 3D point after it's been rotated 30 degrees, moved 5 units, and scaled by 2x is incredibly complex algebra. Matrices simplify this to `Point * Matrix`. They are the engine of every 3D renderer.
 

@@ -2,14 +2,10 @@
 
 Data structures for modelling **Relationships** and **Networks**.
 
-## What is a Graph?
-
 In computer science, a "Graph" isn't a chart. It's a collection of things (**Nodes**) connected by lines (**Edges**).
 *   **Social Networks**: People are Nodes, Friendships are Edges.
 *   **Maps**: Cities are Nodes, Roads are Edges.
 *   **The Web**: Pages are Nodes, Hyperlinks are Edges.
-
-## Why this exists
 
 Implementing Graph algorithms (like finding the shortest path between two cities) is complex and error-prone to rewrite from scratch. This domain provides a standard way to define these networks and optimized algorithms (BFS, Dijkstra) to explore them.
 

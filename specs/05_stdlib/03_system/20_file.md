@@ -2,14 +2,10 @@
 
 This domain handles **File System Operations** defined as Side Effects.
 
-## What is this?
-
 Your code lives in memory, but data lives on disk. This domain bridges the gap. It allows you to:
 *   **Read/Write**: Load text from a config file or save user data.
 *   **Check**: See if a file exists before trying to open it.
 *   **Inspect**: Get metadata like "How big is this file?" or "When was it last modified?"
-
-## Why this exists
 
 Direct file access is dangerous (what if the file is locked? missing? corrupted?). By wrapping these operations in `Effect (Result ...)` types, AIVI forces you to handle failure cases (like "File Not Found") explicitely, making your programs crash-proof against disk errors.
 

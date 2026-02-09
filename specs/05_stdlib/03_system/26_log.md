@@ -2,8 +2,6 @@
 
 The `Log` domain provides structured logging facilities suitable for modern observability.
 
-## Why this exists
-
 `print()` is fine for debugging, but production software needs structured logs (levels, timestamps, metadata fields) that can be ingested by observability tools. This domain standardizes logging across libraries and applications.
 
 ## Overview

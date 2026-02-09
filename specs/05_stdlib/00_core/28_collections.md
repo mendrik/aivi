@@ -1,10 +1,6 @@
 # Collections Domain
 
-The `Collections` domain expands the core data structures beyond `List` and `Vector`.
-
-## Why this exists
-
-While `List` is great for simple sequences, efficient software often requires more sophisticated data structures like HashMaps, Sets, or Priority Queues for performance and semantic clarity.
+The `Collections` domain is your toolbox for structured data. While `List` is great for simple sequences, real-world software needs more. Whether you need to look up users by their ID (HashMaps), keep a list of unique tags (Sets), or process tasks by priority (Heaps), this domain provides the optimized, persistent data structures you need to write efficient and semantic code.
 
 ## Overview
 

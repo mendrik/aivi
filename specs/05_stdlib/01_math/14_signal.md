@@ -2,15 +2,11 @@
 
 Tools for **Digital Signal Processing** (DSP), including the Fast Fourier Transform.
 
-## What is this?
-
 Signals are everywhere: audio recorded from a microphone, vibrations from a sensor, or radio waves.
 *   **Time Domain**: The signal as it happens (loudness over time).
 *   **Frequency Domain**: The ingredients of the signal (how much bass vs. treble).
 
 The **Fast Fourier Transform (FFT)** is a legendary algorithm that converts a Time signal into a Frequency signal. It lets you see the "notes" inside a chord.
-
-## Why this exists
 
 If you want to filter out background noise from audio, compress an image (JPEG), or analyze stock market cycles, you need DSP. This domain provides optimized algorithms so you don't have to write complex math loops yourself.
 

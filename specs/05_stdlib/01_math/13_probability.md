@@ -2,16 +2,12 @@
 
 A library for **Statistical Distributions** and controlled randomness.
 
-## What is this?
-
 Standard random functions usually just give you a number between 0 and 1. But real-world randomness is rarely that uniform. 
 *   Heights of people follow a **Normal (Bell Curve)** distribution.
 *   Radioactive decay follows a **Poisson** distribution.
 *   Coin flips follow a **Bernoulli** distribution.
 
 This domain lets you define the *shape* of randomness you want, and then draw samples from it.
-
-## Why this exists
 
 Simulations, games, and scientific models need "textured" randomness. Instead of writing complex math to convert a simple random number into a Bell curve manually, you can just ask for a `Normal(mean, std_dev)` distribution and sample it.
 

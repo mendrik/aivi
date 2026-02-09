@@ -1,10 +1,6 @@
 # Testing Domain
 
-The `Testing` domain provides first-class support for writing and running tests within AIVI.
-
-## Why this exists
-
-Built-in testing encourages reliability from day one. It standardizes how tests are defined, discovered, and executed, removing the need for third-party test runners.
+The `Testing` domain is built right into the language because reliability shouldn't be an afterthought. Instead of hunting for third-party runners or configuring complex suites, you can just write `@test` next to your code. It provides a standard, unified way to define, discover, and run tests, making sure your code does exactly what you think it does (and keeps doing it after you refactor).
 
 ## Overview
 

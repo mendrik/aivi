@@ -2,8 +2,6 @@
 
 The `System` domain provides access to the environment and process control, abstracting over the host runtime.
 
-## Why this exists
-
 Programs need to interact with their environment: reading configuration from environment variables, handling command-line arguments, or signaling status via exit codes. This domain bridges the gap between the managed AIVI runtime and the OS.
 
 ## Overview

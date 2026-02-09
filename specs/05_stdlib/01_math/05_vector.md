@@ -2,16 +2,12 @@
 
 The `Vector` domain handles 2D and 3D vectors (`Vec2`, `Vec3`), the fundamental atoms of spatial math.
 
-## What is a Vector?
-
 A **Vector** represents a quantity that has both a magnitude (size) and a direction.
 *   **Position**: "At point (10, 50)"
 *   **Velocity**: "Moving North at 50 mph"
 *   **Force**: "Pushing down with 10 Newtons"
 
 In AIVI, vectors are first-class citizens. You can add them, scale them, and measure angles between them.
-
-## Why this exists
 
 Graphics, physics engines, and game logic run on vectors. While you *could* store `x`, `y`, and `z` variables separately, code becomes unreadable quickly. A native Vector domain allows for clean math (`v1 + v2`) and is often hardware-accelerated (SIMD) for speed.
 

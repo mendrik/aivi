@@ -1,6 +1,6 @@
 # Standard Library: Prelude
 
-The prelude is implicitly imported by all AIVI programs.
+The **Prelude** is your default toolkit. It acts as the "standard library of the standard library," automatically importing the core types and domains you use in almost every program (like `Int`, `List`, `Text`, and `Result`). It ensures you don't have to write fifty import lines just to add two numbers or print "Hello World".
 
 ```aivi
 module aivi.prelude = {
