@@ -92,6 +92,7 @@ A high-integrity functional language targeting WebAssembly.
 58. [File](05_stdlib/03_system/20_file.md)
 59. [Console](05_stdlib/03_system/21_console.md)
 60. [HTTP](05_stdlib/03_system/19_http.md)
+61. [URL](05_stdlib/03_system/25_url.md)
 62. [Crypto](05_stdlib/03_system/22_crypto.md)
 63. [System](05_stdlib/03_system/25_system.md)
 64. [Log](05_stdlib/03_system/26_log.md)

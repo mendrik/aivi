@@ -164,6 +164,7 @@ export default defineConfig({
               { text: "File", link: "/05_stdlib/03_system/20_file" },
               { text: "Console", link: "/05_stdlib/03_system/21_console" },
               { text: "HTTP", link: "/05_stdlib/03_system/19_http" },
+              { text: "URL", link: "/05_stdlib/03_system/25_url" },
               { text: "Crypto", link: "/05_stdlib/03_system/22_crypto" },
               { text: "System", link: "/05_stdlib/03_system/25_system" },
               { text: "Log", link: "/05_stdlib/03_system/26_log" }
