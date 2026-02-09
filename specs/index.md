@@ -98,29 +98,12 @@ A high-integrity functional language targeting WebAssembly.
 55. [Geometry Domain](05_stdlib/15_geometry)
 56. [Units Domain](05_stdlib/16_units)
 57. [Graph Domain](05_stdlib/17_graph)
-58. [Linear Algebra Domain](05_stdlib/18_linear_algebra)
+101. [Linear Algebra Domain](05_stdlib/18_linear_algebra)
+102. [HTTP Domain](05_stdlib/19_http)
+103. [File Domain](05_stdlib/20_file)
+104. [Console Domain](05_stdlib/21_console)
+105. [Crypto Domain](05_stdlib/22_crypto)
 
 ### Runtime
 
-59. [Concurrency](06_runtime/01_concurrency)
-
-### Ideas & Future Directions
-
-60. [WASM Target](ideas/01_wasm_target)
-61. [LiveView Frontend](ideas/02_liveview_frontend)
-62. [HTML Domains](ideas/03_html_domains)
-63. [Meta-Domain](ideas/04_meta_domain)
-64. [Tooling](ideas/05_tooling)
-65. [Cargo Package Manager](ideas/06_cargo_package_manager)
-66. [Rustc Native Pipeline](ideas/07_rustc_native_pipeline)
-
-### Guides
-
-67. [From TypeScript](guides/01_from_typescript)
-68. [From Haskell](guides/02_from_haskell)
-
-### Meta
-
-- [Spec README](README)
-- [TODO](TODO)
-- [Open Questions](OPEN_QUESTIONS)
+106. [Concurrency](06_runtime/01_concurrency)

@@ -9,6 +9,8 @@ mod typecheck;
 mod runtime;
 mod rust_codegen;
 mod pm;
+mod kernel;
+mod rust_ir;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,6 +29,8 @@ pub use surface::{
 pub use typecheck::check_types;
 pub use runtime::run_native;
 pub use rust_codegen::{compile_rust, compile_rust_lib};
+pub use kernel::{KernelProgram, lower_hir as lower_kernel};
+pub use rust_ir::{RustIrProgram, lower_kernel as lower_rust_ir};
 pub use pm::{
     collect_aivi_sources, edit_cargo_toml_dependencies, read_aivi_toml, write_scaffold, AiviToml,
     CargoDepSpec, CargoDepSpecParseError, CargoManifestEdits, ProjectKind,
@@ -129,6 +133,16 @@ pub fn desugar_target(target: &str) -> Result<HirProgram, AiviError> {
         modules.append(&mut parsed);
     }
     Ok(hir::desugar_modules(&modules))
+}
+
+pub fn kernel_target(target: &str) -> Result<kernel::KernelProgram, AiviError> {
+    let hir = desugar_target(target)?;
+    Ok(kernel::lower_hir(hir))
+}
+
+pub fn rust_ir_target(target: &str) -> Result<rust_ir::RustIrProgram, AiviError> {
+    let kernel = kernel_target(target)?;
+    rust_ir::lower_kernel(kernel)
 }
 
 pub fn format_target(target: &str) -> Result<String, AiviError> {

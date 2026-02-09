@@ -92,6 +92,9 @@
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "pnpm run build"
   },
+  "dependencies": {
+    "vscode-languageclient": "9.0.1"
+  },
   "devDependencies": {
     "@types/node": "25.2.2",
     "@types/vscode": "1.107.0",

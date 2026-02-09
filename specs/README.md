@@ -71,25 +71,11 @@ A high-integrity functional language targeting WebAssembly.
 45. [Vector Domain](05_stdlib/05_vector.md)
 46. [HTML Domain](05_stdlib/06_html.md)
 47. [Style Domain](05_stdlib/07_style.md)
-48. [SQLite Domain](05_stdlib/08_sqlite.md)
-
-### Ideas & Future Directions
-
-49. [WASM Target](ideas/01_wasm_target.md)
-50. [LiveView Frontend](ideas/02_liveview_frontend.md)
-51. [HTML Domains](ideas/03_html_domains.md)
-52. [Meta-Domain](ideas/04_meta_domain.md)
-53. [Tooling](ideas/05_tooling.md)
-
-### Guides
-
-54. [From TypeScript](guides/01_from_typescript.md)
-55. [From Haskell](guides/02_from_haskell.md)
-
-### Meta
-
-- [TODO](TODO.md)
-- [Open Questions](OPEN_QUESTIONS.md)
+74. [SQLite Domain](05_stdlib/08_sqlite.md)
+75. [HTTP Domain](05_stdlib/19_http.md)
+76. [File Domain](05_stdlib/20_file.md)
+77. [Console Domain](05_stdlib/21_console.md)
+78. [Crypto Domain](05_stdlib/22_crypto.md)
 
 
 ## Building the Specification

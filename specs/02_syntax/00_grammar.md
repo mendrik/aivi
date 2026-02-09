@@ -25,8 +25,8 @@ This chapter is intentionally pragmatic: it aims to be complete enough to build 
 ### Keywords (v0.1)
 
 ```text
-as case class do domain effect else export generate hiding if
-instance module over rec resource then type use when where yield
+as do domain effect else export generate hiding if
+instance module over recurse resource then type use yield loop
 ```
 
 (`True`, `False`, `None`, `Some`, `Ok`, `Err` are ordinary constructors, not keywords.)

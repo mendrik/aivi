@@ -5,21 +5,21 @@ use std::sync::Arc;
 use aivi::{
     parse_modules, BlockItem, ClassDecl, Def, DomainDecl, DomainItem, Expr, InstanceDecl,
     JsxAttribute, JsxChild, JsxElement, JsxNode, ListItem, MatchArm, Module, ModuleItem,
-    PathSegment, Pattern, RecordField, RecordPatternField, Span, TypeAlias, TypeCtor,
-    TypeDecl, TypeExpr, TypeSig, UseDecl,
+    PathSegment, Pattern, RecordField, RecordPatternField, Span, SpannedName, TypeAlias,
+    TypeCtor, TypeDecl, TypeExpr, UseDecl,
 };
 use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, Diagnostic,
-    DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse,
-    GotoDeclarationParams, GotoDeclarationResponse, GotoDefinitionParams,
-    GotoDefinitionResponse, GotoImplementationParams, GotoImplementationResponse, Hover,
-    HoverContents, HoverParams, InitializeParams, InitializeResult, InitializedParams, Location,
-    MarkupContent, MarkupKind, OneOf, Position, Range, ReferenceParams, ServerCapabilities,
-    SymbolKind, TextDocumentPositionParams, TextDocumentSyncCapability, TextDocumentSyncKind,
-    Url,
+    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, DeclarationCapability,
+    Diagnostic, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverContents, HoverParams,
+    HoverProviderCapability, ImplementationProviderCapability, InitializeParams, InitializeResult,
+    InitializedParams, Location, MarkupContent, MarkupKind, OneOf, Position, Range,
+    ReferenceParams, ServerCapabilities, SymbolKind, TextDocumentPositionParams,
+    TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
+use tower_lsp::lsp_types::request::{GotoDeclarationParams, GotoDeclarationResponse, GotoImplementationParams, GotoImplementationResponse};
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 #[derive(Default)]
@@ -286,7 +286,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && module.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(module.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(module.name.span.clone())));
         }
         for export in module.exports.iter() {
             if export.name == ident {
@@ -313,7 +313,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if use_decl.module.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(use_decl.module.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(use_decl.module.span.clone())));
         }
         for item in use_decl.items.iter() {
             if item.name == ident {
@@ -335,7 +335,7 @@ impl Backend {
             }
             ModuleItem::TypeSig(sig) => {
                 if include_declaration && sig.name.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(sig.name.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(sig.name.span.clone())));
                 }
                 Self::collect_type_expr_references(&sig.ty, ident, uri, locations);
             }
@@ -365,7 +365,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && def.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(def.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(def.name.span.clone())));
         }
         for param in def.params.iter() {
             Self::collect_pattern_references(param, ident, uri, locations);
@@ -381,7 +381,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && decl.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(decl.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(decl.name.span.clone())));
         }
         for param in decl.params.iter() {
             if param.name == ident {
@@ -401,7 +401,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && alias.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(alias.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(alias.name.span.clone())));
         }
         for param in alias.params.iter() {
             if param.name == ident {
@@ -419,14 +419,14 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && class_decl.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(class_decl.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(class_decl.name.span.clone())));
         }
         for param in class_decl.params.iter() {
             Self::collect_type_expr_references(param, ident, uri, locations);
         }
         for member in class_decl.members.iter() {
             if include_declaration && member.name.name == ident {
-                locations.push(Location::new(uri.clone(), Self::span_to_range(member.name.span)));
+                locations.push(Location::new(uri.clone(), Self::span_to_range(member.name.span.clone())));
             }
             Self::collect_type_expr_references(&member.ty, ident, uri, locations);
         }
@@ -440,7 +440,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && instance_decl.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(instance_decl.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(instance_decl.name.span.clone())));
         }
         for param in instance_decl.params.iter() {
             Self::collect_type_expr_references(param, ident, uri, locations);
@@ -458,7 +458,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && domain_decl.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(domain_decl.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(domain_decl.name.span.clone())));
         }
         Self::collect_type_expr_references(&domain_decl.over, ident, uri, locations);
         for item in domain_decl.items.iter() {
@@ -481,7 +481,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if include_declaration && ctor.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(ctor.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(ctor.name.span.clone())));
         }
         for arg in ctor.args.iter() {
             Self::collect_type_expr_references(arg, ident, uri, locations);
@@ -497,7 +497,7 @@ impl Backend {
         match expr {
             TypeExpr::Name(name) => {
                 if name.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span.clone())));
                 }
             }
             TypeExpr::Apply { base, args, .. } => {
@@ -538,12 +538,12 @@ impl Backend {
         match pattern {
             Pattern::Ident(name) => {
                 if name.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span.clone())));
                 }
             }
             Pattern::Constructor { name, args, .. } => {
                 if name.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span.clone())));
                 }
                 for arg in args.iter() {
                     Self::collect_pattern_references(arg, ident, uri, locations);
@@ -594,7 +594,7 @@ impl Backend {
         match expr {
             Expr::Ident(name) => {
                 if name.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span.clone())));
                 }
             }
             Expr::Literal(_) => {}
@@ -616,12 +616,12 @@ impl Backend {
             Expr::FieldAccess { base, field, .. } => {
                 Self::collect_expr_references(base, ident, uri, locations);
                 if field.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(field.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(field.span.clone())));
                 }
             }
             Expr::FieldSection { field, .. } => {
                 if field.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(field.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(field.span.clone())));
                 }
             }
             Expr::Index { base, index, .. } => {
@@ -704,7 +704,7 @@ impl Backend {
         match segment {
             PathSegment::Field(name) => {
                 if name.name == ident {
-                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span)));
+                    locations.push(Location::new(uri.clone(), Self::span_to_range(name.span.clone())));
                 }
             }
             PathSegment::Index(expr, _) => {
@@ -771,7 +771,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if element.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(element.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(element.name.span.clone())));
         }
         for attr in element.attributes.iter() {
             Self::collect_jsx_attribute_references(attr, ident, uri, locations);
@@ -788,7 +788,7 @@ impl Backend {
         locations: &mut Vec<Location>,
     ) {
         if attr.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(attr.name.span)));
+            locations.push(Location::new(uri.clone(), Self::span_to_range(attr.name.span.clone())));
         }
         if let Some(value) = &attr.value {
             Self::collect_expr_references(value, ident, uri, locations);
@@ -875,7 +875,7 @@ impl Backend {
         }
     }
 
-    fn format_type_params(params: &[aivi::SpannedName]) -> String {
+    fn format_type_params(params: &[SpannedName]) -> String {
         if params.is_empty() {
             String::new()
         } else {
@@ -1222,6 +1222,9 @@ mod tests {
 module examples.compiler.math = {
   export add, sub
 
+  add : Number -> Number -> Number
+  sub : Number -> Number -> Number
+
   add = x y => x + y
   sub = x y => x - y
 }
@@ -1301,6 +1304,31 @@ module examples.compiler.app = {
     }
 
     #[test]
+    fn build_hover_reports_type_signature() {
+        let text = sample_text();
+        let uri = sample_uri();
+        let position = position_for(text, "add 1 2");
+        let hover = Backend::build_hover(text, &uri, position).expect("hover found");
+        let HoverContents::Markup(markup) = hover.contents else {
+            panic!("expected markup hover");
+        };
+        assert!(markup.value.contains("`add`"));
+        assert!(markup.value.contains(":"));
+    }
+
+    #[test]
+    fn build_references_finds_symbol_mentions() {
+        let text = sample_text();
+        let uri = sample_uri();
+        let position = position_for(text, "add 1 2");
+        let locations = Backend::build_references(text, &uri, position, true);
+        let expected_span = find_symbol_span(text, "add");
+        let expected_range = Backend::span_to_range(expected_span);
+        assert!(locations.iter().any(|location| location.range == expected_range));
+        assert!(locations.len() >= 2);
+    }
+
+    #[test]
     fn build_diagnostics_reports_error() {
         let text = "module broken = {";
         let uri = sample_uri();
@@ -1334,9 +1362,9 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 definition_provider: Some(OneOf::Left(true)),
-                declaration_provider: Some(OneOf::Left(true)),
-                implementation_provider: Some(OneOf::Left(true)),
-                hover_provider: Some(OneOf::Left(true)),
+                declaration_provider: Some(DeclarationCapability::Simple(true)),
+                implementation_provider: Some(ImplementationProviderCapability::Simple(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 references_provider: Some(OneOf::Left(true)),
                 completion_provider: Some(tower_lsp::lsp_types::CompletionOptions {
                     resolve_provider: Some(false),

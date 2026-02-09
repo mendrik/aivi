@@ -1,7 +1,7 @@
 use aivi::{
     check_modules, check_types, compile_rust, desugar_target, format_target,
-    load_module_diagnostics, load_modules, parse_target, render_diagnostics, run_native,
-    write_scaffold, AiviError, CargoDepSpec, ProjectKind,
+    kernel_target, load_module_diagnostics, load_modules, parse_target, render_diagnostics,
+    run_native, rust_ir_target, write_scaffold, AiviError, CargoDepSpec, ProjectKind,
 };
 use std::env;
 use std::path::{Path, PathBuf};
@@ -113,6 +113,28 @@ fn run() -> Result<(), AiviError> {
             println!("{output}");
             Ok(())
         }
+        "kernel" => {
+            let Some(target) = rest.first() else {
+                print_help();
+                return Ok(());
+            };
+            let program = kernel_target(target)?;
+            let output = serde_json::to_string_pretty(&program)
+                .map_err(|err| AiviError::Io(std::io::Error::new(std::io::ErrorKind::Other, err)))?;
+            println!("{output}");
+            Ok(())
+        }
+        "rust-ir" => {
+            let Some(target) = rest.first() else {
+                print_help();
+                return Ok(());
+            };
+            let program = rust_ir_target(target)?;
+            let output = serde_json::to_string_pretty(&program)
+                .map_err(|err| AiviError::Io(std::io::Error::new(std::io::ErrorKind::Other, err)))?;
+            println!("{output}");
+            Ok(())
+        }
         "lsp" | "build" | "run" => {
             match command.as_str() {
                 "lsp" => {
@@ -133,7 +155,7 @@ fn run() -> Result<(), AiviError> {
                             print_help();
                             return Ok(());
                         };
-                        if opts.target != "rust" {
+                        if opts.target != "rust" && opts.target != "rustc" {
                             return Err(AiviError::InvalidCommand(format!(
                                 "unsupported target {}",
                                 opts.target
@@ -141,12 +163,20 @@ fn run() -> Result<(), AiviError> {
                         }
                         let _modules = load_checked_modules(&opts.input)?;
                         let program = desugar_target(&opts.input)?;
-                        let rust = compile_rust(program)?;
-                        let out_dir = opts
-                            .output
-                            .unwrap_or_else(|| PathBuf::from("target/aivi-gen"));
-                        write_rust_project(&out_dir, &rust)?;
-                        println!("{}", out_dir.display());
+                        if opts.target == "rust" {
+                            let rust = compile_rust(program)?;
+                            let out_dir = opts
+                                .output
+                                .unwrap_or_else(|| PathBuf::from("target/aivi-gen"));
+                            write_rust_project(&out_dir, &rust)?;
+                            println!("{}", out_dir.display());
+                        } else {
+                            let out = opts
+                                .output
+                                .unwrap_or_else(|| PathBuf::from("target/aivi-rustc/aivi_out"));
+                            aivi::build_with_rustc(program, &out, &opts.forward)?;
+                            println!("{}", out.display());
+                        }
                         Ok(())
                     }
                 }
@@ -183,7 +213,7 @@ fn run() -> Result<(), AiviError> {
 
 fn print_help() {
     println!(
-        "aivi\n\nUSAGE:\n  aivi <COMMAND>\n\nCOMMANDS:\n  init <name> [--bin|--lib] [--edition 2024] [--language-version 0.1] [--force]\n  new <name> ... (alias of init)\n  search <query>\n  install <spec> [--require-aivi] [--no-fetch]\n  build [--release] [-- <cargo args...>]\n  run [--release] [-- <cargo args...>]\n  clean [--all]\n\n  parse <path|dir/...>\n  check <path|dir/...>\n  fmt <path>\n  desugar <path|dir/...>\n  lsp\n  build <path|dir/...> [--target rust] [--out <dir>]\n  run <path|dir/...> [--target native]\n\n  -h, --help"
+        "aivi\n\nUSAGE:\n  aivi <COMMAND>\n\nCOMMANDS:\n  init <name> [--bin|--lib] [--edition 2024] [--language-version 0.1] [--force]\n  new <name> ... (alias of init)\n  search <query>\n  install <spec> [--require-aivi] [--no-fetch]\n  build [--release] [-- <cargo args...>]\n  run [--release] [-- <cargo args...>]\n  clean [--all]\n\n  parse <path|dir/...>\n  check <path|dir/...>\n  fmt <path>\n  desugar <path|dir/...>\n  kernel <path|dir/...>\n  rust-ir <path|dir/...>\n  lsp\n  build <path|dir/...> [--target rust|rustc] [--out <dir|path>] [-- <rustc args...>]\n  run <path|dir/...> [--target native]\n\n  -h, --help"
     );
 }
 
@@ -191,6 +221,7 @@ struct BuildArgs {
     input: String,
     output: Option<PathBuf>,
     target: String,
+    forward: Vec<String>,
 }
 
 fn parse_build_args(
@@ -201,8 +232,13 @@ fn parse_build_args(
     let mut input = None;
     let mut output = None;
     let mut target = default_target.to_string();
+    let mut forward = Vec::new();
 
     while let Some(arg) = args.next() {
+        if arg == "--" {
+            forward.extend(args);
+            break;
+        }
         match arg.as_str() {
             "--target" => {
                 let Some(value) = args.next() else {
@@ -244,6 +280,7 @@ fn parse_build_args(
         input,
         output,
         target,
+        forward,
     }))
 }
 

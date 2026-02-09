@@ -9,7 +9,6 @@ The compiler lowers AIVI through a typed IR, then emits a Rust crate and lets
 source -> CST -> AST -> HIR -> Core IR -> Rust crate -> rustc -> native binary
 ```
 
-
 ## IR Stages
 
 - **HIR**: desugared surface syntax (blocks, JSX, pattern matches).
@@ -29,15 +28,11 @@ Each stage narrows the language surface and makes codegen simpler.
 
 ## rustc Integration
 
-Two options:
+Pick options:
 
-1. **Temporary crate + `cargo build`**
-   - Emit Rust files into `target/aivi/<crate>/`.
-   - Call `cargo` with a generated `Cargo.toml`.
-2. **`rustc_interface`**
-   - Invoke `rustc` directly with in-memory sources.
-   - Allows tighter integration and custom diagnostics.
-
+**`rustc_interface`**
+    - Invoke `rustc` directly with in-memory sources.
+    - Allows tighter integration and custom diagnostics.
 
 ## Debugging And Diagnostics
 

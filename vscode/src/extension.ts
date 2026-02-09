@@ -1,4 +1,9 @@
 import * as vscode from "vscode";
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+} from "vscode-languageclient/node";
 
 type TokenType =
   | "line_comment"
@@ -432,6 +437,8 @@ function formatAivi(
   return lines.join("\n").replace(/\s+$/g, "") + "\n";
 }
 
+let client: LanguageClient | undefined;
+
 function getFormatConfig(): { indentSize: number; maxBlankLines: number } {
   const config = vscode.workspace.getConfiguration("aivi");
   return {
@@ -441,6 +448,21 @@ function getFormatConfig(): { indentSize: number; maxBlankLines: number } {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  const serverOptions: ServerOptions = {
+    command: "aivi-lsp",
+    args: [],
+  };
+
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [{ language: "aivi" }],
+    synchronize: {
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.aivi"),
+    },
+  };
+
+  client = new LanguageClient("aivi", "Aivi Language Server", serverOptions, clientOptions);
+  context.subscriptions.push(client.start());
+
   const provider: vscode.DocumentFormattingEditProvider = {
     provideDocumentFormattingEdits(document, options) {
       const { indentSize, maxBlankLines } = getFormatConfig();
@@ -474,4 +496,9 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {}
+export function deactivate(): Thenable<void> | undefined {
+  if (!client) {
+    return undefined;
+  }
+  return client.stop();
+}
