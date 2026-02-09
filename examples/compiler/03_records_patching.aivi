@@ -1,0 +1,30 @@
+module examples.compiler.records_patching = {
+  export User, user1, user2, store2
+
+  User = { name: Text, age: Int, tags: List Text }
+
+  append = xs ys => xs ?
+    | [] => ys
+    | [h, ...t] => [h, ...append t ys]
+
+  user1 : User
+  user1 = { name: "Ada", age: 36, tags: ["dev"] }
+
+  user2 = user1 <| {
+    age: _ + 1
+    tags: append _ ["vip"]
+  }
+
+  Item = { price: Int, active: Bool }
+  Store = { items: List Item }
+
+  store = { items: [
+    { price: 10, active: True }
+    { price: 20, active: False }
+    { price: 30, active: True }
+  ] }
+
+  store2 = store <| {
+    items[active].price: _ + 5
+  }
+}

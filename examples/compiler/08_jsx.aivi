@@ -1,0 +1,17 @@
+module examples.compiler.ui = {
+  use aivi.std.html
+
+  export Card, view
+
+  Card = { title, children } => <div class="card">
+    <h2>{title}</h2>
+    <div class="body">{children}</div>
+  </div>
+
+  view = user => <div class="page">
+    {if user.active then <span>Active</span> else <></>}
+    <Card title="Hello">
+      <p>{user.name}</p>
+    </Card>
+  </div>
+}

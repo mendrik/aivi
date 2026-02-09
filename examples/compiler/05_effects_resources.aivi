@@ -1,0 +1,30 @@
+module examples.compiler.effects = {
+  export program, readConfig, withFile
+
+  program : Effect Text Unit
+  program = effect {
+    _ <- print "boot"
+    cfg <- readConfig "config.json"
+    _ <- print cfg
+    pure Unit
+  }
+
+  readConfig : Text -> Effect Text Text
+  readConfig path = effect {
+    res <- attempt (load (file.read path))
+    res ?
+      | Ok txt => pure txt
+      | Err _  => fail "missing"
+  }
+
+  withFile : Text -> Effect Text Unit
+  withFile path = effect {
+    f <- resource {
+      handle <- file.open path
+      yield handle
+      _ <- file.close handle
+    }
+    _ <- file.readAll f
+    pure Unit
+  }
+}

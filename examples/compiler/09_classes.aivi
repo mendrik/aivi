@@ -1,0 +1,23 @@
+module examples.compiler.classes = {
+  export Eq, Functor, Option
+
+  class Eq A = {
+    eq: A -> A -> Bool
+  }
+
+  instance Eq Bool = {
+    eq: x y => x == y
+  }
+
+  Option A = None | Some A
+
+  class Functor (F *) = {
+    map: F A -> (A -> B) -> F B
+  }
+
+  instance Functor (Option *) = {
+    map: opt f => opt ?
+      | None => None
+      | Some x => Some (f x)
+  }
+}

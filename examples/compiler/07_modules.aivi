@@ -1,0 +1,15 @@
+@no_prelude
+module examples.compiler.math = {
+  export add, sub
+
+  add = x y => x + y
+  sub = x y => x - y
+}
+
+module examples.compiler.app = {
+  export run
+
+  use examples.compiler.math (add)
+
+  run = add 1 2
+}

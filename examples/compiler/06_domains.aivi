@@ -1,0 +1,22 @@
+module examples.compiler.domains = {
+  export Date, Calendar, addWeek
+
+  Date = { year: Int, month: Int, day: Int }
+
+  domain Calendar over Date = {
+    type Delta = Day Int | Week Int
+
+    (+) : Date -> Delta -> Date
+    (+) d (Day n) = addDays d n
+    (+) d (Week n) = addDays d (n * 7)
+
+    1d = Day 1
+    1w = Week 1
+  }
+
+  addDays : Date -> Int -> Date
+  addDays d n = d <| { day: _ + n }
+
+  addWeek : Date -> Date
+  addWeek d = d + 1w
+}

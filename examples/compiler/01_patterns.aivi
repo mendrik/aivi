@@ -1,0 +1,24 @@
+module examples.compiler.patterns = {
+  export head, classify, deepName, unwrap
+
+  Option A = None | Some A
+  Result E A = Err E | Ok A
+
+  head =
+    | [] => None
+    | [x, ...] => Some x
+
+  classify = n => n ?
+    | 0 => "zero"
+    | n when n < 0 => "negative"
+    | _ => "positive"
+
+  deepName = response =>
+    response ?
+      | { data.user.profile@{ name } } => name
+      | _ => "unknown"
+
+  unwrap =
+    | Ok x => x
+    | Err _ => 0
+}
