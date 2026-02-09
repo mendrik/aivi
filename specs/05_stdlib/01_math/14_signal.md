@@ -1,14 +1,12 @@
 # FFT & Signal Domain
 
-Tools for **Digital Signal Processing** (DSP), including the Fast Fourier Transform.
+The `Signal` domain provides tools for **Digital Signal Processing** (DSP), including the Fast Fourier Transform.
 
-Signals are everywhere: audio recorded from a microphone, vibrations from a sensor, or radio waves.
-*   **Time Domain**: The signal as it happens (loudness over time).
-*   **Frequency Domain**: The ingredients of the signal (how much bass vs. treble).
+Signals are everything: audio from a mic, vibrations in a bridge, or stock market prices.
+*   **Time Domain**: "How loud is it right now?"
+*   **Frequency Domain**: "What notes are being played?"
 
-The **Fast Fourier Transform (FFT)** is a legendary algorithm that converts a Time signal into a Frequency signal. It lets you see the "notes" inside a chord.
-
-If you want to filter out background noise from audio, compress an image (JPEG), or analyze stock market cycles, you need DSP. This domain provides optimized algorithms so you don't have to write complex math loops yourself.
+The **Fast Fourier Transform (FFT)** is a legendary algorithm that converts Time into Frequency. It lets you unbake a cake to find the ingredients. If you want to filter noise from audio, analyze heartbeats, or compress images, you need this domain.
 
 ## Overview
 

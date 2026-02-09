@@ -1,15 +1,8 @@
 # URL Domain
 
-The `Url` domain provides a structured, type-safe way to handle **Uniform Resource Locators**.
+The `Url` domain handles **Uniform Resource Locators** without the string-mashing headaches.
 
-A URL is the address of a resource on the internet. It's not just a string of text; it has distinct components:
-*   **Protocol**: How to talk (e.g., `https`, `mailto`).
-*   **Host**: Who has the data (e.g., `api.github.com`).
-*   **Path**: Where it is (e.g., `/users/1`).
-*   **Query**: Extra parameters (e.g., `?sort=desc`).
-
-Manipulating URLs as raw strings is brittle. Concatenating strings often leads to duplicate slashes (`//api//v1`), missing `?` or `&` in queries, or unescaped characters causing bugs.
-This domain treats URLs as **Records**, allowing you to modify specific parts (like adding a query parameter) safely without breaking the rest of the address.
+A URL isn't just text; it's a structured address with protocols, hosts, and queries. Concatenating strings to build URLs leads to bugs (missing `/`, double `?`, unescaped spaces). This domain treats URLs as safe, structured records, letting you modify protocols or add query parameters without breaking the address.
 
 ## Module
 

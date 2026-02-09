@@ -1,6 +1,6 @@
 # Console Domain
 
-The `Console` domain provides basic input/output capabilities.
+The `Console` domain is your program's voice. It handles basic interactions with the terminal. Whether you're debugging with a quick `print`, logging a status update, or asking the user for input, this is where your program talks to the human running it.
 
 ```aivi
 use std.Console

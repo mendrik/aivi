@@ -1,13 +1,13 @@
 # Graph Domain
 
-Data structures for modelling **Relationships** and **Networks**.
+The `Graph` domain is for modelling **Relationships** and **Networks**.
 
-In computer science, a "Graph" isn't a chart. It's a collection of things (**Nodes**) connected by lines (**Edges**).
-*   **Social Networks**: People are Nodes, Friendships are Edges.
-*   **Maps**: Cities are Nodes, Roads are Edges.
-*   **The Web**: Pages are Nodes, Hyperlinks are Edges.
+In computer science, a "Graph" isn't a pie chart. It's a map of connections:
+*   **Social Networks**: People connected by Friendships.
+*   **Maps**: Cities connected by Roads.
+*   **The Internet**: Pages connected by Links.
 
-Implementing Graph algorithms (like finding the shortest path between two cities) is complex and error-prone to rewrite from scratch. This domain provides a standard way to define these networks and optimized algorithms (BFS, Dijkstra) to explore them.
+If you need to find the shortest path between two points or see who is friends with whom, you need a Graph. This domain provides the data structures and algorithms (like BFS and Dijkstra) to solve these problems efficiently.
 
 ## Overview
 

@@ -1,15 +1,10 @@
 # Calendar Domain
 
-Robust tools for handling **Dates** and **Human Time**.
+The `Calendar` domain gives you robust tools for handling **Dates** and **Human Time**.
 
-Handling time is deceptively hard. Ideally, a day is 24 hours. In reality:
-*   Months have 28, 29, 30, or 31 days.
-*   Years have 365 or 366 days.
-*   Timezones shift clocks back and forth.
+Handling time is deceptively hard. Ideally, a day is 24 hours. In reality, months have 28-31 days, years have 365 or 366 days, and timezones shift clocks back and forth.
 
-The `Calendar` domain hides this chaos. It ensures that when you say "Next Month," it handles the math correctly, whether it's February or July.
-
-Writing `timestamp + 86400` to add a day works... until there's a leap second or daylight savings switch. Using a dedicated domain ensures your scheduling logic (e.g., "Meeting every Monday") is reliable and legible.
+The `Calendar` domain hides this chaos. Writing `timestamp + 86400` works until a leap second deletes your data. This domain ensures that when you say "Next Month," it handles the math correctly—whether it's February or July—making your scheduling logic reliable and legible.
 
 ## Overview
 

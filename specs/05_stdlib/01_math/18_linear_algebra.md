@@ -1,13 +1,10 @@
 # Linear Algebra Domain
 
-Advanced solvers for **Systems of Equations**.
+The `LinearAlgebra` domain solves massive **Systems of Equations**.
 
-While the `Vector` and `Matrix` domains handle 3D graphics, this domain is for "hard" science and engineering.
-It allows you to solve problems like: "If 3x + 2y = 10 and x - y = 5, what are x and y?"
+While `Vector` and `Matrix` are for 3D graphics, this domain is for "hard" science and engineering. It answers questions like: "If `3x + 2y = 10` and `x - y = 5`, what are `x` and `y`?"... but for systems with *thousands* of variables.
 
-In engineering, these systems can have thousands of variables (e.g., simulating heat flow across a metal plate).
-
-Writing a solver for `Ax = b` (Gaussian elimination or LU decomposition) is difficult to make numerically stable. This domain wraps optimized, industrial-grade linear algebra routines (like LAPACK) so you can solve complex systems safely.
+Whether you're simulating heat flow across a computer chip, calculating structural loads on a bridge, or training a neural network, you are solving systems of linear equations. This domain wraps industrial-grade solvers (like LAPACK) to do the heavy lifting for you.
 
 ## Overview
 

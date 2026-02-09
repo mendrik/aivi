@@ -1,13 +1,13 @@
 # File Domain
 
-This domain handles **File System Operations** defined as Side Effects.
+The `File` domain bridges the gap between your code and the disk.
 
-Your code lives in memory, but data lives on disk. This domain bridges the gap. It allows you to:
-*   **Read/Write**: Load text from a config file or save user data.
-*   **Check**: See if a file exists before trying to open it.
-*   **Inspect**: Get metadata like "How big is this file?" or "When was it last modified?"
+Your code lives in ephemeral memory, but data needs to persist. This domain lets you safely read configs, save user data, and inspect directories.
+*   **Read/Write**: Load a config or save a savegame.
+*   **Check**: "Does this file exist?"
+*   **Inspect**: "When was this modified?"
 
-Direct file access is dangerous (what if the file is locked? missing? corrupted?). By wrapping these operations in `Effect (Result ...)` types, AIVI forces you to handle failure cases (like "File Not Found") explicitely, making your programs crash-proof against disk errors.
+Direct file access is dangerous (locks, missing files, permissions). AIVI wraps these in `Effect` types, forcing you to handle errors explicitly. Your program won't crash just because a file is missing; it will handle it.
 
 ## Overview
 

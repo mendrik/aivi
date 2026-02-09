@@ -1,11 +1,10 @@
 # Duration Domain
 
-A type-safe way to represent **Spans of Time**.
+The `Duration` domain provides a type-safe way to represent **Spans of Time**.
 
-In many systems, a timeout is just an integer like `500`. But is that 500 milliseconds? 500 seconds?
-`Duration` solves this ambiguity. It wraps the raw number in a type that knows its unit. `500` becomes `500ms` or `0.5s`.
+In many systems, a timeout is just an integer like `500`. But is that 500 milliseconds? 500 seconds? Ambiguous units cause outages (like setting a 30-second timeout that the system reads as 30 milliseconds).
 
-Ambiguous units cause outages. (e.g., A developer sets a timeout to `30`, thinking seconds, but the system reads it as 30 milliseconds, causing instant failure). This domain forces clarity: you must specify the unit, and the compiler ensures you don't compare Seconds to Apples.
+`Duration` solves this by wrapping the number in a type that knows its unit. `500` becomes `500ms` or `0.5s`. The compiler ensures you don't compare Seconds to Apples, stopping bugs before they start.
 
 ## Overview
 

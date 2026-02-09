@@ -1,15 +1,13 @@
 # Geometry Domain
 
-Primitives for shapes (`Sphere`, `Ray`, `Rect`) and collision detection.
+The `Geometry` domain creates shapes (`Sphere`, `Ray`, `Rect`) and checks if they touch.
 
-This domain deals with the "physical" side of math: shapes and where they are. It differs from the `Vector` domain (which handles raw direction/magnitude) by introducing **surfaces** and **volumes**.
+This is the "physical" side of math. While `Vector` handles movement, `Geometry` handles **stuff**.
+*   "Did I click the button?" (Point vs Rect)
+*   "Did the bullet hit the player?" (Ray vs Cylinder)
+*   "Is the tank inside the base?" (Point vs Polygon)
 
-Common questions this domain answers:
-*   "Did the user click on this button?" (Point vs Rectangle overlap)
-*   "Did the laser hit the enemy?" (Ray vs Sphere intersection)
-*   "What is the center of this polygon?"
-
-Almost every visual application needs to check if two things touch. Providing standard definitions for shapes like `Ray` and `AABB` (Axis-Aligned Bounding Box) allows for highly optimized intersection code that powers games and UI hit-testing.
+Almost every visual application needs to know when two things collide. This domain gives you standard shapes and highly optimized algorithms to check for intersections instantly.
 
 ## Overview
 

@@ -1,15 +1,13 @@
 # Probability & Distribution Domain
 
-A library for **Statistical Distributions** and controlled randomness.
+The `Probability` domain gives you tools for **Statistical Distributions** and structured randomness.
 
-Standard random functions usually just give you a number between 0 and 1. But real-world randomness is rarely that uniform. 
-*   Heights of people follow a **Normal (Bell Curve)** distribution.
+Standard `random()` just gives you a boring uniform number between 0 and 1. But reality isn't uniform.
+*   Heights of people follow a **Bell Curve** (Normal distribution).
 *   Radioactive decay follows a **Poisson** distribution.
-*   Coin flips follow a **Bernoulli** distribution.
+*   Success/failure rates follow a **Bernoulli** distribution.
 
-This domain lets you define the *shape* of randomness you want, and then draw samples from it.
-
-Simulations, games, and scientific models need "textured" randomness. Instead of writing complex math to convert a simple random number into a Bell curve manually, you can just ask for a `Normal(mean, std_dev)` distribution and sample it.
+This domain lets you define the *shape* of the chaotic world you want to simulate, and then draw mathematically correct samples from it.
 
 ## Overview
 
