@@ -57,15 +57,7 @@ export default defineConfig({
       {
         text: "Roadmap",
         collapsed: true,
-        items: [
-          { text: "Overview", link: "/roadmap/" },
-          { text: "Overall Phases", link: "/roadmap/01_overall_phases" },
-          { text: "Rust Workspace Layout", link: "/roadmap/02_rust_workspace_layout" },
-          { text: "Language Implementation", link: "/roadmap/03_language_implementation" },
-          { text: "Compile to WASM/WASI", link: "/roadmap/04_compiler_wasm_wasi" },
-          { text: "Language Server (LSP)", link: "/roadmap/05_language_server_lsp" },
-          { text: "MCP Integration", link: "/roadmap/06_mcp_integration" },
-          { text: "Standard Library Plan", link: "/roadmap/07_standard_library_plan" }
+          { text: "Roadmap", link: "/roadmap/README" }
         ]
       },
       {
@@ -85,7 +77,7 @@ export default defineConfig({
           { text: "Modules", link: "/02_syntax/10_modules" },
           { text: "Domain Definitions", link: "/02_syntax/11_domain_definition" },
           { text: "External Sources", link: "/02_syntax/12_external_sources" },
-          { text: "JSX Literals", link: "/02_syntax/13_jsx_literals" },
+          // JSX literals docs removed for now
           { text: "Decorators", link: "/02_syntax/14_decorators" },
           { text: "Resources", link: "/02_syntax/15_resources" }
         ]
@@ -155,7 +147,10 @@ export default defineConfig({
       {
         text: "Runtime",
         collapsed: true,
-        items: [{ text: "Concurrency", link: "/06_runtime/01_concurrency" }]
+        items: [
+          { text: "Concurrency", link: "/06_runtime/01_concurrency" },
+          { text: "Rustc Native Pipeline", link: "/06_runtime/02_rustc_native_pipeline" }
+        ]
       }
     ],
     search: {

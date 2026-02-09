@@ -4,7 +4,7 @@ title: AIVI Language Specification
 
 # AIVI Language Specification
 
-A high-integrity functional language targeting WebAssembly.
+A high-integrity functional language with a Rust-first compilation pipeline.
 
 ## Table of Contents
 
@@ -14,23 +14,7 @@ A high-integrity functional language targeting WebAssembly.
 
 ### Roadmap
 
-- [Roadmap Overview](roadmap/)
-- [Overall Phases](roadmap/01_overall_phases)
-- [Rust Workspace Layout](roadmap/02_rust_workspace_layout)
-- [Language Implementation](roadmap/03_language_implementation)
-- [Compile to WASM/WASI](roadmap/04_compiler_wasm_wasi)
-- [Language Server (LSP)](roadmap/05_language_server_lsp)
-- [MCP Integration](roadmap/06_mcp_integration)
-- [Standard Library Plan](roadmap/07_standard_library_plan)
-- [M8 LSP Overview](roadmap/m8_lsp/00_overview)
-- [M8 LSP Architecture](roadmap/m8_lsp/01_architecture)
-- [M8 LSP Features](roadmap/m8_lsp/02_features)
-- [M8 LSP Workplan](roadmap/m8_lsp/03_workplan)
-- [M9 MCP Overview](roadmap/m9_mcp/00_overview)
-- [M9 MCP Host Architecture](roadmap/m9_mcp/01_host_architecture)
-- [M9 MCP Schema Mapping](roadmap/m9_mcp/02_schema_mapping)
-- [M9 MCP CLI + Ops](roadmap/m9_mcp/03_cli_ops)
-- [M9 MCP Test Plan](roadmap/m9_mcp/04_test_plan)
+- [Roadmap](roadmap/README.md)
 
 ### Syntax
 
@@ -47,9 +31,8 @@ A high-integrity functional language targeting WebAssembly.
 12. [Modules](02_syntax/10_modules)
 13. [Domain Definitions](02_syntax/11_domain_definition)
 14. [External Sources](02_syntax/12_external_sources)
-15. [JSX Literals](02_syntax/13_jsx_literals)
-16. [Decorators](02_syntax/14_decorators)
-17. [Resources](02_syntax/15_resources)
+15. [Decorators](02_syntax/14_decorators)
+16. [Resources](02_syntax/15_resources)
 
 ### Kernel (Core Calculus)
 
@@ -107,3 +90,4 @@ A high-integrity functional language targeting WebAssembly.
 ### Runtime
 
 107. [Concurrency](06_runtime/01_concurrency)
+108. [Rustc Native Pipeline](06_runtime/02_rustc_native_pipeline)
