@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "examples/hello.aivi",
+      "byte_count": 12,
+      "line_count": 1,
+      "lines": [
+        "hello world"
+      ]
+    }
+  ]
+}
