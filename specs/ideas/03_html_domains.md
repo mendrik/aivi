@@ -40,12 +40,12 @@ CSS units as first-class Deltas.
 ```aivi
 10px
 2em
-50pct
+50%
 ```
 
 ```aivi
 style = {
-  width: 100pct
+  width: 100%
   margin: 10px
   fontSize: 1.2em
 }
