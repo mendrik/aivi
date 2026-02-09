@@ -17,7 +17,7 @@ birthday = ~d(1990-12-31)
 timestamp = ~dt(2025-02-08T12:34:56Z)
 
 // "Human" math: Add 7 days, regardless of seconds
-next_week = now + 7`days`
+next_week = now + 7days
 ```
 
 ## Features

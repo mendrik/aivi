@@ -37,16 +37,13 @@ Used for local system access. Supports structured (JSON, CSV) and unstructured (
 
 ```aivi
 // Read entire file as text
-readme : Source File Text
 readme = file.read "./README.md"
 
 // Stream bytes from a large file
-blob : Source File (Generator Bytes)
 blob = file.stream "./large.bin"
 
 // Read structured CSV with schema
 @schema "id:Int,name:Text,email:Text"
-users : Source File (List User)
 users = file.csv "./users.csv"
 ```
 
@@ -59,13 +56,12 @@ Typed REST/API integration.
 User = { id: Int, name: Text }
 
 // Typed GET request (inferred type)
-users : Source Http (List User)
-users = http.get "https://api.example.com/v1/users"
+users = http.get ~u(https://api.example.com/v1/users)
 
 // Request with headers and body
 req = http.request {
   method: Post
-  url: "https://api.example.com/v1/users"
+  url: ~u(https://api.example.com/v1/users)
   headers: [("Content-Type", "application/json")]
   body: Some (Json.encode { name: "New User" })
 }
@@ -82,7 +78,6 @@ db = sqlite.open "./local.db"
 
 // Typed query source
 @sql "SELECT id, name FROM users WHERE active = 1"
-activeUsers : Source Db (List User)
 activeUsers = db.query
 ```
 
@@ -93,7 +88,6 @@ Interacting with mail servers (IMAP/SMTP).
 
 ```aivi
 // Fetch unread emails
-inbox : Source Email (List Message)
 inbox = email.imap {
   host: "imap.gmail.com"
   filter: "UNSEEN"
@@ -123,7 +117,6 @@ Analysis = {
 
 // LLM completion with strict schema enforcement
 @model "gpt-4o"
-analyze : Text -> Source Llm Analysis
 analyze input = llm.complete {
   prompt: "Analyze this feedback: {input}"
   schema: Analysis
@@ -139,11 +132,9 @@ Images are typed by their metadata and pixel data format.
 Image A = { width: Int, height: Int, format: ImageFormat, pixels: A }
 
 // Load image metadata only
-meta : Source File ImageMeta
 meta = file.imageMeta "./photo.jpg"
 
 // Load full image with RGB pixel access
-photo : Source File (Image ImageData)
 photo = file.image "./photo.jpg"
 ```
 
@@ -154,11 +145,9 @@ Integration with object storage.
 
 ```aivi
 // Bucket listings
-images : Source S3 (List S3Object)
 images = s3.bucket "my-assets" |> s3.list "thumbnails/"
 
 // Fetch object content
-logo : Source S3 Bytes
 logo = s3.get "my-assets" "branding/logo.png"
 ```
 
@@ -172,10 +161,8 @@ Some sources are resolved at compile time and embedded into the binary. This ens
 
 ```aivi
 @static
-version : Text
 version = file.read "./VERSION"
 
 @static
-locales : Json
 locales = file.json "./i18n/en.json"
 ```

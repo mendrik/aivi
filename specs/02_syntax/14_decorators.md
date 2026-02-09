@@ -48,10 +48,16 @@ Decorators appear before the binding they annotate.
 | `@test` | `@test add_is_commutative = ...` | Mark a definition as a test case |
 
 ### Pragmas (Module-level)
-
 | Decorator | Usage | Meaning |
 | :--- | :--- | :--- |
 | `@no_prelude` | `@no_prelude module M = ...` | Skip implicit prelude import |
+
+### Sources
+| Decorator | Usage | Meaning |
+| :--- | :--- | :--- |
+| `@sql` | `@sql "SELECT..."` | Bind to SQL query |
+| `@schema` | `@schema "id:Int..."` | Define schema for text/csv |
+| `@model` | `@model "gpt-4"` | Bind to LLM model |
 
 
 ## 14.3 Field Decorators

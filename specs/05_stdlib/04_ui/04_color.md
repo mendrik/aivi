@@ -11,7 +11,7 @@ import aivi.std.ui.color use { Color }
 
 primary = #007bff
 // Mathematically correct lightening
-lighter = primary + 10`lightness`
+lighter = primary + 10lightness
 ```
 
 ## Features

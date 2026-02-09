@@ -1,134 +1,122 @@
-# Domains, Units, and Deltas
+# Domains
 
-Domains define **semantics**, not just values. They provide a context in which operators (like `+`, `-`, `*`) and literals (like `1m`, `1d`) are interpreted. This allows AIVI to handle complex, domain-specific logic like calendar arithmetic, color blending, or physical units with type safety and without polluting the core language with special cases.
+Domains are AIVI's mechanism for context-aware semantics. They allow the language to adapt to specific problem spaces—like time, geometry, or UI styling—by providing custom interpretations for operators, literals, and type interactions.
 
-```aivi
-domain Calendar
-domain Color
-domain Vector
-```
+Instead of baking specific logic (like "days often have 24 hours but not always") into the core compiler, AIVI delegates this to **Domains**.
 
-A domain typically defines:
-1.  **Carrier Types**: The underlying data types (e.g., a `ZonedDateTime` record for `Calendar`).
-2.  **Delta Types**: Representing changes or intervals (e.g., `Duration`).
-3.  **Interpretation Rules**: How literals and operators map to functions.
+## Using Domains
 
-
-## 6.1 Delta literals
-
-Deltas represent **change**, not quantities.
+To use a domain, you `use` or `import` it. This brings its operators and literals into scope.
 
 ```aivi
-1d
-1m
-1y
-3l
-90deg
+// Bring Vector math into scope
+use aivi.std.math.vector
+
+position = (10, 20)
+velocity = (1, 0)
+
+// The '+' operator now knows how to add tuples as vectors
+new_pos = position + velocity
 ```
 
-Properties:
+## Units and Deltas
 
-* deltas are not numbers
-* deltas have no intrinsic arithmetic (any operators must be domain-defined)
-* deltas are interpreted by domains
+Domains often introduce **Units** (measurements) and **Deltas** (changes).
 
+### Delta Literals (Suffixes)
 
-## 6.2 Domain-directed operators
-
-Operators have **no intrinsic meaning**.
+Deltas represent a relative change or a typed quantity. They are written as numeric literals with a suffix.
 
 ```aivi
-date + 1m
-color + 3l
-vector1 + vector2
+10m      // 10 minutes (Duration) or 10 meters (Length)
+30s      // 30 seconds
+90deg    // 90 degrees
+100px    // 100 pixels
 ```
 
-Valid only if the domain defines the operation.
-## 6.3 Expressive Domain Logic
-
-Domains allow for "semantic arithmetic" where the types ensure that only operations that make sense in that domain are permitted.
-
-### Semantic Time Calculation
-```aivi
-// Domains handle complex calendars (Leap years, DST) automatically
-deadline = now + 2w + 3d
-isLate = current_time > deadline
-
-// Interval calculations
-remaining = deadline - now // Returns a Duration
-```
-
-### Visual and Spatial Logic
-```aivi
-// Color blending and manipulation
-highlight = baseColor + 20l - 10s // Lighter, less saturated
-transparent = activeColor <| { alpha: 0.5 }
-
-// Vector arithmetic
-velocity = (10, 5) // Inferred as Vector
-position2 = position1 + (velocity * 2.0)
-```
-
-### Typed Custom Domains
-```aivi
-// Financial domain prevents adding different currencies
-total = usd 100 + usd 50 // OK
-err = usd 100 + eur 50   // Compile-time Error
-```
-
-Currency suffix literals (e.g. `100$`) are a possible future extension, but are out of scope for the v0.1 lexer rules (which restrict suffix literals to ASCII identifier-like suffixes plus `%`).
-
-### Built-in operator domains
-
-Some domains are effectively built in for practicality (but can still be specified in the same “operators come from domains” model):
-
-* `Int` / `Float` / `Decimal`: numeric operators like `+`, `-`, `*`, `/`
-* `Int` (and/or a dedicated `Bits` carrier): bitwise operators like `&`, `|`, `^`, `~`, `<<`, `>>`
-* `Bool`: boolean operators `!`, `&&`, `||` (typically defined with short-circuit semantics)
-
-#### Predicates
-
-A predicate is just a function:
+These are **not** strings; they are typed values. `10m` might compile to a `Duration` struct or a float tagged as `Meters`, depending on the active domain.
 
 ```aivi
-Pred A = A => Bool
+deadline = now + 10m
 ```
 
-Predicate composition is ordinary boolean logic inside a predicate position:
+### Sigils (Prefixes)
+
+Sigils provide custom parsing for complex literals. They start with `~` followed by a tag and a delimiter.
 
 ```aivi
-isGoodUser : Pred User
-isGoodUser = active && tier == Premium && isValidEmail email
+// Regex
+pattern = ~r/\w+@\w+\.\w+/
 
-goodUsers = users |> filter isGoodUser
+// URL
+endpoint = ~u(https://api.example.com)
+
+// Date
+birthday = ~d(1990-12-31)
 ```
 
-#### Bits
+Domains define these sigils to validate and construct types at compile time.
 
-Bitwise operators can be viewed as coming from a `Bits` domain (often implemented on `Int`):
+## Defining Domains
+
+You can define your own domains to encapsulate logic. A domain relates a **Carrier Type** (the data) with **Delta Types** (changes) and **Operators**.
+
+### Syntax
 
 ```aivi
-// Test a bit
-isSet = flags n => (flags & (1 << n)) != 0
+domain Name over CarrierType = {
+  // 1. Define the "change" type
+  type Delta = ...
 
-// Combine masks
-mask = readMask1 | readMask2
+  // 2. Implement operators
+  (+) : CarrierType -> Delta -> CarrierType
+  (+) carrier delta = ...
+
+  // 3. Define literals
+  1d = Day 1
+  ~my_sigil(...) = ...
+}
 ```
 
+### Example: A Simple Color Domain
 
-### Standard library domains
+```aivi
+// The data
+Rgb = { r: Int, g: Int, b: Int }
 
-The standard library exports domains as modules (see Modules). Typical domains include:
+// The definition
+domain Color over Rgb = {
+  // Deltas define how values can change
+  type Delta = Lightness Int | Hue Int
 
-* `Calendar` (date arithmetic with calendar-aware deltas)
-* `Duration` (fixed time deltas)
-* `Color`, `Vector`
-* (HTML/Style domains are deferred; Rust backend will handle UI targets later)
-* `SQLite`
+  // Operator: Color + Change -> Color
+  (+) : Rgb -> Delta -> Rgb
+  (+) color (Lightness amount) = adjust_lightness color amount
+  (+) color (Hue amount)       = adjust_hue color amount
 
-### Behind the Scenes: Interpretation
-Every operation like `date + 1m` is desugared into a domain-specific function call. The compiler uses the type of `date` to look up the `Calendar` domain's `(+)` implementation for that carrier.
+  // Define suffix literals 
+  // "10l" desugars to "Lightness 10"
+  1l = Lightness 1
+  1h = Hue 1
+}
+```
 
-1.  **Delta Interpretation**: `1m` is interpreted by the `Calendar` domain as "one month".
-2.  **Operator Mapping**: `+` is mapped to `Calendar.add`.
-3.  **Result**: `Calendar.add date (Calendar.delta "1m")`.
+### Interpretation
+
+When you write:
+
+```aivi
+red = { r: 255, g: 0, b: 0 }
+lighter = red + 10l
+```
+
+The compiler sees `red` is type `Rgb`. It looks for a domain over `Rgb` (the `Color` domain). It then desugars `10l` using the domain's rules into `Lightness 10`, and maps `+` to the domain's `(+)` function.
+
+## Multi-Carrier Domains
+
+Some domains cover multiple types (e.g., `Vector` over `Vec2` and `Vec3`). In v0.1, this is handled by defining the domain multiple times, once for each carrier.
+
+```aivi
+domain Vector over Vec2 = { ... }
+domain Vector over Vec3 = { ... }
+```
