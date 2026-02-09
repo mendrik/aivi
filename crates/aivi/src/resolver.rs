@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::diagnostics::{Diagnostic, FileDiagnostic};
 use crate::surface::{
-    BlockItem, Def, DomainItem, Expr, JsxChild, JsxNode, Module, ModuleItem, Pattern,
+    BlockItem, Def, DomainItem, Expr, Module, ModuleItem, Pattern,
 };
 
 pub fn check_modules(modules: &[Module]) -> Vec<FileDiagnostic> {
@@ -326,50 +326,7 @@ fn check_expr(
                 }
             }
         }
-        Expr::Jsx(node) => check_jsx(node, scope, diagnostics, module, wildcard_import),
         Expr::Raw { .. } => {}
-    }
-}
-
-fn check_jsx(
-    node: &JsxNode,
-    scope: &mut HashSet<String>,
-    diagnostics: &mut Vec<FileDiagnostic>,
-    module: &Module,
-    wildcard_import: bool,
-) {
-    match node {
-        JsxNode::Element(element) => {
-            for attr in &element.attributes {
-                if let Some(value) = &attr.value {
-                    check_expr(value, scope, diagnostics, module, wildcard_import);
-                }
-            }
-            for child in &element.children {
-                match child {
-                    JsxChild::Expr(expr) => {
-                        check_expr(expr, scope, diagnostics, module, wildcard_import);
-                    }
-                    JsxChild::Element(node) => {
-                        check_jsx(node, scope, diagnostics, module, wildcard_import);
-                    }
-                    JsxChild::Text(_, _) => {}
-                }
-            }
-        }
-        JsxNode::Fragment(fragment) => {
-            for child in &fragment.children {
-                match child {
-                    JsxChild::Expr(expr) => {
-                        check_expr(expr, scope, diagnostics, module, wildcard_import);
-                    }
-                    JsxChild::Element(node) => {
-                        check_jsx(node, scope, diagnostics, module, wildcard_import);
-                    }
-                    JsxChild::Text(_, _) => {}
-                }
-            }
-        }
     }
 }
 

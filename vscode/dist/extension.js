@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
+const node_1 = require("vscode-languageclient/node");
 const LONG_OPS = [
     "::=",
     "<|",
@@ -429,6 +430,7 @@ function formatAivi(text, indentSize, maxBlankLines, baseIndent = "") {
         flushLine();
     return lines.join("\n").replace(/\s+$/g, "") + "\n";
 }
+let client;
 function getFormatConfig() {
     const config = vscode.workspace.getConfiguration("aivi");
     return {
@@ -437,6 +439,21 @@ function getFormatConfig() {
     };
 }
 function activate(context) {
+    const serverOptions = {
+        command: "aivi-lsp",
+        args: [],
+    };
+    const clientOptions = {
+        documentSelector: [{ language: "aivi" }],
+        synchronize: {
+            fileEvents: vscode.workspace.createFileSystemWatcher("**/*.aivi"),
+        },
+    };
+    client = new node_1.LanguageClient("aivi", "Aivi Language Server", serverOptions, clientOptions);
+    client.start();
+    context.subscriptions.push(new vscode.Disposable(() => {
+        void client?.stop();
+    }));
     const provider = {
         provideDocumentFormattingEdits(document, options) {
             const { indentSize, maxBlankLines } = getFormatConfig();
@@ -459,4 +476,9 @@ function activate(context) {
     };
     context.subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider({ language: "aivi" }, provider), vscode.languages.registerDocumentRangeFormattingEditProvider({ language: "aivi" }, rangeProvider));
 }
-function deactivate() { }
+function deactivate() {
+    if (!client) {
+        return undefined;
+    }
+    return client.stop();
+}

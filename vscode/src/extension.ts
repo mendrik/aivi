@@ -461,7 +461,12 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   client = new LanguageClient("aivi", "Aivi Language Server", serverOptions, clientOptions);
-  context.subscriptions.push(client.start());
+  client.start();
+  context.subscriptions.push(
+    new vscode.Disposable(() => {
+      void client?.stop();
+    })
+  );
 
   const provider: vscode.DocumentFormattingEditProvider = {
     provideDocumentFormattingEdits(document, options) {

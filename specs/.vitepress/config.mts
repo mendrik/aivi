@@ -135,39 +135,27 @@ export default defineConfig({
           { text: "Vector", link: "/05_stdlib/05_vector" },
           { text: "HTML", link: "/05_stdlib/06_html" },
           { text: "Style", link: "/05_stdlib/07_style" },
-          { text: "SQLite", link: "/05_stdlib/08_sqlite" }
+          { text: "SQLite", link: "/05_stdlib/08_sqlite" },
+          { text: "Matrix", link: "/05_stdlib/09_matrix" },
+          { text: "Complex", link: "/05_stdlib/10_complex" },
+          { text: "Quaternion", link: "/05_stdlib/11_quaternion" },
+          { text: "Rational & BigInt", link: "/05_stdlib/12_rational_bigint" },
+          { text: "Probability", link: "/05_stdlib/13_probability" },
+          { text: "FFT & Signal", link: "/05_stdlib/14_signal" },
+          { text: "Geometry", link: "/05_stdlib/15_geometry" },
+          { text: "Units", link: "/05_stdlib/16_units" },
+          { text: "Graph", link: "/05_stdlib/17_graph" },
+          { text: "Linear Algebra", link: "/05_stdlib/18_linear_algebra" },
+          { text: "HTTP", link: "/05_stdlib/19_http" },
+          { text: "File", link: "/05_stdlib/20_file" },
+          { text: "Console", link: "/05_stdlib/21_console" },
+          { text: "Crypto", link: "/05_stdlib/22_crypto" }
         ]
       },
       {
         text: "Runtime",
         collapsed: true,
         items: [{ text: "Concurrency", link: "/06_runtime/01_concurrency" }]
-      },
-      {
-        text: "Guides",
-        collapsed: true,
-        items: [
-          { text: "From TypeScript", link: "/guides/01_from_typescript" },
-          { text: "From Haskell", link: "/guides/02_from_haskell" }
-        ]
-      },
-      {
-        text: "Ideas",
-        collapsed: true,
-        items: [
-          { text: "WASM Target", link: "/ideas/01_wasm_target" },
-          { text: "LiveView Frontend", link: "/ideas/02_liveview_frontend" },
-          { text: "Meta-Domain", link: "/ideas/04_meta_domain" },
-          { text: "Tooling", link: "/ideas/05_tooling" }
-        ]
-      },
-      {
-        text: "Meta",
-        collapsed: true,
-        items: [
-          { text: "TODO", link: "/TODO" },
-          { text: "Open Questions", link: "/OPEN_QUESTIONS" }
-        ]
       }
     ],
     search: {

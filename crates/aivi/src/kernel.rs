@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::hir::{
-    HirBlockItem, HirBlockKind, HirDef, HirExpr, HirJsxAttribute, HirJsxChild, HirJsxElement,
-    HirJsxFragment, HirJsxNode, HirListItem, HirLiteral, HirMatchArm, HirModule, HirPathSegment,
-    HirPattern, HirProgram, HirRecordField, HirRecordPatternField,
+    HirBlockItem, HirBlockKind, HirDef, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirModule,
+    HirPathSegment, HirPattern, HirProgram, HirRecordField, HirRecordPatternField,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -58,7 +57,6 @@ pub enum KernelExpr {
         block_kind: KernelBlockKind,
         items: Vec<KernelBlockItem>,
     },
-    JsxElement { id: u32, node: KernelJsxNode },
     Raw { id: u32, text: String },
 }
 
@@ -136,36 +134,6 @@ pub enum KernelBlockItem {
     Expr { expr: KernelExpr },
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum KernelJsxNode {
-    Element(KernelJsxElement),
-    Fragment(KernelJsxFragment),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct KernelJsxElement {
-    pub name: String,
-    pub attributes: Vec<KernelJsxAttribute>,
-    pub children: Vec<KernelJsxChild>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct KernelJsxFragment {
-    pub children: Vec<KernelJsxChild>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct KernelJsxAttribute {
-    pub name: String,
-    pub value: Option<KernelExpr>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum KernelJsxChild {
-    Expr(KernelExpr),
-    Text(String),
-    Element(KernelJsxNode),
-}
 
 pub fn lower_hir(program: HirProgram) -> KernelProgram {
     KernelProgram {
@@ -276,10 +244,6 @@ fn lower_expr(expr: HirExpr) -> KernelExpr {
             block_kind: lower_block_kind(block_kind),
             items: items.into_iter().map(lower_block_item).collect(),
         },
-        HirExpr::JsxElement { id, node } => KernelExpr::JsxElement {
-            id,
-            node: lower_jsx_node(node),
-        },
         HirExpr::Raw { id, text } => KernelExpr::Raw { id, text },
     }
 }
@@ -387,40 +351,3 @@ fn lower_block_item(item: HirBlockItem) -> KernelBlockItem {
         },
     }
 }
-
-fn lower_jsx_node(node: HirJsxNode) -> KernelJsxNode {
-    match node {
-        HirJsxNode::Element(el) => KernelJsxNode::Element(lower_jsx_element(el)),
-        HirJsxNode::Fragment(frag) => KernelJsxNode::Fragment(lower_jsx_fragment(frag)),
-    }
-}
-
-fn lower_jsx_element(el: HirJsxElement) -> KernelJsxElement {
-    KernelJsxElement {
-        name: el.name,
-        attributes: el.attributes.into_iter().map(lower_jsx_attribute).collect(),
-        children: el.children.into_iter().map(lower_jsx_child).collect(),
-    }
-}
-
-fn lower_jsx_fragment(frag: HirJsxFragment) -> KernelJsxFragment {
-    KernelJsxFragment {
-        children: frag.children.into_iter().map(lower_jsx_child).collect(),
-    }
-}
-
-fn lower_jsx_attribute(attr: HirJsxAttribute) -> KernelJsxAttribute {
-    KernelJsxAttribute {
-        name: attr.name,
-        value: attr.value.map(lower_expr),
-    }
-}
-
-fn lower_jsx_child(child: HirJsxChild) -> KernelJsxChild {
-    match child {
-        HirJsxChild::Expr(expr) => KernelJsxChild::Expr(lower_expr(expr)),
-        HirJsxChild::Text(text) => KernelJsxChild::Text(text),
-        HirJsxChild::Element(node) => KernelJsxChild::Element(lower_jsx_node(node)),
-    }
-}
-

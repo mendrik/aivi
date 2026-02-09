@@ -30,7 +30,7 @@ Deliverables:
 - [x] Syntax errors with spans, recovery, and multiple diagnostics per file.
 - [x] Structured diagnostics pipeline (codes, labels, stable formatting for syntax errors).
 - [x] Formatter prototype: a “pretty printer” for a subset (enough to format examples).
-- [ ] Minimal VS Code integration: syntax highlighting already exists; add “format document” that shells out to `aivi fmt` (optional until LSP).
+- [x] Minimal VS Code integration: syntax highlighting already exists; add “format document” that shells out to `aivi fmt` (optional until LSP).
 
 Acceptance criteria:
 - [ ] Parse all files in `examples/` and most `specs/` code blocks (even if some fail).
@@ -58,10 +58,10 @@ Scope:
 
 Deliverables:
 - [x] `aivi desugar` debug output.
-- [ ] Internal “HIR” (typed later) with stable IDs for IDE and incremental compilation.
+- [x] Internal “HIR” (typed later) with stable IDs for IDE and incremental compilation.
 
 Acceptance criteria:
-- [ ] Any supported surface feature lowers to Kernel consistently (round-trip tests).
+- [x] Any supported surface feature lowers to Kernel consistently (round-trip tests).
 
 ## M4 — Type system v1 (rank-1, no HKTs/classes yet)
 
@@ -74,27 +74,29 @@ Scope:
   - Effect typing as annotations (initially: check the *shape*, don’t implement full effect inference).
 
 Deliverables:
-- [ ] `aivi check` produces type errors with explanatory traces.
-- [ ] Typed holes (`_`) with “found/expected” and suggestions.
-- [ ] Canonical type pretty-printer for stable errors and diffs.
+- [x] `aivi check` produces type errors with explanatory traces.
+- [x] Typed holes (`_`) with “found/expected” and suggestions.
+- [x] Canonical type pretty-printer for stable errors and diffs.
 - [ ] LSP: hover types, signature help, completion using local typing.
 
 Acceptance criteria:
-- [ ] Small programs typecheck; errors are actionable; no “mystery type” output.
+- [x] Small programs typecheck; errors are actionable; no “mystery type” output.
 
-## M5 — WASM/WASI execution (interpreter optional, compiler required)
+## M5 — Execution (Rust Transpilation & Native Runtime)
 
 Scope:
-- Compile a typed Kernel program to WASM and run it under Wasmtime.
-- WASI integration for basic IO through `Effect` operations.
+- Compile a typed Kernel program to Rust (`aivi build --target rust`) or binary (`aivi build --target rustc`).
+- Run via interpreter/native runtime (`aivi run --target native`).
+- WASI integration via Rust backend.
 
 Deliverables:
-- [x] `aivi build --target wasm32-wasi` emits a `.wasm`.
-- [x] `aivi run` runs the produced artifact.
+- [x] `aivi build --target rust` emits a Cargo project.
+- [x] `aivi build --target rustc` emits a binary.
+- [x] `aivi run` runs the program (native/interpreter).
 - [x] Basic runtime support: heap allocation and a minimal string/list representation.
 
 Acceptance criteria:
-- [ ] Deterministic outputs for golden tests; no UB; memory safe by construction.
+- [x] Deterministic outputs for golden tests; no UB; memory safe by construction.
 
 ## M6 — Effects, Resources, Concurrency
 
@@ -105,7 +107,7 @@ Scope:
  - Be explicit about determinism guarantees (or lack thereof).
 
 Deliverables:
-- [x] Built-in effects: `Clock`, `File`, `Random` (start small).
+- [x] Built-in effects: `Clock`, `File`, `Random` (partial).
 - [ ] Deterministic cancellation semantics.
 
 Acceptance criteria:

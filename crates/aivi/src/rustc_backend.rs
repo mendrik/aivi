@@ -394,12 +394,6 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
             items,
             ..
         } => emit_block(*block_kind, items, indent)?,
-
-        RustIrExpr::JsxElement { .. } => {
-            return Err(AiviError::Codegen(
-                "JSX is not supported by the rustc backend yet".to_string(),
-            ))
-        }
         RustIrExpr::Raw { text, .. } => {
             return Err(AiviError::Codegen(format!(
                 "raw expressions are not supported by the rustc backend yet: {text}"

@@ -43,10 +43,10 @@ module test.core = {
 }
 
 #[test]
-fn typecheck_domains_jsx_patching() {
+fn typecheck_domains_patching() {
     let source = r#"
 module test.m7 = {
-  export addWeek, view, updated
+  export addWeek, updated
 
   Date = { year: Int, month: Int, day: Int }
 
@@ -68,13 +68,6 @@ module test.m7 = {
   addWeek d = d + 1w
 
   updated = addWeek { year: 2024, month: 9, day: 1 }
-
-  view : Text -> Date -> Html
-  view name date =
-    <div class="card">
-      <span>Hello {name}!</span>
-      <span>Day {date.day}</span>
-    </div>
 }
 "#;
     check_ok(source);

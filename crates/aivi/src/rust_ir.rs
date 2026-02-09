@@ -97,7 +97,6 @@ pub enum RustIrExpr {
         block_kind: RustIrBlockKind,
         items: Vec<RustIrBlockItem>,
     },
-    JsxElement { id: u32 },
     Raw { id: u32, text: String },
 }
 
@@ -303,7 +302,6 @@ fn lower_expr(
                 lowered
             },
         },
-        KernelExpr::JsxElement { id, .. } => RustIrExpr::JsxElement { id },
         KernelExpr::Raw { id, text } => RustIrExpr::Raw { id, text },
     })
 }

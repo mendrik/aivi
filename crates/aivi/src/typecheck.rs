@@ -2,9 +2,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::diagnostics::{Diagnostic, FileDiagnostic, Span};
 use crate::surface::{
-    BlockItem, BlockKind, Def, DomainItem, Expr, JsxChild, JsxNode, Literal, Module, ModuleItem,
-    PathSegment, Pattern, RecordField, RecordPatternField, SpannedName, TypeAlias, TypeDecl,
-    TypeExpr, TypeSig,
+    BlockItem, BlockKind, Def, DomainItem, Expr, Literal, Module, ModuleItem, PathSegment, Pattern,
+    RecordField, RecordPatternField, SpannedName, TypeAlias, TypeDecl, TypeExpr, TypeSig,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -785,7 +784,6 @@ impl TypeChecker {
             } => self.infer_if(cond, then_branch, else_branch, env),
             Expr::Binary { op, left, right, .. } => self.infer_binary(op, left, right, env),
             Expr::Block { kind, items, .. } => self.infer_block(kind, items, env),
-            Expr::Jsx(node) => self.infer_jsx(node, env),
             Expr::Raw { .. } => Ok(self.fresh_var()),
         }
     }
@@ -1199,48 +1197,6 @@ impl TypeChecker {
             self.unify_with_span(value_ty, field_ty, field.span.clone())?;
         }
         Ok(target_ty)
-    }
-
-    fn infer_jsx(&mut self, node: &JsxNode, env: &mut TypeEnv) -> Result<Type, TypeError> {
-        self.check_jsx(node, env)?;
-        Ok(Type::con("Html"))
-    }
-
-    fn check_jsx(&mut self, node: &JsxNode, env: &mut TypeEnv) -> Result<(), TypeError> {
-        match node {
-            JsxNode::Element(element) => {
-                for attr in &element.attributes {
-                    if let Some(value) = &attr.value {
-                        let _ = self.infer_expr(value, env)?;
-                    }
-                }
-                for child in &element.children {
-                    match child {
-                        JsxChild::Expr(expr) => {
-                            let _ = self.infer_expr(expr, env)?;
-                        }
-                        JsxChild::Element(node) => {
-                            self.check_jsx(node, env)?;
-                        }
-                        JsxChild::Text(_, _) => {}
-                    }
-                }
-            }
-            JsxNode::Fragment(fragment) => {
-                for child in &fragment.children {
-                    match child {
-                        JsxChild::Expr(expr) => {
-                            let _ = self.infer_expr(expr, env)?;
-                        }
-                        JsxChild::Element(node) => {
-                            self.check_jsx(node, env)?;
-                        }
-                        JsxChild::Text(_, _) => {}
-                    }
-                }
-            }
-        }
-        Ok(())
     }
 
     fn infer_pattern(&mut self, pattern: &Pattern, env: &mut TypeEnv) -> Result<Type, TypeError> {
@@ -1841,7 +1797,6 @@ fn expr_span(expr: &Expr) -> Span {
         | Expr::If { span, .. }
         | Expr::Binary { span, .. }
         | Expr::Block { span, .. } => span.clone(),
-        Expr::Jsx(node) => jsx_span(node),
         Expr::Raw { span, .. } => span.clone(),
     }
 }
@@ -1864,13 +1819,6 @@ fn literal_span(literal: &Literal) -> Span {
         | Literal::String { span, .. }
         | Literal::Bool { span, .. }
         | Literal::DateTime { span, .. } => span.clone(),
-    }
-}
-
-fn jsx_span(node: &JsxNode) -> Span {
-    match node {
-        JsxNode::Element(element) => element.span.clone(),
-        JsxNode::Fragment(fragment) => fragment.span.clone(),
     }
 }
 
@@ -1997,7 +1945,6 @@ fn desugar_holes_inner(expr: Expr, is_root: bool) -> Expr {
                 .collect();
             Expr::Block { kind, items, span }
         }
-        Expr::Jsx(node) => Expr::Jsx(desugar_holes_jsx(node)),
         Expr::Ident(name) => Expr::Ident(name),
         Expr::Literal(literal) => Expr::Literal(literal),
         Expr::Raw { text, span } => Expr::Raw { text, span },
@@ -2025,40 +1972,6 @@ fn desugar_holes_inner(expr: Expr, is_root: bool) -> Expr {
         let _ = index;
     }
     acc
-}
-
-fn desugar_holes_jsx(node: JsxNode) -> JsxNode {
-    match node {
-        JsxNode::Element(mut element) => {
-            for attr in &mut element.attributes {
-                if let Some(value) = &attr.value {
-                    attr.value = Some(desugar_holes_inner(value.clone(), false));
-                }
-            }
-            element.children = element
-                .children
-                .into_iter()
-                .map(desugar_holes_jsx_child)
-                .collect();
-            JsxNode::Element(element)
-        }
-        JsxNode::Fragment(mut fragment) => {
-            fragment.children = fragment
-                .children
-                .into_iter()
-                .map(desugar_holes_jsx_child)
-                .collect();
-            JsxNode::Fragment(fragment)
-        }
-    }
-}
-
-fn desugar_holes_jsx_child(child: JsxChild) -> JsxChild {
-    match child {
-        JsxChild::Expr(expr) => JsxChild::Expr(desugar_holes_inner(expr, false)),
-        JsxChild::Element(node) => JsxChild::Element(desugar_holes_jsx(node)),
-        JsxChild::Text(text, span) => JsxChild::Text(text, span),
-    }
 }
 
 fn contains_hole(expr: &Expr) -> bool {
@@ -2098,27 +2011,7 @@ fn contains_hole(expr: &Expr) -> bool {
             | BlockItem::Recurse { expr, .. }
             | BlockItem::Expr { expr, .. } => contains_hole(expr),
         }),
-        Expr::Jsx(node) => contains_hole_jsx(node),
         Expr::Raw { .. } => false,
-    }
-}
-
-fn contains_hole_jsx(node: &JsxNode) -> bool {
-    match node {
-        JsxNode::Element(element) => element
-            .attributes
-            .iter()
-            .any(|attr| attr.value.as_ref().map_or(false, contains_hole))
-            || element.children.iter().any(|child| match child {
-                JsxChild::Expr(expr) => contains_hole(expr),
-                JsxChild::Element(node) => contains_hole_jsx(node),
-                JsxChild::Text(_, _) => false,
-            }),
-        JsxNode::Fragment(fragment) => fragment.children.iter().any(|child| match child {
-            JsxChild::Expr(expr) => contains_hole(expr),
-            JsxChild::Element(node) => contains_hole_jsx(node),
-            JsxChild::Text(_, _) => false,
-        }),
     }
 }
 
@@ -2259,45 +2152,5 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
                 .collect(),
             span,
         },
-        Expr::Jsx(node) => Expr::Jsx(replace_holes_jsx(node, counter, params)),
-    }
-}
-
-fn replace_holes_jsx(node: JsxNode, counter: &mut u32, params: &mut Vec<String>) -> JsxNode {
-    match node {
-        JsxNode::Element(element) => JsxNode::Element(crate::surface::JsxElement {
-            name: element.name,
-            attributes: element
-                .attributes
-                .into_iter()
-                .map(|attr| crate::surface::JsxAttribute {
-                    name: attr.name,
-                    value: attr.value.map(|value| replace_holes_inner(value, counter, params)),
-                    span: attr.span,
-                })
-                .collect(),
-            children: element
-                .children
-                .into_iter()
-                .map(|child| match child {
-                    JsxChild::Expr(expr) => JsxChild::Expr(replace_holes_inner(expr, counter, params)),
-                    JsxChild::Element(node) => JsxChild::Element(replace_holes_jsx(node, counter, params)),
-                    JsxChild::Text(text, span) => JsxChild::Text(text, span),
-                })
-                .collect(),
-            span: element.span,
-        }),
-        JsxNode::Fragment(fragment) => JsxNode::Fragment(crate::surface::JsxFragment {
-            children: fragment
-                .children
-                .into_iter()
-                .map(|child| match child {
-                    JsxChild::Expr(expr) => JsxChild::Expr(replace_holes_inner(expr, counter, params)),
-                    JsxChild::Element(node) => JsxChild::Element(replace_holes_jsx(node, counter, params)),
-                    JsxChild::Text(text, span) => JsxChild::Text(text, span),
-                })
-                .collect(),
-            span: fragment.span,
-        }),
     }
 }

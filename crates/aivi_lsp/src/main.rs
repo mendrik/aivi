@@ -3,10 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use aivi::{
-    parse_modules, BlockItem, ClassDecl, Def, DomainDecl, DomainItem, Expr, InstanceDecl,
-    JsxAttribute, JsxChild, JsxElement, JsxNode, ListItem, MatchArm, Module, ModuleItem,
-    PathSegment, Pattern, RecordField, RecordPatternField, Span, SpannedName, TypeAlias,
-    TypeCtor, TypeDecl, TypeExpr, UseDecl,
+    parse_modules, BlockItem, ClassDecl, Def, DomainDecl, DomainItem, Expr, InstanceDecl, ListItem,
+    MatchArm, Module, ModuleItem, PathSegment, Pattern, RecordField, RecordPatternField, Span,
+    SpannedName, TypeAlias, TypeCtor, TypeDecl, TypeExpr, UseDecl,
 };
 use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result;
@@ -667,9 +666,6 @@ impl Backend {
                     Self::collect_block_item_references(item, ident, uri, locations);
                 }
             }
-            Expr::Jsx(node) => {
-                Self::collect_jsx_references(node, ident, uri, locations);
-            }
             Expr::Raw { .. } => {}
         }
     }
@@ -746,71 +742,6 @@ impl Backend {
         }
     }
 
-    fn collect_jsx_references(
-        node: &JsxNode,
-        ident: &str,
-        uri: &Url,
-        locations: &mut Vec<Location>,
-    ) {
-        match node {
-            JsxNode::Element(element) => {
-                Self::collect_jsx_element_references(element, ident, uri, locations);
-            }
-            JsxNode::Fragment(fragment) => {
-                for child in fragment.children.iter() {
-                    Self::collect_jsx_child_references(child, ident, uri, locations);
-                }
-            }
-        }
-    }
-
-    fn collect_jsx_element_references(
-        element: &JsxElement,
-        ident: &str,
-        uri: &Url,
-        locations: &mut Vec<Location>,
-    ) {
-        if element.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(element.name.span.clone())));
-        }
-        for attr in element.attributes.iter() {
-            Self::collect_jsx_attribute_references(attr, ident, uri, locations);
-        }
-        for child in element.children.iter() {
-            Self::collect_jsx_child_references(child, ident, uri, locations);
-        }
-    }
-
-    fn collect_jsx_attribute_references(
-        attr: &JsxAttribute,
-        ident: &str,
-        uri: &Url,
-        locations: &mut Vec<Location>,
-    ) {
-        if attr.name.name == ident {
-            locations.push(Location::new(uri.clone(), Self::span_to_range(attr.name.span.clone())));
-        }
-        if let Some(value) = &attr.value {
-            Self::collect_expr_references(value, ident, uri, locations);
-        }
-    }
-
-    fn collect_jsx_child_references(
-        child: &JsxChild,
-        ident: &str,
-        uri: &Url,
-        locations: &mut Vec<Location>,
-    ) {
-        match child {
-            JsxChild::Expr(expr) => {
-                Self::collect_expr_references(expr, ident, uri, locations);
-            }
-            JsxChild::Element(node) => {
-                Self::collect_jsx_references(node, ident, uri, locations);
-            }
-            JsxChild::Text(_, _) => {}
-        }
-    }
 
     fn format_type_decl(decl: &TypeDecl) -> String {
         let params = Self::format_type_params(&decl.params);

@@ -5,8 +5,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::io::Write;
 
 use crate::hir::{
-    HirBlockItem, HirExpr, HirJsxChild, HirJsxNode, HirListItem, HirLiteral, HirMatchArm,
-    HirPathSegment, HirPattern, HirRecordField, HirProgram,
+    HirBlockItem, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirPathSegment, HirPattern,
+    HirRecordField, HirProgram,
 };
 use crate::AiviError;
 
@@ -412,7 +412,6 @@ impl Runtime {
                     "generator blocks are not supported in native runtime yet".to_string(),
                 )),
             },
-            HirExpr::JsxElement { node, .. } => self.eval_jsx(node, env),
             HirExpr::Raw { .. } => Err(RuntimeError::Message(
                 "raw expressions are not supported in native runtime yet".to_string(),
             )),
@@ -682,64 +681,6 @@ impl Runtime {
         Err(RuntimeError::Message(format!(
             "unsupported binary operator {op}"
         )))
-    }
-
-    fn eval_jsx(&mut self, node: &HirJsxNode, env: &Env) -> Result<Value, RuntimeError> {
-        match node {
-            HirJsxNode::Element(element) => {
-                let mut attrs = Vec::new();
-                for attr in &element.attributes {
-                    let value = if let Some(expr) = &attr.value {
-                        self.eval_expr(expr, env)?
-                    } else {
-                        Value::Text("true".to_string())
-                    };
-                    let text = value_to_text(&value);
-                    let mut attr_map = HashMap::new();
-                    attr_map.insert("name".to_string(), Value::Text(attr.name.clone()));
-                    attr_map.insert("value".to_string(), Value::Text(text));
-                    attrs.push(Value::Record(attr_map));
-                }
-                let mut children = Vec::new();
-                for child in &element.children {
-                    self.push_jsx_child(&mut children, child, env)?;
-                }
-                let mut map = HashMap::new();
-                map.insert("tag".to_string(), Value::Text(element.name.clone()));
-                map.insert("attrs".to_string(), Value::List(attrs));
-                map.insert("children".to_string(), Value::List(children));
-                Ok(Value::Record(map))
-            }
-            HirJsxNode::Fragment(fragment) => {
-                let mut children = Vec::new();
-                for child in &fragment.children {
-                    self.push_jsx_child(&mut children, child, env)?;
-                }
-                Ok(Value::List(children))
-            }
-        }
-    }
-
-    fn push_jsx_child(
-        &mut self,
-        children: &mut Vec<Value>,
-        child: &HirJsxChild,
-        env: &Env,
-    ) -> Result<(), RuntimeError> {
-        match child {
-            HirJsxChild::Text(text) => {
-                children.push(Value::Text(text.clone()));
-            }
-            HirJsxChild::Expr(expr) => {
-                let value = self.eval_expr(expr, env)?;
-                append_html_value(children, value);
-            }
-            HirJsxChild::Element(node) => {
-                let value = self.eval_jsx(node, env)?;
-                append_html_value(children, value);
-            }
-        }
-        Ok(())
     }
 
     fn run_effect_value(&mut self, value: Value) -> Result<Value, RuntimeError> {
@@ -1185,107 +1126,6 @@ fn is_match_failure_message(message: &str) -> bool {
     message == "non-exhaustive match"
 }
 
-fn append_html_value(children: &mut Vec<Value>, value: Value) {
-    match value {
-        Value::List(items) => {
-            for item in items {
-                append_html_value(children, item);
-            }
-        }
-        Value::Unit => {}
-        other => children.push(other),
-    }
-}
-
-fn value_to_text(value: &Value) -> String {
-    match value {
-        Value::Text(text) => text.clone(),
-        _ => format_value(value),
-    }
-}
-
-fn render_html_value(value: &Value) -> Result<String, RuntimeError> {
-    match value {
-        Value::Text(text) => Ok(escape_html(text)),
-        Value::Record(map) => render_html_element(map),
-        Value::List(items) => {
-            let mut out = String::new();
-            for item in items {
-                out.push_str(&render_html_value(item)?);
-            }
-            Ok(out)
-        }
-        other => Ok(escape_html(&format_value(other))),
-    }
-}
-
-fn render_html_element(map: &HashMap<String, Value>) -> Result<String, RuntimeError> {
-    let tag = map
-        .get("tag")
-        .and_then(|value| match value {
-            Value::Text(text) => Some(text.clone()),
-            _ => None,
-        })
-        .ok_or_else(|| RuntimeError::Message("html element missing tag".to_string()))?;
-    let attrs = map
-        .get("attrs")
-        .and_then(|value| match value {
-            Value::List(items) => Some(items.clone()),
-            _ => None,
-        })
-        .unwrap_or_default();
-    let children = map
-        .get("children")
-        .and_then(|value| match value {
-            Value::List(items) => Some(items.clone()),
-            _ => None,
-        })
-        .unwrap_or_default();
-
-    let mut attr_text = String::new();
-    for attr in attrs {
-        if let Value::Record(attr_map) = attr {
-            let name = attr_map
-                .get("name")
-                .and_then(|value| match value {
-                    Value::Text(text) => Some(text.clone()),
-                    _ => None,
-                })
-                .unwrap_or_default();
-            let value = attr_map
-                .get("value")
-                .and_then(|value| match value {
-                    Value::Text(text) => Some(text.clone()),
-                    _ => None,
-                })
-                .unwrap_or_default();
-            if !name.is_empty() {
-                attr_text.push(' ');
-                attr_text.push_str(&name);
-                attr_text.push_str("=\"");
-                attr_text.push_str(&escape_html(&value));
-                attr_text.push('"');
-            }
-        }
-    }
-
-    let mut children_text = String::new();
-    for child in children {
-        children_text.push_str(&render_html_value(&child)?);
-    }
-    Ok(format!(
-        "<{tag}{attr_text}>{children_text}</{tag}>"
-    ))
-}
-
-fn escape_html(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#39;")
-}
-
 fn format_value(value: &Value) -> String {
     match value {
         Value::Unit => "Unit".to_string(),
@@ -1436,7 +1276,6 @@ fn register_builtins(env: &Env) {
     env.set("random".to_string(), build_random_record());
     env.set("channel".to_string(), build_channel_record());
     env.set("concurrent".to_string(), build_concurrent_record());
-    env.set("html".to_string(), build_html_record());
 }
 
 fn builtin(
@@ -1848,19 +1687,6 @@ fn build_concurrent_record() -> Value {
                 }),
             };
             Ok(Value::Effect(Arc::new(effect)))
-        }),
-    );
-    Value::Record(fields)
-}
-
-fn build_html_record() -> Value {
-    let mut fields = HashMap::new();
-    fields.insert(
-        "render".to_string(),
-        builtin("html.render", 1, |mut args, _| {
-            let value = args.pop().unwrap();
-            let rendered = render_html_value(&value)?;
-            Ok(Value::Text(rendered))
         }),
     );
     Value::Record(fields)
