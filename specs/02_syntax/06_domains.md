@@ -64,7 +64,7 @@ remaining = deadline - now // Returns a Duration
 ```aivi
 // Color blending and manipulation
 highlight = baseColor + 20l - 10s // Lighter, less saturated
-transparent = activeColor <= { alpha: 0.5 }
+transparent = activeColor <| { alpha: 0.5 }
 
 // Vector arithmetic
 velocity = (10, 5) // Inferred as Vector

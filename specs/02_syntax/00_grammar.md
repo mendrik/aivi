@@ -68,7 +68,7 @@ MatchExpr      := PatchExpr [ "?" MatchArms ] ;
 MatchArms      := Sep? "|" Arm { Sep "|" Arm } ;
 Arm            := Pattern [ "when" Expr ] "=>" Expr ;
 
-PatchExpr      := PipeExpr { "<=" PatchLit } ;
+PatchExpr      := PipeExpr { "<|" PatchLit } ;
 PipeExpr       := AppExpr { "|>" AppExpr } ;
 
 AppExpr        := Atom { Atom } ;
@@ -203,4 +203,4 @@ RecordPatKey   := lowerIdent { "." lowerIdent } ;
 - **`{ ... }` shape ambiguity**: if a braced form mixes `field: expr` with `pat = expr`, error with “record literal vs block” guidance.
 - **Arms without a `?`**: `| p => e` is only valid after `?` *or* directly after `=` in the multi-clause unary function form.
 - **`_` placeholder**: `_ + 1` is only legal where a unary function is expected; otherwise error and suggest `x => x + 1`.
-- **Deep keys in record literals**: `a.b: 1` should be rejected in record literals (suggest patching with `<=` if the intent was a path).
+- **Deep keys in record literals**: `a.b: 1` should be rejected in record literals (suggest patching with `<|` if the intent was a path).

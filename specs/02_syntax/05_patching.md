@@ -1,9 +1,11 @@
 # Patching Records
 
-The `<=` operator applies a **declarative structural patch**. The compiler enforces that the patch shape matches the target record's type, ensuring that only existing fields are updated or new fields are added according to the record's openness.
+The `<|` operator applies a **declarative structural patch**. This avoids overloading `<=`, which is expected to be a normal comparison operator.
+
+The compiler enforces that the patch shape matches the target record's type, ensuring that only existing fields are updated or new fields are added according to the record's openness.
 
 ```aivi
-updated = record <= { path: instruction }
+updated = record <| { path: instruction }
 ```
 
 Patching is:
@@ -67,7 +69,7 @@ If the constructor does not match, the value is unchanged.
 ## 5.3 Replace / insert
 
 ```aivi
-user2 = user <= {
+user2 = user <| {
   name: "Grace"
   profile.avatar.url: "https://img"
 }
@@ -80,7 +82,7 @@ Intermediate records are created if missing.
 ## 5.4 Transform
 
 ```aivi
-user3 = user <= {
+user3 = user <| {
   name: toUpper
   stats.loginCount: _ + 1
 }
@@ -91,7 +93,7 @@ user3 = user <= {
 ## 5.5 Removal
 
 ```aivi
-user4 = user <= {
+user4 = user <| {
   email: -
   preferences.notifications.email: -
 }
@@ -108,7 +110,7 @@ Patching allows for very concise updates to deeply nested data structures and co
 ### Deep Collection Updates
 ```aivi
 // Update prices of all active items in a category
-store2 = store <= {
+store2 = store <| {
   categories[name == "Hardware"].items[active].price: _ * 1
 }
 ```
@@ -116,7 +118,7 @@ store2 = store <= {
 ### Complex Sum-Type Patching
 ```aivi
 // Move all shapes to the origin
-scene2 = scene <= {
+scene2 = scene <| {
   shapes[*].Circle.center: origin
   shapes[*].Square.origin: origin
 }
@@ -125,7 +127,7 @@ scene2 = scene <= {
 ### Record Bulk Update
 ```aivi
 // Set multiple fields based on previous state
-user2 = user <= {
+user2 = user <| {
   name: toUpper
   status: if admin then SuperUser else Normal
   stats.lastVisit: now

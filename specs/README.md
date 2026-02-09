@@ -74,8 +74,9 @@ A high-integrity functional language targeting WebAssembly.
 
 49. [WASM Target](ideas/01_wasm_target.md)
 50. [LiveView Frontend](ideas/02_liveview_frontend.md)
-51. [Meta-Domain](ideas/04_meta_domain.md)
-52. [Tooling](ideas/05_tooling.md)
+51. [HTML Domains](ideas/03_html_domains.md)
+52. [Meta-Domain](ideas/04_meta_domain.md)
+53. [Tooling](ideas/05_tooling.md)
 
 ### Guides
 

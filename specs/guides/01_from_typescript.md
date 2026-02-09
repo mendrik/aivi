@@ -77,7 +77,7 @@ const updated = {
 
 **AIVI:**
 ```aivi
-updated = user <= {
+updated = user <| {
   name: "Grace"
   stats.loginCount: _ + 1
 }

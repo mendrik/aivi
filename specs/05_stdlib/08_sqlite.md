@@ -99,7 +99,7 @@ user = db.users <= { id: 1 }
 
 // Patching a Row record triggers an effectful update
 effect {
-  user <= { name: "Grace" }
+  user <| { name: "Grace" }
 }
 ```
 
@@ -170,7 +170,7 @@ user1 = db.users <= { id: 1 }
 effect {
   db.users
     filter (u => u.status == Inactive && u.lastLogin > thirtyDaysAgo)
-    |> traverse (_ <= { status: Active })
+    |> traverse (_ <| { status: Active })
 }
 ```
 

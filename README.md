@@ -28,15 +28,15 @@ init = { count: 0, step: 1 }
 update : Msg -> Model -> Model
 update msg model =
   msg ?
-  | Inc        => model <= { count: _ + model.step }
-  | Dec        => model <= { count: _ - model.step }
-  | SetStep s  => model <= { step: _ <- s }
+  | Inc        => model <| { count: _ + model.step }
+  | Dec        => model <| { count: _ - model.step }
+  | SetStep s  => model <| { step: _ <- s }
 
-// Pipes and a few “ligature-friendly” operators: -> => |> ?? <= >= != && ||
+// Pipes and a few “ligature-friendly” operators: -> => |> <| ?? <= >= != && ||
 renderCount = model =>
   model.count
     |> toText
-    |> (t => "Count: " + t)
+    |> "Count: _"
 
 // Domain-directed deltas (examples from the spec’s stdlib ideas)
 deadline = now + 2w + 3d

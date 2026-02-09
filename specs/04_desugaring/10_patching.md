@@ -1,4 +1,4 @@
-# Record patching `<=` (Path : Instruction)
+# Record patching `<|` (Path : Instruction)
 
 Kernel record primitives:
 
@@ -11,17 +11,17 @@ For nested paths, desugar into nested `update`/`delete`.
 
 | Surface | Desugaring |
 | :--- | :--- |
-| `r <= { a: v }` | `update ⟦r⟧ "a" (λ_. ⟦v⟧)` (replace/insert) |
-| `r <= { a: f }` where `f` is a function | `update ⟦r⟧ "a" ⟦f⟧` (transform) |
-| `r <= { a: - }` | `delete ⟦r⟧ "a"` |
+| `r <| { a: v }` | `update ⟦r⟧ "a" (λ_. ⟦v⟧)` (replace/insert) |
+| `r <| { a: f }` where `f` is a function | `update ⟦r⟧ "a" ⟦f⟧` (transform) |
+| `r <| { a: - }` | `delete ⟦r⟧ "a"` |
 
 Nested:
 
 | Surface | Desugaring |
 | :--- | :--- |
-| `r <= { a.b: v }` | `update ⟦r⟧ "a" (λa0. update a0 "b" (λ_. ⟦v⟧))` |
-| `r <= { a.b: f }` | `update ⟦r⟧ "a" (λa0. update a0 "b" ⟦f⟧)` |
-| `r <= { a.b: - }` | `update ⟦r⟧ "a" (λa0. delete a0 "b")` |
+| `r <| { a.b: v }` | `update ⟦r⟧ "a" (λa0. update a0 "b" (λ_. ⟦v⟧))` |
+| `r <| { a.b: f }` | `update ⟦r⟧ "a" (λa0. update a0 "b" ⟦f⟧)` |
+| `r <| { a.b: - }` | `update ⟦r⟧ "a" (λa0. delete a0 "b")` |
 
 ## Function-as-data disambiguation `:=`
 

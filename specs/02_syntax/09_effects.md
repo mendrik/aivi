@@ -79,7 +79,7 @@ If you instead write `if … then effect { … } else effect { … }` *without* 
 ## 9.3 Effects and patching
 
 ```aivi
-authorize = user => user <= {
+authorize = user => user <| {
   roles: _ ++ ["Admin"]
   lastLogin: now
 }

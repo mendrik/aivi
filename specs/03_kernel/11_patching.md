@@ -3,7 +3,7 @@
 A patch:
 
 ```text
-x <= { a.b.c : f }
+x <| { a.b.c : f }
 ```
 
 Desugars to nested `update` + `fold`:

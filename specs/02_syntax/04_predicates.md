@@ -118,8 +118,8 @@ generate {
 ```
 
 ```aivi
-store <= { items[price > 80].discount: 0.1 }
-store <= { categories[name == "Hardware"].items[active].price: _ * 1.1 }
+store <| { items[price > 80].discount: 0.1 }
+store <| { categories[name == "Hardware"].items[active].price: _ * 1.1 }
 ```
 
 ```aivi

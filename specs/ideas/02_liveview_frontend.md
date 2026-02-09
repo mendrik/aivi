@@ -29,7 +29,7 @@ This creates a **"No-JS" experience** for the developer. They write only AIVI co
 ## Why AIVI fits this
 
 *   **Generators**: Perfect for handling streams of events (clicks, inputs).
-*   **Patching (`<=`)**: The deep update syntax makes state management trivial (Redux/Zustand replacement built-in).
+*   **Patching (`<|`)**: The deep update syntax makes state management trivial (Redux/Zustand replacement built-in).
 *   **Domains**: HTML structure is typed via `Html`, and styling is typed via `Style` (CSS unit deltas like `16px`, `100%`, `100svh`, `5cqw`).
 
 ## Example
@@ -44,8 +44,8 @@ Msg = Inc | Dec
 update : Msg -> Model -> Model
 update msg model =
   msg ?
-  | Inc => model <= { count: _ + 1 }
-  | Dec => model <= { count: _ - 1 }
+  | Inc => model <| { count: _ + 1 }
+  | Dec => model <| { count: _ - 1 }
 
 containerStyle : StyleSheet
 containerStyle = [
