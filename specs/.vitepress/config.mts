@@ -24,6 +24,7 @@ export default defineConfig({
   lang: "en-US",
   title: "AIVI",
   description: "AIVI Language Specification",
+  head: [["link", { rel: "icon", href: "/favicon.png" }]],
   base: process.env.CI ? resolveBase() : "/",
   cleanUrls: true,
   lastUpdated: true,

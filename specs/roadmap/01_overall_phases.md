@@ -9,7 +9,7 @@ This plan is intentionally incremental: each milestone produces something shippa
 - Start with **WASM MVP + WASI** and a small runtime; keep a clean seam to later adopt **WasmGC** and/or the **Component Model**.
 - Treat “Domains”, “Effects”, and “Resources” as first-class: design them early, implement them progressively.
 
-## M0 — Repo + CI scaffolding (1–3 days)
+## M0 — Repo + CI scaffolding
 
 Deliverables:
 - Rust workspace skeleton (`crates/*`) and a single `aivi` binary.
