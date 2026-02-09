@@ -1,6 +1,6 @@
 use aivi::{
-    check_modules, desugar_target, format_target, load_module_diagnostics, load_modules,
-    parse_target, render_diagnostics, AiviError,
+    check_modules, check_types, desugar_target, format_target, load_module_diagnostics,
+    load_modules, parse_target, render_diagnostics, AiviError,
 };
 use std::env;
 use std::process::ExitCode;
@@ -60,6 +60,9 @@ fn run() -> Result<(), AiviError> {
             let mut diagnostics = load_module_diagnostics(&target)?;
             let modules = load_modules(&target)?;
             diagnostics.extend(check_modules(&modules));
+            if diagnostics.is_empty() {
+                diagnostics.extend(check_types(&modules));
+            }
             if diagnostics.is_empty() {
                 return Ok(());
             }

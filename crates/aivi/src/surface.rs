@@ -42,6 +42,14 @@ pub struct TypeDecl {
 }
 
 #[derive(Debug, Clone)]
+pub struct TypeAlias {
+    pub name: SpannedName,
+    pub params: Vec<SpannedName>,
+    pub aliased: TypeExpr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeCtor {
     pub name: SpannedName,
     pub args: Vec<TypeExpr>,
@@ -91,6 +99,7 @@ pub enum ModuleItem {
     Def(Def),
     TypeSig(TypeSig),
     TypeDecl(TypeDecl),
+    TypeAlias(TypeAlias),
     ClassDecl(ClassDecl),
     InstanceDecl(InstanceDecl),
     DomainDecl(DomainDecl),
@@ -556,10 +565,31 @@ impl Parser {
         let name = self.consume_name()?;
         if name.name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
             self.pos = checkpoint;
-            return self.parse_type_decl().map(ModuleItem::TypeDecl);
+            return self.parse_type_decl_or_alias();
         }
         self.pos = checkpoint;
         self.parse_def().map(ModuleItem::Def)
+    }
+
+    fn parse_type_decl_or_alias(&mut self) -> Option<ModuleItem> {
+        let checkpoint = self.pos;
+        let diag_checkpoint = self.diagnostics.len();
+        if let Some(decl) = self.parse_type_decl() {
+            if !decl.constructors.is_empty() {
+                return Some(ModuleItem::TypeDecl(decl));
+            }
+        }
+        self.pos = checkpoint;
+        if let Some(alias) = self.parse_type_alias() {
+            if self.check_symbol("=>") {
+                self.pos = checkpoint;
+                self.diagnostics.truncate(diag_checkpoint);
+                return self.parse_def().map(ModuleItem::Def);
+            }
+            return Some(ModuleItem::TypeAlias(alias));
+        }
+        self.diagnostics.truncate(diag_checkpoint);
+        None
     }
 
     fn parse_type_decl(&mut self) -> Option<TypeDecl> {
@@ -598,6 +628,25 @@ impl Parser {
             name,
             params,
             constructors: ctors,
+            span,
+        })
+    }
+
+    fn parse_type_alias(&mut self) -> Option<TypeAlias> {
+        let name = self.consume_ident()?;
+        let mut params = Vec::new();
+        while let Some(param) = self.consume_ident() {
+            params.push(param);
+        }
+        self.expect_symbol("=", "expected '=' in type alias");
+        let aliased = self.parse_type_expr().unwrap_or(TypeExpr::Unknown {
+            span: name.span.clone(),
+        });
+        let span = merge_span(name.span.clone(), type_span(&aliased));
+        Some(TypeAlias {
+            name,
+            params,
+            aliased,
             span,
         })
     }
@@ -709,11 +758,24 @@ impl Parser {
         self.expect_symbol("{", "expected '{' to start domain body");
         let mut items = Vec::new();
         while !self.check_symbol("}") && self.pos < self.tokens.len() {
+            self.consume_newlines();
+            if self.check_symbol("}") {
+                break;
+            }
             if self.match_keyword("type") {
                 if let Some(type_decl) = self.parse_type_decl() {
                     items.push(DomainItem::TypeAlias(type_decl));
                     continue;
                 }
+            }
+            let checkpoint = self.pos;
+            if self.consume_name().is_some() {
+                if self.check_symbol(":") {
+                    self.pos = checkpoint;
+                    let _ = self.parse_type_sig();
+                    continue;
+                }
+                self.pos = checkpoint;
             }
             if let Some(def) = self.parse_def() {
                 items.push(DomainItem::Def(def));
@@ -936,38 +998,48 @@ impl Parser {
     fn parse_postfix(&mut self) -> Option<Expr> {
         let mut expr = self.parse_primary()?;
         loop {
-            if self.consume_symbol("(") {
-                let mut args = Vec::new();
-                while !self.check_symbol(")") && self.pos < self.tokens.len() {
-                    if let Some(arg) = self.parse_expr() {
-                        args.push(arg);
-                    }
-                    if !self.consume_symbol(",") {
-                        break;
+            if self.peek_symbol("(") {
+                if let Some(span) = self.peek_span() {
+                    if is_adjacent(&expr_span(&expr), &span) {
+                        self.consume_symbol("(");
+                        let mut args = Vec::new();
+                        while !self.check_symbol(")") && self.pos < self.tokens.len() {
+                            if let Some(arg) = self.parse_expr() {
+                                args.push(arg);
+                            }
+                            if !self.consume_symbol(",") {
+                                break;
+                            }
+                        }
+                        let end = self.expect_symbol(")", "expected ')' to close call");
+                        let span = merge_span(expr_span(&expr), end.unwrap_or(expr_span(&expr)));
+                        expr = Expr::Call {
+                            func: Box::new(expr),
+                            args,
+                            span,
+                        };
+                        continue;
                     }
                 }
-                let end = self.expect_symbol(")", "expected ')' to close call");
-                let span = merge_span(expr_span(&expr), end.unwrap_or(expr_span(&expr)));
-                expr = Expr::Call {
-                    func: Box::new(expr),
-                    args,
-                    span,
-                };
-                continue;
             }
-            if self.consume_symbol("[") {
-                let index = self.parse_expr().unwrap_or(Expr::Raw {
-                    text: String::new(),
-                    span: expr_span(&expr),
-                });
-                let end = self.expect_symbol("]", "expected ']' after index");
-                let span = merge_span(expr_span(&expr), end.unwrap_or(expr_span(&expr)));
-                expr = Expr::Index {
-                    base: Box::new(expr),
-                    index: Box::new(index),
-                    span,
-                };
-                continue;
+            if self.peek_symbol("[") {
+                if let Some(span) = self.peek_span() {
+                    if is_adjacent(&expr_span(&expr), &span) {
+                        self.consume_symbol("[");
+                        let index = self.parse_expr().unwrap_or(Expr::Raw {
+                            text: String::new(),
+                            span: expr_span(&expr),
+                        });
+                        let end = self.expect_symbol("]", "expected ']' after index");
+                        let span = merge_span(expr_span(&expr), end.unwrap_or(expr_span(&expr)));
+                        expr = Expr::Index {
+                            base: Box::new(expr),
+                            index: Box::new(index),
+                            span,
+                        };
+                        continue;
+                    }
+                }
             }
             if self.consume_symbol(".") {
                 if let Some(field) = self.consume_ident() {
@@ -988,12 +1060,15 @@ impl Parser {
     fn is_expr_start(&self) -> bool {
         if let Some(token) = self.tokens.get(self.pos) {
             match token.kind {
-                TokenKind::Ident | TokenKind::Number | TokenKind::String => return true,
+                TokenKind::Ident => {
+                    if token.text == "then" || token.text == "else" {
+                        return false;
+                    }
+                    return true;
+                }
+                TokenKind::Number | TokenKind::String => return true,
                 TokenKind::Symbol => {
-                    return matches!(
-                        token.text.as_str(),
-                        "(" | "[" | "{" | "." | "<" | "-"
-                    )
+                    return matches!(token.text.as_str(), "(" | "[" | "{" | "." | "-")
                 }
                 TokenKind::Newline => return false,
             }
@@ -1052,6 +1127,7 @@ impl Parser {
 
         if self.consume_symbol("[") {
             let mut items = Vec::new();
+            self.consume_newlines();
             while !self.check_symbol("]") && self.pos < self.tokens.len() {
                 let spread = self.consume_symbol("...");
                 if let Some(expr) = self.parse_expr() {
@@ -1062,12 +1138,27 @@ impl Parser {
                         span,
                     });
                 }
-                if !self.consume_symbol(",") {
+                self.consume_newlines();
+                if self.consume_symbol(",") {
+                    self.consume_newlines();
+                    continue;
+                }
+                if self.check_symbol("]") {
                     break;
                 }
+                if self.is_expr_start() {
+                    continue;
+                }
+                break;
             }
             let end = self.expect_symbol("]", "expected ']' to close list");
-            let span = merge_span(items.first().map(|item| item.span.clone()).unwrap_or(self.previous_span()), end.unwrap_or(self.previous_span()));
+            let span = merge_span(
+                items
+                    .first()
+                    .map(|item| item.span.clone())
+                    .unwrap_or(self.previous_span()),
+                end.unwrap_or(self.previous_span()),
+            );
             return Some(Expr::List { items, span });
         }
 
@@ -1486,6 +1577,13 @@ impl Parser {
         }
         self.expect_symbol(">", "expected '>' to close JSX start tag");
         let children = self.parse_jsx_children(Some(name.name.clone()));
+        self.expect_symbol("<", "expected '</' after JSX children");
+        self.expect_symbol("/", "expected '</' after JSX children");
+        if let Some(tag) = self.consume_ident() {
+            if tag.name != name.name {
+                self.emit_diag("E1701", "mismatched JSX closing tag", tag.span.clone());
+            }
+        }
         let end_span = self.expect_symbol(">", "expected '>' after JSX end tag");
         let span = merge_span(name.span.clone(), end_span.unwrap_or(name.span.clone()));
         Some(JsxNode::Element(JsxElement {
@@ -1499,16 +1597,18 @@ impl Parser {
     fn parse_jsx_children(&mut self, closing: Option<String>) -> Vec<JsxChild> {
         let mut children = Vec::new();
         while self.pos < self.tokens.len() {
+            self.consume_newlines();
             if self.check_symbol("<") && self.tokens.get(self.pos + 1).map(|t| t.text.as_str()) == Some("/") {
-                self.pos += 2;
-                if let Some(name) = closing.clone() {
-                    if let Some(tag) = self.consume_ident() {
-                        if tag.name != name {
-                            self.emit_diag("E1701", "mismatched JSX closing tag", tag.span.clone());
+                if closing.is_none() {
+                    break;
+                }
+                if let Some(expected) = closing.as_ref() {
+                    if let Some(tag) = self.tokens.get(self.pos + 2) {
+                        if tag.kind == TokenKind::Ident && tag.text == *expected {
+                            break;
                         }
                     }
                 }
-                break;
             }
             if self.peek_symbol("<") {
                 if let Some(node) = self.parse_jsx() {

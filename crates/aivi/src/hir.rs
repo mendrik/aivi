@@ -192,6 +192,7 @@ fn collect_defs(module: &Module) -> Vec<(String, Expr)> {
                     }
                 }
             }
+            ModuleItem::TypeAlias(_) => {}
             _ => {}
         }
     }

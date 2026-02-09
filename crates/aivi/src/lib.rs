@@ -5,6 +5,7 @@ mod hir;
 mod lexer;
 mod resolver;
 mod surface;
+mod typecheck;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,6 +18,7 @@ pub use formatter::format_text;
 pub use hir::{HirModule, HirProgram};
 pub use resolver::check_modules;
 pub use surface::{parse_modules, parse_modules_from_tokens, Module};
+pub use typecheck::check_types;
 
 #[derive(Debug)]
 pub enum AiviError {

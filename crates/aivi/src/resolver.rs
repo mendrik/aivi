@@ -157,6 +157,7 @@ fn check_defs(
                     }
                 }
             }
+            ModuleItem::TypeAlias(_) => {}
             _ => {}
         }
     }
@@ -172,6 +173,7 @@ fn collect_value_defs(item: &ModuleItem, scope: &mut HashSet<String>) {
                 scope.insert(ctor.name.name.clone());
             }
         }
+        ModuleItem::TypeAlias(_) => {}
         ModuleItem::ClassDecl(class_decl) => {
             for member in &class_decl.members {
                 scope.insert(member.name.name.clone());
@@ -258,11 +260,6 @@ fn check_expr(
         }
         Expr::Record { fields, .. } => {
             for field in fields {
-                for segment in &field.path {
-                    if let crate::surface::PathSegment::Index(expr, _) = segment {
-                        check_expr(expr, scope, diagnostics, module, wildcard_import);
-                    }
-                }
                 check_expr(&field.value, scope, diagnostics, module, wildcard_import);
             }
         }
