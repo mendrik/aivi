@@ -1640,6 +1640,14 @@ impl Parser {
             self.pos += 1;
             return Some(token.clone());
         }
+        if token.kind == TokenKind::Symbol
+            && token.text != "<"
+            && token.text != "{"
+            && token.text != "}"
+        {
+            self.pos += 1;
+            return Some(token.clone());
+        }
         None
     }
 

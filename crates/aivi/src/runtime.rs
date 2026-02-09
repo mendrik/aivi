@@ -62,7 +62,6 @@ enum EffectValue {
 }
 
 struct ResourceValue {
-    env: Env,
     items: Arc<Vec<HirBlockItem>>,
 }
 
@@ -279,10 +278,16 @@ impl Runtime {
         self.check_cancelled()?;
         match expr {
             HirExpr::Var { name, .. } => {
-                let value = env
-                    .get(name)
-                    .ok_or_else(|| RuntimeError::Message(format!("unknown name {name}")))?;
-                self.force_value(value)
+                if let Some(value) = env.get(name) {
+                    return self.force_value(value);
+                }
+                if is_constructor_name(name) {
+                    return Ok(Value::Constructor {
+                        name: name.clone(),
+                        args: Vec::new(),
+                    });
+                }
+                Err(RuntimeError::Message(format!("unknown name {name}")))
             }
             HirExpr::LitNumber { text, .. } => {
                 if let Some(value) = parse_number_value(text) {
@@ -400,7 +405,6 @@ impl Runtime {
                 ))),
                 crate::hir::HirBlockKind::Resource => Ok(Value::Resource(Arc::new(
                     ResourceValue {
-                        env: env.clone(),
                         items: Arc::new(items.clone()),
                     },
                 ))),
@@ -425,6 +429,10 @@ impl Runtime {
             }
             Value::Builtin(builtin) => builtin.apply(arg, self),
             Value::MultiClause(clauses) => self.apply_multi_clause(clauses, arg),
+            Value::Constructor { name, mut args } => {
+                args.push(arg);
+                Ok(Value::Constructor { name, args })
+            }
             _ => Err(RuntimeError::Message(
                 "attempted to call a non-function".to_string(),
             )),
@@ -1160,6 +1168,13 @@ fn parse_number_value(text: &str) -> Option<Value> {
     } else {
         None
     }
+}
+
+fn is_constructor_name(name: &str) -> bool {
+    name.chars()
+        .next()
+        .map(|ch| ch.is_ascii_uppercase())
+        .unwrap_or(false)
 }
 
 fn is_callable(value: &Value) -> bool {

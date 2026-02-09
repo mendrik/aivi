@@ -101,7 +101,6 @@ impl TypePool {
 struct CodegenEnv {
     defs: HashMap<String, DefMeta>,
     print_index: u32,
-    alloc_index: u32,
     data: DataBuilder,
 }
 
@@ -162,7 +161,7 @@ pub fn compile_wasm(program: HirProgram) -> Result<Vec<u8>, AiviError> {
     next_func_index += 1;
     functions.function(print_type);
 
-    let alloc_index = next_func_index;
+    let _alloc_index = next_func_index;
     next_func_index += 1;
     functions.function(alloc_type);
 
@@ -189,7 +188,6 @@ pub fn compile_wasm(program: HirProgram) -> Result<Vec<u8>, AiviError> {
     let mut env = CodegenEnv {
         defs: def_meta,
         print_index,
-        alloc_index,
         data: DataBuilder::new(),
     };
 

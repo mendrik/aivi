@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::surface::{
-    BlockItem, BlockKind, DomainItem, Expr, JsxChild, JsxNode, Module, ModuleItem, Pattern,
+    BlockItem, BlockKind, Def, DomainItem, Expr, JsxChild, JsxNode, Module, ModuleItem, Pattern,
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -176,17 +176,17 @@ fn collect_defs(module: &Module) -> Vec<(String, Expr)> {
     let mut defs = Vec::new();
     for item in &module.items {
         match item {
-            ModuleItem::Def(def) => defs.push((def.name.name.clone(), def.expr.clone())),
+            ModuleItem::Def(def) => defs.push((def.name.name.clone(), def_expr(def))),
             ModuleItem::InstanceDecl(instance) => {
                 for def in &instance.defs {
-                    defs.push((def.name.name.clone(), def.expr.clone()));
+                    defs.push((def.name.name.clone(), def_expr(def)));
                 }
             }
             ModuleItem::DomainDecl(domain) => {
                 for domain_item in &domain.items {
                     match domain_item {
                         DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
-                            defs.push((def.name.name.clone(), def.expr.clone()));
+                            defs.push((def.name.name.clone(), def_expr(def)));
                         }
                         DomainItem::TypeAlias(_) => {}
                     }
@@ -199,7 +199,26 @@ fn collect_defs(module: &Module) -> Vec<(String, Expr)> {
     defs
 }
 
+fn def_expr(def: &Def) -> Expr {
+    if def.params.is_empty() {
+        def.expr.clone()
+    } else {
+        Expr::Lambda {
+            params: def.params.clone(),
+            body: Box::new(def.expr.clone()),
+            span: def.span.clone(),
+        }
+    }
+}
+
 fn lower_expr(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
+    if let Expr::Binary { op, left, right, .. } = &expr {
+        if op == "<|" {
+            if matches!(**right, Expr::Record { .. }) && !contains_hole(left) {
+                return lower_expr_inner(expr, id_gen);
+            }
+        }
+    }
     if contains_hole(&expr) {
         let (rewritten, params) = replace_holes(expr);
         let mut hir = lower_expr_inner(rewritten, id_gen);
@@ -600,7 +619,7 @@ fn contains_hole(expr: &Expr) -> bool {
         Expr::Call { func, args, .. } => {
             contains_hole(func) || args.iter().any(contains_hole)
         }
-        Expr::Lambda { params: _, body, .. } => contains_hole(body),
+        Expr::Lambda { .. } => false,
         Expr::Match { scrutinee, arms, .. } => {
             scrutinee.as_ref().map_or(false, |expr| contains_hole(expr))
                 || arms.iter().any(|arm| {
