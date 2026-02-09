@@ -3,3 +3,4 @@
 *.pdf
 .vitepress/cache/
 .vitepress/dist/
+node_modules

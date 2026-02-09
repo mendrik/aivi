@@ -30,9 +30,8 @@ A high-integrity functional language targeting WebAssembly.
 12. [Modules](02_syntax/10_modules.md)
 13. [Domain Definitions](02_syntax/11_domain_definition.md)
 14. [External Sources](02_syntax/12_external_sources.md)
-15. [JSX Literals](02_syntax/13_jsx_literals.md)
-16. [Decorators](02_syntax/14_decorators.md)
-17. [Resources](02_syntax/15_resources.md)
+15. [Decorators](02_syntax/14_decorators.md)
+16. [Resources](02_syntax/15_resources.md)
 
 ### Kernel (Core Calculus)
 
@@ -69,23 +68,21 @@ A high-integrity functional language targeting WebAssembly.
 43. [Duration Domain](05_stdlib/03_duration.md)
 44. [Color Domain](05_stdlib/04_color.md)
 45. [Vector Domain](05_stdlib/05_vector.md)
-46. [HTML Domain](05_stdlib/06_html.md)
-47. [Style Domain](05_stdlib/07_style.md)
-48. [SQLite Domain](05_stdlib/08_sqlite.md)
-49. [Matrix Domain](05_stdlib/09_matrix.md)
-50. [Complex Domain](05_stdlib/10_complex.md)
-51. [Quaternion Domain](05_stdlib/11_quaternion.md)
-52. [Rational & BigInt Domains](05_stdlib/12_rational_bigint.md)
-53. [Probability & Distribution Domain](05_stdlib/13_probability.md)
-54. [FFT & Signal Domain](05_stdlib/14_signal.md)
-55. [Geometry Domain](05_stdlib/15_geometry.md)
-56. [Units Domain](05_stdlib/16_units.md)
-57. [Graph Domain](05_stdlib/17_graph.md)
-58. [Linear Algebra Domain](05_stdlib/18_linear_algebra.md)
-59. [HTTP Domain](05_stdlib/19_http.md)
-60. [File Domain](05_stdlib/20_file.md)
-61. [Console Domain](05_stdlib/21_console.md)
-62. [Crypto Domain](05_stdlib/22_crypto.md)
+46. [SQLite Domain](05_stdlib/08_sqlite.md)
+47. [Matrix Domain](05_stdlib/09_matrix.md)
+48. [Complex Domain](05_stdlib/10_complex.md)
+49. [Quaternion Domain](05_stdlib/11_quaternion.md)
+50. [Rational & BigInt Domains](05_stdlib/12_rational_bigint.md)
+51. [Probability & Distribution Domain](05_stdlib/13_probability.md)
+52. [FFT & Signal Domain](05_stdlib/14_signal.md)
+53. [Geometry Domain](05_stdlib/15_geometry.md)
+54. [Units Domain](05_stdlib/16_units.md)
+55. [Graph Domain](05_stdlib/17_graph.md)
+56. [Linear Algebra Domain](05_stdlib/18_linear_algebra.md)
+57. [HTTP Domain](05_stdlib/19_http.md)
+58. [File Domain](05_stdlib/20_file.md)
+59. [Console Domain](05_stdlib/21_console.md)
+60. [Crypto Domain](05_stdlib/22_crypto.md)
 
 
 ## Building the Specification
@@ -102,5 +99,4 @@ Build static site:
 ```bash
 npm run docs:build
 ```
-
 

@@ -34,20 +34,15 @@ cargo run -p aivi -- fmt examples/hello.aivi
 # Start the language server (requires aivi-lsp in PATH)
 cargo run -p aivi -- lsp
 
-# Build a WASM artifact (expects a main definition)
-cargo run -p aivi -- build path/to/module.aivi --target wasm32-wasi --out target/aivi.wasm
+# Dump kernel and Rust IR (JSON)
+cargo run -p aivi -- kernel examples/11_concurrency.aivi
+cargo run -p aivi -- rust-ir examples/11_concurrency.aivi
 
-# Run the WASM artifact under Wasmtime
-cargo run -p aivi -- run path/to/module.aivi --target wasm32-wasi
-
-# Example WASM run
-cargo run -p aivi -- run examples/10_wasm.aivi --target wasm32-wasi
+# Emit a native binary via direct rustc invocation
+cargo run -p aivi -- build examples/11_concurrency.aivi --target rustc --out target/aivi-bin -- -C opt-level=3
 
 # Run using the native effect runtime (M6)
 cargo run -p aivi -- run examples/11_concurrency.aivi --target native
-
-# Run JSX + domains + patching demo (M7)
-cargo run -p aivi -- run examples/12_m7.aivi --target native
 ```
 
 ## Test
@@ -58,9 +53,5 @@ cargo test
 
 ## Notes
 
-- The WASM backend is intentionally minimal: it supports basic literals, simple arithmetic,
-- The WASM backend is intentionally minimal: it supports basic literals, simple arithmetic,
-  `if`, blocks with simple bindings, and `print` for `Text`. It currently expects a single
-  module and a `main` definition. More features will land in later phases.
-- The native runtime is the current home for effects, resources, and concurrency. It is
-  intentionally minimal and does not yet cover the full surface language.
+- The `rustc` backend currently targets a small, effect-centric subset (enough for hello-world style programs).
+- The native runtime is the current home for effects, resources, and concurrency; it is intentionally minimal.

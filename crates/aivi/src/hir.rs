@@ -725,7 +725,6 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
                 .collect(),
             span,
         },
-        Expr::Raw { .. } => expr,
     }
 }
 

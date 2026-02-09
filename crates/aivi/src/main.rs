@@ -481,38 +481,13 @@ fn cmd_install(args: &[String]) -> Result<(), AiviError> {
         }
     }
 
-    match verify_aivi_dependency(&root, dep.name()) {
-        Ok(true) => {}
-        Ok(false) if require_aivi => {
-            return Err(AiviError::Cargo(format!(
-                "dependency {} is missing [package.metadata.aivi]",
-                dep.name()
-            )));
-        }
-        Ok(false) => {
-            eprintln!(
-                "warning: dependency {} is missing [package.metadata.aivi] (use --require-aivi to reject)",
-                dep.name()
-            );
-        }
-        Err(err) if require_aivi => return Err(err),
-        Err(err) => eprintln!("warning: failed to verify dependency: {err}"),
+    if require_aivi {
+        return Err(AiviError::Cargo(
+            "--require-aivi is not supported without cargo metadata inspection".to_string(),
+        ));
     }
 
     Ok(())
-}
-
-fn verify_aivi_dependency(project_root: &Path, dep_name: &str) -> Result<bool, AiviError> {
-    let metadata = cargo_metadata::MetadataCommand::new()
-        .current_dir(project_root)
-        .exec()
-        .map_err(|err| AiviError::Cargo(format!("cargo metadata failed: {err}")))?;
-    let Some(pkg) = metadata.packages.iter().find(|p| p.name == dep_name) else {
-        return Err(AiviError::Cargo(format!(
-            "dependency {dep_name} not found in cargo metadata"
-        )));
-    };
-    Ok(pkg.metadata.get("aivi").is_some())
 }
 
 fn should_use_project_pipeline(args: &[String]) -> bool {

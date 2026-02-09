@@ -95,7 +95,8 @@ pub fn write_scaffold(
                 "[project]\nkind = \"bin\"\nentry = \"{entry_file}\"\nlanguage_version = \"{language_version}\"\n\n[build]\ngen_dir = \"target/aivi-gen\"\nrust_edition = \"{edition}\"\ncargo_profile = \"dev\"\n"
             );
             let cargo_toml = format!(
-                "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"{edition}\"\n\n[package.metadata.aivi]\nlanguage_version = \"{language_version}\"\nkind = \"bin\"\nentry = \"src/{entry_file}\"\n\n[[bin]]\nname = \"{name}\"\npath = \"target/aivi-gen/src/main.rs\"\n\n[dependencies]\naivi = \"0.1\"\nserde_json = \"1.0\"\n"
+                "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"{edition}\"\n\n[package.metadata.aivi]\nlanguage_version = \"{language_version}\"\nkind = \"bin\"\nentry = \"src/{entry_file}\"\n\n[[bin]]\nname = \"{name}\"\npath = \"target/aivi-gen/src/main.rs\"\n\n[dependencies]\n{}\nserde_json = \"1.0\"\n",
+                aivi_path_dependency()
             );
             let aivi_source = starter_bin_source();
             (entry_file, cargo_toml, aivi_toml, aivi_source)
@@ -106,7 +107,8 @@ pub fn write_scaffold(
                 "[project]\nkind = \"lib\"\nentry = \"{entry_file}\"\nlanguage_version = \"{language_version}\"\n\n[build]\ngen_dir = \"target/aivi-gen\"\nrust_edition = \"{edition}\"\ncargo_profile = \"dev\"\n"
             );
             let cargo_toml = format!(
-                "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"{edition}\"\n\n[package.metadata.aivi]\nlanguage_version = \"{language_version}\"\nkind = \"lib\"\nentry = \"src/{entry_file}\"\n\n[lib]\npath = \"target/aivi-gen/src/lib.rs\"\n\n[dependencies]\naivi = \"0.1\"\nserde_json = \"1.0\"\n"
+                "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"{edition}\"\n\n[package.metadata.aivi]\nlanguage_version = \"{language_version}\"\nkind = \"lib\"\nentry = \"src/{entry_file}\"\n\n[lib]\npath = \"target/aivi-gen/src/lib.rs\"\n\n[dependencies]\n{}\nserde_json = \"1.0\"\n",
+                aivi_path_dependency()
             );
             let aivi_source = starter_lib_source();
             (entry_file, cargo_toml, aivi_toml, aivi_source)
@@ -119,6 +121,11 @@ pub fn write_scaffold(
     std::fs::write(src_dir.join(entry_file), aivi_source)?;
 
     Ok(())
+}
+
+fn aivi_path_dependency() -> String {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    format!("aivi = {{ path = {:?} }}", manifest_dir.display().to_string())
 }
 
 fn starter_bin_source() -> &'static str {

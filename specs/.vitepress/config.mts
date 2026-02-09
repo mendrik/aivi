@@ -80,7 +80,8 @@ export default defineConfig({
           { text: "External Sources", link: "/02_syntax/12_external_sources" },
           // JSX literals docs removed for now
           { text: "Decorators", link: "/02_syntax/14_decorators" },
-          { text: "Resources", link: "/02_syntax/15_resources" }
+          { text: "Resources", link: "/02_syntax/15_resources" },
+          { text: "Tagged Literals", link: "/02_syntax/16_tagged_literals" }
         ]
       },
       {
@@ -126,8 +127,6 @@ export default defineConfig({
           { text: "Duration", link: "/05_stdlib/03_duration" },
           { text: "Color", link: "/05_stdlib/04_color" },
           { text: "Vector", link: "/05_stdlib/05_vector" },
-          { text: "HTML", link: "/05_stdlib/06_html" },
-          { text: "Style", link: "/05_stdlib/07_style" },
           { text: "SQLite", link: "/05_stdlib/08_sqlite" },
           { text: "Matrix", link: "/05_stdlib/09_matrix" },
           { text: "Complex", link: "/05_stdlib/10_complex" },
@@ -142,11 +141,17 @@ export default defineConfig({
           { text: "HTTP", link: "/05_stdlib/19_http" },
           { text: "File", link: "/05_stdlib/20_file" },
           { text: "Console", link: "/05_stdlib/21_console" },
-          { text: "Crypto", link: "/05_stdlib/22_crypto" }
+          { text: "Crypto", link: "/05_stdlib/22_crypto" },
+          { text: "JSON", link: "/05_stdlib/23_json" },
+          { text: "Regex", link: "/05_stdlib/24_regex" },
+          { text: "System", link: "/05_stdlib/25_system" },
+          { text: "Log", link: "/05_stdlib/26_log" },
+          { text: "Test", link: "/05_stdlib/27_test" },
+          { text: "Collections", link: "/05_stdlib/28_collections" }
         ]
       },
       {
-        text: "Runtime",
+        text: "Execution & Concurrency",
         collapsed: true,
         items: [
           { text: "Concurrency", link: "/06_runtime/01_concurrency" },

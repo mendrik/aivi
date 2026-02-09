@@ -11,7 +11,7 @@ source -> CST -> AST -> HIR -> Core IR -> Rust crate -> rustc -> native binary
 
 ## IR Stages
 
-- **HIR**: desugared surface syntax (blocks, JSX, pattern matches).
+- **HIR**: desugared surface syntax (blocks, pattern matches).
 - **Core IR**: explicit effects, closures, and fully-specified match trees.
 - **Lowered IR**: control-flow graph with basic blocks (MIR-like).
 

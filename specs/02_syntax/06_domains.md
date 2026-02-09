@@ -123,7 +123,7 @@ The standard library exports domains as modules (see Modules). Typical domains i
 * `Calendar` (date arithmetic with calendar-aware deltas)
 * `Duration` (fixed time deltas)
 * `Color`, `Vector`
-* `Html`, `Style`
+* (HTML/Style domains are deferred; Rust backend will handle UI targets later)
 * `SQLite`
 
 ### Behind the Scenes: Interpretation

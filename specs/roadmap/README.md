@@ -6,7 +6,6 @@ This roadmap tracks the incremental development of the AIVI language, compiler, 
 
 - **Kernel First**: Implement the Kernel first, then desugar surface language into it (`specs/03_kernel` → `specs/04_desugaring`).
 - **Unified Engine**: Single parser, name resolver, and typechecker for both Compiler and LSP.
-- **WASM MVP + WASI**: Start simple, adopt WasmGC/Component Model later.
 - **First-Class Domains**: Design Domains, Effects, and Resources early.
 
 ---
@@ -57,7 +56,6 @@ This roadmap tracks the incremental development of the AIVI language, compiler, 
 - [x] `aivi build --target rustc` emits binary via Rust transpilation.
 - [x] `aivi run` executes program (native/interpreter).
 - [x] Basic runtime support (heap, strings, lists).
-- [x] WASI integration via Rust backend.
 - [x] **Acceptance**: Deterministic golden tests, memory safety.
 
 ---
@@ -72,11 +70,9 @@ Scope: Implement `Effect E A` semantics, structured concurrency, and resource ma
 - [ ] `bracket`/`with` resource pattern.
 - [ ] Deterministic cancellation semantics.
 
-## Phase M7: Domains + Patching + JSX/HTML (In Progress)
+## Phase M7: Domains + Patching (In Progress)
 
-Scope: Domain definitions, operator overloading, patching semantics, and JSX desugaring.
-
-- [x] Small "HTML domain" demo (tree print/serialize).
+Scope: Domain definitions, operator overloading, and patching semantics.
 - [ ] Domain definitions and operator interpretation (`specs/02_syntax/11_domain_definition.md`).
 - [ ] Patching semantics (`specs/02_syntax/05_patching.md`).
 - [ ] Domain-specific numeric deltas (calendar/duration/color).
@@ -98,7 +94,6 @@ Scope: Make editing AIVI comfortable for daily work.
 
 Scope: Expose AIVI modules as Model Context Protocol (MCP) tools/resources.
 
-- [ ] Rust MCP host loading AIVI WASM artifacts.
 - [ ] `aivi mcp serve` exposing `@mcp_tool` and `@mcp_resource`.
 - [ ] JSON Schema generation from AIVI types.
 - [ ] Capability gates for unauthorized effects.
@@ -131,11 +126,11 @@ Scope: Advanced typing features.
 - **Phase 2**: Implement stdlib in AIVI language where possible.
 - **Phase 3**: Optimization (persistent collections, HAMT).
 - **Modules**: `Prelude`, `Core` (Int/Float/Bool/Text/List), `Collections`, `Bytes`, `Json`.
-- **Domains**: `Duration`, `Calendar`, `Color`, `Vector`, `Html`, `Style`.
+- **Domains**: `Duration`, `Calendar`, `Color`, `Vector`.
 - **Effects**: `Console`, `Clock`, `Random`, `File`, `Net`.
 
 ### Rust Workspace Layout
 - **Binaries**: `aivi_cli`, `aivi_lsp`, `aivi_mcp`.
 - **Core Libs**: `span`, `lexer`, `cst`, `parser`, `ast`, `hir`, `resolve`, `desugar`, `kernel`, `types`, `effects`.
-- **Codegen**: `codegen_wasm`, `runtime`, `wasi`.
+- **Codegen**: `runtime`, `rust_codegen`.
 - **Tooling**: `fmt`, `tests`, `doc`.

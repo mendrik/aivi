@@ -188,7 +188,7 @@ Atom           := Literal
                | EffectBlock
                | GenerateBlock
                | ResourceBlock
-               | JSXElement ;
+               ;
 
 Block          := "do" "{" { Stmt } "}" ;
 EffectBlock    := "effect" "{" { Stmt } "}" ;
@@ -315,12 +315,6 @@ RecordPat      := "{" { RecordPatField } "}" ;
 RecordPatField := RecordPatKey [ (":" Pattern) | ("@" Pattern) ] [ FieldSep ] ;
 RecordPatKey   := lowerIdent { "." lowerIdent } ;
 ```
-
-## 0.8 JSX (parsing note)
-
-JSX literals are a *secondary* syntax that is easiest to parse with a dedicated sub-parser once a `<` token is seen in an expression position.
-
-This grammar document treats JSX as a single `JSXElement` atom (see `specs/02_syntax/13_jsx_literals.md` for surface rules and desugaring intent).
 
 
 ## 0.9 Diagnostics (where the compiler should nag)
