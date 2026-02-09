@@ -65,3 +65,13 @@ If you see type-soundness issues, unclear semantics, bad ergonomics, or “this 
 
 - Open an issue / PR with a minimal counterexample.
 - Point to a specific page in `specs/` (or propose a rewrite).
+
+## CLI (experimental)
+
+The `aivi` CLI can scaffold and build Cargo-backed AIVI projects (generated Rust goes in `target/aivi-gen/`):
+
+- `cargo install aivi`
+- `aivi init my-app --bin` (or `--lib`)
+- `cd my-app && aivi build`
+- `cd my-app && aivi run`
+- `cd my-app && aivi install some-crate@^1.2`

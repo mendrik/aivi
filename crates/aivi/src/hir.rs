@@ -1,27 +1,27 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::surface::{
     BlockItem, BlockKind, Def, DomainItem, Expr, JsxChild, JsxNode, Module, ModuleItem, Pattern,
 };
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirProgram {
     pub modules: Vec<HirModule>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirModule {
     pub name: String,
     pub defs: Vec<HirDef>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirDef {
     pub name: String,
     pub expr: HirExpr,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "kind")]
 pub enum HirExpr {
     Var { id: u32, name: String },
@@ -55,32 +55,32 @@ pub enum HirExpr {
     Raw { id: u32, text: String },
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirListItem {
     pub expr: HirExpr,
     pub spread: bool,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirRecordField {
     pub path: Vec<HirPathSegment>,
     pub value: HirExpr,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirPathSegment {
     Field(String),
     Index(HirExpr),
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirMatchArm {
     pub pattern: HirPattern,
     pub guard: Option<HirExpr>,
     pub body: HirExpr,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirPattern {
     Wildcard { id: u32 },
     Var { id: u32, name: String },
@@ -91,13 +91,13 @@ pub enum HirPattern {
     Record { id: u32, fields: Vec<HirRecordPatternField> },
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirRecordPatternField {
     pub path: Vec<String>,
     pub pattern: HirPattern,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirLiteral {
     Number(String),
     String(String),
@@ -105,7 +105,7 @@ pub enum HirLiteral {
     DateTime(String),
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirBlockKind {
     Plain,
     Effect,
@@ -113,7 +113,7 @@ pub enum HirBlockKind {
     Resource,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirBlockItem {
     Bind { pattern: HirPattern, expr: HirExpr },
     Filter { expr: HirExpr },
@@ -122,31 +122,31 @@ pub enum HirBlockItem {
     Expr { expr: HirExpr },
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirJsxNode {
     Element(HirJsxElement),
     Fragment(HirJsxFragment),
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirJsxElement {
     pub name: String,
     pub attributes: Vec<HirJsxAttribute>,
     pub children: Vec<HirJsxChild>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirJsxFragment {
     pub children: Vec<HirJsxChild>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirJsxAttribute {
     pub name: String,
     pub value: Option<HirExpr>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum HirJsxChild {
     Expr(HirExpr),
     Text(String),

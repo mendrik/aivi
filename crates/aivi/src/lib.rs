@@ -6,8 +6,9 @@ mod lexer;
 mod resolver;
 mod surface;
 mod typecheck;
-mod wasm;
 mod runtime;
+mod rust_codegen;
+mod pm;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,11 +19,18 @@ pub use formatter::format_text;
 pub use hir::{HirModule, HirProgram};
 pub use resolver::check_modules;
 pub use surface::{
-    parse_modules, parse_modules_from_tokens, DomainItem, Module, ModuleItem,
+    parse_modules, parse_modules_from_tokens, BlockItem, ClassDecl, Def, DomainDecl, DomainItem,
+    Expr, InstanceDecl, JsxAttribute, JsxChild, JsxElement, JsxFragment, JsxNode, ListItem,
+    MatchArm, Module, ModuleItem, PathSegment, Pattern, RecordField, RecordPatternField,
+    SpannedName, TypeAlias, TypeCtor, TypeDecl, TypeExpr, TypeSig, UseDecl,
 };
 pub use typecheck::check_types;
-pub use wasm::{compile_wasm, run_wasm};
 pub use runtime::run_native;
+pub use rust_codegen::{compile_rust, compile_rust_lib};
+pub use pm::{
+    collect_aivi_sources, edit_cargo_toml_dependencies, read_aivi_toml, write_scaffold, AiviToml,
+    CargoDepSpec, CargoDepSpecParseError, CargoManifestEdits, ProjectKind,
+};
 
 #[derive(Debug)]
 pub enum AiviError {
@@ -33,6 +41,8 @@ pub enum AiviError {
     Codegen(String),
     Wasm(String),
     Runtime(String),
+    Config(String),
+    Cargo(String),
 }
 
 impl std::fmt::Display for AiviError {
@@ -45,6 +55,8 @@ impl std::fmt::Display for AiviError {
             AiviError::Codegen(message) => write!(f, "Codegen error: {message}"),
             AiviError::Wasm(message) => write!(f, "WASM error: {message}"),
             AiviError::Runtime(message) => write!(f, "Runtime error: {message}"),
+            AiviError::Config(message) => write!(f, "Config error: {message}"),
+            AiviError::Cargo(message) => write!(f, "Cargo error: {message}"),
         }
     }
 }
