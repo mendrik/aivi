@@ -7,7 +7,7 @@
 AIVI is a high-integrity functional language aimed at WebAssembly. This repo primarily contains the **language specification** and standard-library sketches.
 
 - Read the spec entrypoint: `specs/README.md`
-- Browse the docs index: `specs/index.md`
+- Browse the docs index: [Full specification](https://mendrik.github.io/aivi/)
 - Build the docs site: `pnpm docs:dev` / `pnpm docs:build`
 
 ## Syntax sketch (very early)
