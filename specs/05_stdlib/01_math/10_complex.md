@@ -4,12 +4,7 @@ The `Complex` domain supports arithmetic with **Complex Numbers**.
 
 A complex number expands the idea of the number line into a 2D plane. It has a **Real** part (normal numbers) and an **Imaginary** part (multiples of `i`, where `i` is the square root of -1). 
 
-While "imaginary" sounds abstract, these numbers are incredibly real in their applications. They are the native language of:
-*   **Electronics**: Describing alternating current (AC) circuits.
-*   **Signal Processing**: Analyzing audio waves and radio frequencies.
-*   **Fractals**: Generating the Mandelbrot set.
-
-Trying to simulate circuits or process audio using just two separate float variables (`x` and `y`) is tedious and error-prone. This domain lets you treat complex numbers as single values, allowing you to simply write `a + b` or `a * b` and have the math work correctly.
+While "imaginary" sounds made up, these numbers effectively power modern civilization. They are the native language of electricity, radio waves, and signal processing. Trying to simulate circuits using separate `x` and `y` float variables is like doing arithmetic with Roman numerals—tedious and error-prone. This domain lets you treat them as first-class values.
 
 ## Overview
 

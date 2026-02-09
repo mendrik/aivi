@@ -2,10 +2,12 @@
 
 This domain provides **Arbitrary-Precision Integers** (`BigInt`) and **Exact Rational Numbers** (`Rational`).
 
-- **BigInt**: Standard integers (`Int`) are limited to 64 bits (max ~9 quintillion). `BigInt` grows automatically to fit *any* integer number, limited only by your computer's RAM. They are essential for cryptography, combinatorics, and counting things that exceed standard limits.
-- **Rational**: Computers usually store fractions as floating-point decimals (`0.1`), which are imprecise approximations. `Rational` numbers store exact fractions (like `1/3`), ensuring that `1/3 + 1/3 + 1/3` equals exactly `1`, not `0.999999`.
+Standard computers are bad at math. They run out of fingers at 9 quintillion (`Int64`), and they think `0.1 + 0.2` equals `0.30000000000000004` (Floating Point).
 
-Floating-point math has inherent precision errors (e.g., `0.1 + 0.2 != 0.3` in standard binary math). For financial calculations, scientific proofs, or algorithms requiring exactness, standard floats are dangerous. These types guarantee precision.
+*   **BigInt** grows automatically to fit *any* integer number, limited only by your computer's RAM.
+*   **Rational** stores exact fractions (like `1/3`), ensuring that `1/3 + 1/3 + 1/3` equals exactly `1`, not `0.999999`.
+
+If you are doing cryptography, combinatorics, or financial calculations where a missing penny is a lawsuit, use these types.
 
 ## Overview
 

@@ -1,15 +1,10 @@
 # Quaternion Domain
 
-The `Quaternion` domain provides tools for handling **3D rotations** robustly.
+The `Quaternion` domain provides tools for handling **3D rotations** without the headaches.
 
-In 3D graphics and games, we usually think of rotations as angles (X, Y, Z). However, using angles often leads to mathematical problems like "Gimbal Lock," where rotation axes align and freedom of movement is lost.
+In 3D graphics, we usually think of rotations as angles (X, Y, Z). But angles have a fatal flaw called "Gimbal Lock," where two axes align and you lose a degree of freedom.
 
-A **Quaternion** is a four-dimensional number system that solves this. While harder to visualize (it involves a scalar and a 3D vector), it is the industry standard for:
-1.  Smoothly interpolating between two rotations (SLERP).
-2.  Avoiding Gimbal Lock completely.
-3.  Computationally efficient rotation composition.
-
-Creating a 3D fly-camera or animating a character's joints requires smooth, glitch-free rotation. Quaternions make this mathematically stable compared to Euler angles or Matrix rotations.
+A **Quaternion** is a four-dimensional mathematical object that solves this. It allows for totally smooth interpolation between rotations (SLERP) and never suffers from Gimbal Lock. If you want to make a camera fly smoothly or animate a character's joints, Quaternions are the industry standard.
 
 ## Overview
 
