@@ -48,10 +48,6 @@ pub fn render_diagnostics(path: &str, diagnostics: &[Diagnostic]) -> String {
     output
 }
 
-pub fn render_diagnostic(path: &str, diagnostic: &Diagnostic) -> String {
-    render_diagnostic_with_source(path, diagnostic, None)
-}
-
 fn render_diagnostic_with_source(
     path: &str,
     diagnostic: &Diagnostic,

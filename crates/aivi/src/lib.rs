@@ -13,9 +13,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub use cst::{CstBundle, CstFile, CstToken};
-pub use diagnostics::{
-    render_diagnostics, Diagnostic, DiagnosticLabel, FileDiagnostic, Position, Span,
-};
+pub use diagnostics::{render_diagnostics, Diagnostic, DiagnosticLabel, FileDiagnostic, Position, Span};
 pub use formatter::format_text;
 pub use hir::{HirModule, HirProgram};
 pub use resolver::check_modules;

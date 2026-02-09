@@ -390,6 +390,119 @@ impl Backend {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_text() -> &'static str {
+        r#"@no_prelude
+module examples.compiler.math = {
+  export add, sub
+
+  add = x y => x + y
+  sub = x y => x - y
+}
+
+module examples.compiler.app = {
+  export run
+
+  use examples.compiler.math (add)
+
+  run = add 1 2
+}
+"#
+    }
+
+    fn sample_uri() -> Url {
+        Url::parse("file:///test.aivi").expect("valid test uri")
+    }
+
+    fn position_for(text: &str, needle: &str) -> Position {
+        let offset = text.find(needle).expect("needle exists");
+        let mut line = 0u32;
+        let mut column = 0u32;
+        for (idx, ch) in text.char_indices() {
+            if idx == offset {
+                break;
+            }
+            if ch == '\n' {
+                line += 1;
+                column = 0;
+            } else {
+                column += 1;
+            }
+        }
+        Position::new(line, column)
+    }
+
+    fn find_symbol_span(text: &str, name: &str) -> Span {
+        let path = PathBuf::from("test.aivi");
+        let (modules, _) = parse_modules(&path, text);
+        for module in modules {
+            for export in module.exports.iter() {
+                if export.name == name {
+                    return export.span.clone();
+                }
+            }
+            for item in module.items {
+                if let ModuleItem::Def(def) = item {
+                    if def.name.name == name {
+                        return def.name.span;
+                    }
+                }
+            }
+        }
+        panic!("symbol not found: {name}");
+    }
+
+    #[test]
+    fn completion_items_include_keywords_and_defs() {
+        let text = sample_text();
+        let uri = sample_uri();
+        let items = Backend::build_completion_items(text, &uri);
+        let labels: Vec<&str> = items.iter().map(|item| item.label.as_str()).collect();
+        assert!(labels.contains(&"module"));
+        assert!(labels.contains(&"examples.compiler.math"));
+        assert!(labels.contains(&"add"));
+    }
+
+    #[test]
+    fn build_definition_resolves_def() {
+        let text = sample_text();
+        let uri = sample_uri();
+        let position = position_for(text, "add 1 2");
+        let location = Backend::build_definition(text, &uri, position).expect("definition found");
+        let expected_span = find_symbol_span(text, "add");
+        let expected_range = Backend::span_to_range(expected_span);
+        assert_eq!(location.range, expected_range);
+    }
+
+    #[test]
+    fn build_diagnostics_reports_error() {
+        let text = "module broken = {";
+        let uri = sample_uri();
+        let diagnostics = Backend::build_diagnostics(text, &uri);
+        assert!(!diagnostics.is_empty());
+        assert_eq!(diagnostics[0].severity, Some(DiagnosticSeverity::ERROR));
+        assert_eq!(diagnostics[0].source.as_deref(), Some("aivi"));
+    }
+
+    #[test]
+    fn document_symbols_include_module_and_children() {
+        let text = sample_text();
+        let uri = sample_uri();
+        let symbols = Backend::build_document_symbols(text, &uri);
+        let module = symbols
+            .iter()
+            .find(|symbol| symbol.name == "examples.compiler.math")
+            .expect("module symbol exists");
+        let children = module.children.as_ref().expect("module has children");
+        let child_names: Vec<&str> = children.iter().map(|child| child.name.as_str()).collect();
+        assert!(child_names.contains(&"add"));
+        assert!(child_names.contains(&"sub"));
+    }
+}
+
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {

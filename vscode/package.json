@@ -18,6 +18,14 @@
     "Formatters"
   ],
   "main": "./dist/extension.js",
+  "files": [
+    "dist/extension.js",
+    "syntaxes/**",
+    "language-configuration.json",
+    "ebnf-language-configuration.json",
+    "bin/aivi-lsp",
+    "README.md"
+  ],
   "activationEvents": [
     "onLanguage:aivi"
   ],
@@ -81,7 +89,7 @@
   "scripts": {
     "build": "tsgo -p .",
     "watch": "tsgo -watch -p .",
-    "package": "vsce package",
+    "package": "vsce package --no-dependencies",
     "vscode:prepublish": "pnpm run build"
   },
   "devDependencies": {
