@@ -39,6 +39,9 @@ cargo run -p aivi -- run examples/10_wasm.aivi --target wasm32-wasi
 
 # Run using the native effect runtime (M6)
 cargo run -p aivi -- run examples/11_concurrency.aivi --target native
+
+# Run JSX + domains + patching demo (M7)
+cargo run -p aivi -- run examples/12_m7.aivi --target native
 ```
 
 ## Test

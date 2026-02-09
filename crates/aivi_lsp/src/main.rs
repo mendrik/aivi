@@ -2,14 +2,15 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use aivi::diagnostics::Span;
-use aivi::surface::{parse_modules, DomainItem, ModuleItem};
+use aivi::{parse_modules, DomainItem, ModuleItem, Span};
 use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::{
-    Diagnostic, DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse,
-    InitializeParams, InitializeResult, InitializedParams, OneOf, Position, Range, ServerCapabilities,
-    SymbolKind, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
+    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, Diagnostic,
+    DiagnosticSeverity, DocumentSymbol, DocumentSymbolParams, DocumentSymbolResponse,
+    GotoDefinitionParams, GotoDefinitionResponse, InitializeParams, InitializeResult,
+    InitializedParams, Location, OneOf, Position, Range, ServerCapabilities, SymbolKind,
+    TextDocumentPositionParams, TextDocumentSyncCapability, TextDocumentSyncKind, Url,
 };
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
@@ -30,12 +31,156 @@ struct Backend {
 }
 
 impl Backend {
+    const KEYWORDS: [&'static str; 19] = [
+        "module", "export", "use", "type", "alias", "class", "instance", "domain",
+        "def", "let", "if", "else", "match", "case", "when", "true", "false", "in",
+        "where",
+    ];
+
     fn span_to_range(span: Span) -> Range {
         let start_line = span.start.line.saturating_sub(1) as u32;
         let start_char = span.start.column.saturating_sub(1) as u32;
         let end_line = span.end.line.saturating_sub(1) as u32;
         let end_char = span.end.column as u32;
         Range::new(Position::new(start_line, start_char), Position::new(end_line, end_char))
+    }
+
+    fn offset_at(text: &str, position: Position) -> usize {
+        let mut offset = 0usize;
+        let mut line = 0u32;
+        for chunk in text.split_inclusive('\n') {
+            if line == position.line {
+                let char_offset = position.character as usize;
+                return offset + chunk.chars().take(char_offset).map(|c| c.len_utf8()).sum::<usize>();
+            }
+            offset += chunk.len();
+            line += 1;
+        }
+        offset
+    }
+
+    fn extract_identifier(text: &str, position: Position) -> Option<String> {
+        let offset = Self::offset_at(text, position).min(text.len());
+        let bytes = text.as_bytes();
+        if bytes.is_empty() {
+            return None;
+        }
+        let mut start = offset.min(bytes.len());
+        while start > 0 {
+            let ch = text[start - 1..].chars().next()?;
+            if ch.is_alphanumeric() || ch == '_' || ch == '.' {
+                start -= ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+        let mut end = offset.min(bytes.len());
+        while end < bytes.len() {
+            let ch = text[end..].chars().next()?;
+            if ch.is_alphanumeric() || ch == '_' || ch == '.' {
+                end += ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+        let ident = text[start..end].trim();
+        if ident.is_empty() {
+            None
+        } else {
+            Some(ident.to_string())
+        }
+    }
+
+    fn build_definition(text: &str, uri: &Url, position: Position) -> Option<Location> {
+        let ident = Self::extract_identifier(text, position)?;
+        let path = PathBuf::from(Self::path_from_uri(uri));
+        let (modules, _) = parse_modules(&path, text);
+        for module in modules {
+            if module.name.name == ident {
+                let range = Self::span_to_range(module.name.span);
+                return Some(Location::new(uri.clone(), range));
+            }
+            for export in module.exports.iter() {
+                if export.name == ident {
+                    let range = Self::span_to_range(export.span.clone());
+                    return Some(Location::new(uri.clone(), range));
+                }
+            }
+            for item in module.items.iter() {
+                if let Some(range) = Self::item_definition_range(item, &ident) {
+                    return Some(Location::new(uri.clone(), range));
+                }
+            }
+        }
+        None
+    }
+
+    fn item_definition_range(item: &ModuleItem, ident: &str) -> Option<Range> {
+        match item {
+            ModuleItem::Def(def) if def.name.name == ident => Some(Self::span_to_range(def.name.span.clone())),
+            ModuleItem::TypeSig(sig) if sig.name.name == ident => Some(Self::span_to_range(sig.name.span.clone())),
+            ModuleItem::TypeDecl(decl) if decl.name.name == ident => Some(Self::span_to_range(decl.name.span.clone())),
+            ModuleItem::TypeAlias(alias) if alias.name.name == ident => Some(Self::span_to_range(alias.name.span.clone())),
+            ModuleItem::ClassDecl(class_decl) if class_decl.name.name == ident => {
+                Some(Self::span_to_range(class_decl.name.span.clone()))
+            }
+            ModuleItem::InstanceDecl(instance_decl) if instance_decl.name.name == ident => {
+                Some(Self::span_to_range(instance_decl.name.span.clone()))
+            }
+            ModuleItem::DomainDecl(domain_decl) if domain_decl.name.name == ident => {
+                Some(Self::span_to_range(domain_decl.name.span.clone()))
+            }
+            _ => None,
+        }
+    }
+
+    fn build_completion_items(text: &str, uri: &Url) -> Vec<CompletionItem> {
+        let path = PathBuf::from(Self::path_from_uri(uri));
+        let (modules, _) = parse_modules(&path, text);
+        let mut items = Vec::new();
+        for keyword in Self::KEYWORDS {
+            items.push(CompletionItem {
+                label: keyword.to_string(),
+                kind: Some(CompletionItemKind::KEYWORD),
+                ..CompletionItem::default()
+            });
+        }
+        for module in modules {
+            items.push(CompletionItem {
+                label: module.name.name.clone(),
+                kind: Some(CompletionItemKind::MODULE),
+                ..CompletionItem::default()
+            });
+            for export in module.exports {
+                items.push(CompletionItem {
+                    label: export.name,
+                    kind: Some(CompletionItemKind::PROPERTY),
+                    ..CompletionItem::default()
+                });
+            }
+            for item in module.items {
+                if let Some((label, kind)) = Self::completion_from_item(item) {
+                    items.push(CompletionItem {
+                        label,
+                        kind: Some(kind),
+                        ..CompletionItem::default()
+                    });
+                }
+            }
+        }
+        items
+    }
+
+    fn completion_from_item(item: ModuleItem) -> Option<(String, CompletionItemKind)> {
+        match item {
+            ModuleItem::Def(def) => Some((def.name.name, CompletionItemKind::FUNCTION)),
+            ModuleItem::TypeSig(sig) => Some((sig.name.name, CompletionItemKind::FUNCTION)),
+            ModuleItem::TypeDecl(decl) => Some((decl.name.name, CompletionItemKind::STRUCT)),
+            ModuleItem::TypeAlias(alias) => Some((alias.name.name, CompletionItemKind::TYPE_PARAMETER)),
+            ModuleItem::ClassDecl(class_decl) => Some((class_decl.name.name, CompletionItemKind::CLASS)),
+            ModuleItem::InstanceDecl(instance_decl) => Some((instance_decl.name.name, CompletionItemKind::VARIABLE)),
+            ModuleItem::DomainDecl(domain_decl) => Some((domain_decl.name.name, CompletionItemKind::MODULE)),
+        }
     }
 
     fn path_from_uri(uri: &Url) -> String {
@@ -252,6 +397,12 @@ impl LanguageServer for Backend {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
                 document_symbol_provider: Some(OneOf::Left(true)),
+                definition_provider: Some(OneOf::Left(true)),
+                completion_provider: Some(tower_lsp::lsp_types::CompletionOptions {
+                    resolve_provider: Some(false),
+                    trigger_characters: None,
+                    ..tower_lsp::lsp_types::CompletionOptions::default()
+                }),
                 ..ServerCapabilities::default()
             },
             server_info: Some(tower_lsp::lsp_types::ServerInfo {
@@ -287,11 +438,11 @@ impl LanguageServer for Backend {
         let uri = params.text_document.uri;
         let version = params.text_document.version;
         if let Some(change) = params.content_changes.into_iter().next() {
-            self.update_document(uri.clone(), change.text, version).await;
+            self.update_document(uri.clone(), change.text, Some(version)).await;
             if let Some(diagnostics) = self.with_document_text(&uri, |content| {
                 Self::build_diagnostics(content, &uri)
             }).await {
-                self.client.publish_diagnostics(uri, diagnostics, version).await;
+                self.client.publish_diagnostics(uri, diagnostics, Some(version)).await;
             }
         }
     }
@@ -310,6 +461,28 @@ impl LanguageServer for Backend {
             .await
             .unwrap_or_default();
         Ok(Some(DocumentSymbolResponse::Nested(symbols)))
+    }
+
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        let TextDocumentPositionParams { text_document, position } = params.text_document_position_params;
+        let uri = text_document.uri;
+        let location = self
+            .with_document_text(&uri, |content| Self::build_definition(content, &uri, position))
+            .await
+            .flatten();
+        Ok(location.map(GotoDefinitionResponse::Scalar))
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let uri = params.text_document_position.text_document.uri;
+        let items = self
+            .with_document_text(&uri, |content| Self::build_completion_items(content, &uri))
+            .await
+            .unwrap_or_default();
+        Ok(Some(CompletionResponse::Array(items)))
     }
 }
 

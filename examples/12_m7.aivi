@@ -1,0 +1,36 @@
+module examples.m7 = {
+  export main
+
+  Date = { year: Int, month: Int, day: Int }
+
+  domain Calendar over Date = {
+    type Delta = Day Int | Week Int
+
+    (+) : Date -> Delta -> Date
+    (+) d delta = delta ?
+      | Day n => addDays d n
+      | Week n => addDays d (n * 7)
+
+    1d = Day 1
+    1w = Week 1
+  }
+
+  addDays : Date -> Int -> Date
+  addDays d n = d <| { day: _ + n }
+
+  view : Text -> Date -> Html
+  view name date =
+    <div class="card">
+      <span>Hello {name}!</span>
+      <span>Day {date.day}</span>
+    </div>
+
+  main : Effect Text Unit
+  main = effect {
+    name <- pure "AIVI"
+    today <- pure { year: 2024, month: 9, day: 1 }
+    next <- pure (today + 1w)
+    _ <- print (html.render (view name next))
+    pure Unit
+  }
+}

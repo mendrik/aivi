@@ -483,6 +483,17 @@ impl TypeChecker {
         };
         env.insert("random".to_string(), Scheme::mono(random_record));
 
+        let html_record = Type::Record {
+            fields: vec![(
+                "render".to_string(),
+                Type::Func(Box::new(Type::con("Html")), Box::new(Type::con("Text"))),
+            )]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("html".to_string(), Scheme::mono(html_record));
+
         self.builtins = env;
     }
 

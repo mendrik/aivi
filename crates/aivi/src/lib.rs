@@ -19,7 +19,9 @@ pub use diagnostics::{
 pub use formatter::format_text;
 pub use hir::{HirModule, HirProgram};
 pub use resolver::check_modules;
-pub use surface::{parse_modules, parse_modules_from_tokens, Module};
+pub use surface::{
+    parse_modules, parse_modules_from_tokens, DomainItem, Module, ModuleItem,
+};
 pub use typecheck::check_types;
 pub use wasm::{compile_wasm, run_wasm};
 pub use runtime::run_native;

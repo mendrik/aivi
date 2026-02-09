@@ -5,8 +5,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::io::Write;
 
 use crate::hir::{
-    HirBlockItem, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirPathSegment, HirPattern,
-    HirRecordField, HirProgram,
+    HirBlockItem, HirExpr, HirJsxChild, HirJsxNode, HirListItem, HirLiteral, HirMatchArm,
+    HirPathSegment, HirPattern, HirRecordField, HirProgram,
 };
 use crate::AiviError;
 
@@ -27,6 +27,7 @@ enum Value {
     Effect(Arc<EffectValue>),
     Resource(Arc<ResourceValue>),
     Thunk(Arc<ThunkValue>),
+    MultiClause(Vec<Value>),
     ChannelSend(Arc<ChannelSend>),
     ChannelRecv(Arc<ChannelRecv>),
     FileHandle(Arc<Mutex<std::fs::File>>),
@@ -149,14 +150,32 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
 
     let globals = Env::new(None);
     register_builtins(&globals);
+    let mut grouped: HashMap<String, Vec<HirExpr>> = HashMap::new();
     for def in module.defs {
-        let thunk = ThunkValue {
-            expr: Arc::new(def.expr),
-            env: globals.clone(),
-            cached: Mutex::new(None),
-            in_progress: AtomicBool::new(false),
-        };
-        globals.set(def.name, Value::Thunk(Arc::new(thunk)));
+        grouped.entry(def.name).or_default().push(def.expr);
+    }
+    for (name, exprs) in grouped {
+        if exprs.len() == 1 {
+            let thunk = ThunkValue {
+                expr: Arc::new(exprs.into_iter().next().unwrap()),
+                env: globals.clone(),
+                cached: Mutex::new(None),
+                in_progress: AtomicBool::new(false),
+            };
+            globals.set(name, Value::Thunk(Arc::new(thunk)));
+        } else {
+            let mut clauses = Vec::new();
+            for expr in exprs {
+                let thunk = ThunkValue {
+                    expr: Arc::new(expr),
+                    env: globals.clone(),
+                    cached: Mutex::new(None),
+                    in_progress: AtomicBool::new(false),
+                };
+                clauses.push(Value::Thunk(Arc::new(thunk)));
+            }
+            globals.set(name, Value::MultiClause(clauses));
+        }
     }
 
     let ctx = Arc::new(RuntimeContext { globals });
@@ -168,7 +187,19 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
         .globals
         .get("main")
         .ok_or_else(|| AiviError::Runtime("missing main definition".to_string()))?;
-    let main_value = runtime.force_value(main)?;
+    let main_value = match runtime.force_value(main) {
+        Ok(value) => value,
+        Err(RuntimeError::Cancelled) => {
+            return Err(AiviError::Runtime("execution cancelled".to_string()))
+        }
+        Err(RuntimeError::Message(message)) => return Err(AiviError::Runtime(message)),
+        Err(RuntimeError::Error(value)) => {
+            return Err(AiviError::Runtime(format!(
+                "runtime error: {}",
+                format_value(&value)
+            )))
+        }
+    };
     let effect = match main_value {
         Value::Effect(effect) => Value::Effect(effect),
         _ => {
@@ -253,7 +284,15 @@ impl Runtime {
                     .ok_or_else(|| RuntimeError::Message(format!("unknown name {name}")))?;
                 self.force_value(value)
             }
-            HirExpr::LitNumber { text, .. } => parse_number(text),
+            HirExpr::LitNumber { text, .. } => {
+                if let Some(value) = parse_number_value(text) {
+                    return Ok(value);
+                }
+                let value = env.get(text).ok_or_else(|| {
+                    RuntimeError::Message(format!("unknown numeric literal {text}"))
+                })?;
+                self.force_value(value)
+            }
             HirExpr::LitString { text, .. } => Ok(Value::Text(text.clone())),
             HirExpr::LitBool { value, .. } => Ok(Value::Bool(*value)),
             HirExpr::LitDateTime { text, .. } => Ok(Value::DateTime(text.clone())),
@@ -284,9 +323,7 @@ impl Runtime {
                 Ok(Value::Tuple(values))
             }
             HirExpr::Record { fields, .. } => self.eval_record(fields, env),
-            HirExpr::Patch { .. } => Err(RuntimeError::Message(
-                "patch expressions are not supported in native runtime yet".to_string(),
-            )),
+            HirExpr::Patch { target, fields, .. } => self.eval_patch(target, fields, env),
             HirExpr::FieldAccess { base, field, .. } => {
                 let base_value = self.eval_expr(base, env)?;
                 match base_value {
@@ -347,7 +384,7 @@ impl Runtime {
             HirExpr::Binary { op, left, right, .. } => {
                 let left_value = self.eval_expr(left, env)?;
                 let right_value = self.eval_expr(right, env)?;
-                eval_binary(op, left_value, right_value)
+                self.eval_binary(op, left_value, right_value, env)
             }
             HirExpr::Block {
                 block_kind,
@@ -371,9 +408,7 @@ impl Runtime {
                     "generator blocks are not supported in native runtime yet".to_string(),
                 )),
             },
-            HirExpr::JsxElement { .. } => Err(RuntimeError::Message(
-                "JSX literals are not supported in native runtime yet".to_string(),
-            )),
+            HirExpr::JsxElement { node, .. } => self.eval_jsx(node, env),
             HirExpr::Raw { .. } => Err(RuntimeError::Message(
                 "raw expressions are not supported in native runtime yet".to_string(),
             )),
@@ -389,10 +424,52 @@ impl Runtime {
                 self.eval_expr(&closure.body, &new_env)
             }
             Value::Builtin(builtin) => builtin.apply(arg, self),
+            Value::MultiClause(clauses) => self.apply_multi_clause(clauses, arg),
             _ => Err(RuntimeError::Message(
                 "attempted to call a non-function".to_string(),
             )),
         }
+    }
+
+    fn apply_multi_clause(
+        &mut self,
+        clauses: Vec<Value>,
+        arg: Value,
+    ) -> Result<Value, RuntimeError> {
+        let mut results = Vec::new();
+        let mut match_failures = 0;
+        let mut last_error = None;
+        for clause in clauses {
+            match self.apply(clause.clone(), arg.clone()) {
+                Ok(value) => results.push(value),
+                Err(RuntimeError::Message(message)) if is_match_failure_message(&message) => {
+                    match_failures += 1;
+                }
+                Err(err) => {
+                    last_error = Some(err);
+                }
+            }
+        }
+        if !results.is_empty() {
+            let mut callable = results
+                .iter()
+                .filter(|value| is_callable(value))
+                .cloned()
+                .collect::<Vec<_>>();
+            if !callable.is_empty() {
+                if callable.len() == 1 {
+                    return Ok(callable.remove(0));
+                }
+                return Ok(Value::MultiClause(callable));
+            }
+            return Ok(results.remove(0));
+        }
+        if match_failures > 0 && last_error.is_none() {
+            return Err(RuntimeError::Message("non-exhaustive match".to_string()));
+        }
+        Err(last_error.unwrap_or_else(|| {
+            RuntimeError::Message("no matching clause".to_string())
+        }))
     }
 
     fn eval_plain_block(
@@ -497,6 +574,164 @@ impl Runtime {
             insert_record_path(&mut map, &field.path, value)?;
         }
         Ok(Value::Record(map))
+    }
+
+    fn eval_patch(
+        &mut self,
+        target: &HirExpr,
+        fields: &[HirRecordField],
+        env: &Env,
+    ) -> Result<Value, RuntimeError> {
+        let base_value = self.eval_expr(target, env)?;
+        let Value::Record(mut map) = base_value else {
+            return Err(RuntimeError::Message(
+                "patch target must be a record".to_string(),
+            ));
+        };
+        for field in fields {
+            self.apply_patch_field(&mut map, &field.path, &field.value, env)?;
+        }
+        Ok(Value::Record(map))
+    }
+
+    fn apply_patch_field(
+        &mut self,
+        record: &mut HashMap<String, Value>,
+        path: &[HirPathSegment],
+        expr: &HirExpr,
+        env: &Env,
+    ) -> Result<(), RuntimeError> {
+        if path.is_empty() {
+            return Err(RuntimeError::Message(
+                "patch field path must not be empty".to_string(),
+            ));
+        }
+        let mut current = record;
+        for segment in &path[..path.len() - 1] {
+            match segment {
+                HirPathSegment::Field(name) => {
+                    let entry = current
+                        .entry(name.clone())
+                        .or_insert_with(|| Value::Record(HashMap::new()));
+                    match entry {
+                        Value::Record(map) => {
+                            current = map;
+                        }
+                        _ => {
+                            return Err(RuntimeError::Message(format!(
+                                "patch path conflict at {name}"
+                            )))
+                        }
+                    }
+                }
+                HirPathSegment::Index(_) => {
+                    return Err(RuntimeError::Message(
+                        "patch index paths are not supported in native runtime yet".to_string(),
+                    ))
+                }
+            }
+        }
+        let segment = path.last().unwrap();
+        match segment {
+            HirPathSegment::Field(name) => {
+                let existing = current.get(name).cloned();
+                let value = self.eval_expr(expr, env)?;
+                let new_value = match existing {
+                    Some(existing) if is_callable(&value) => {
+                        self.apply(value, existing)?
+                    }
+                    Some(_) | None if is_callable(&value) => {
+                        return Err(RuntimeError::Message(format!(
+                            "patch transform expects existing field {name}"
+                        )));
+                    }
+                    _ => value,
+                };
+                current.insert(name.clone(), new_value);
+                Ok(())
+            }
+            HirPathSegment::Index(_) => Err(RuntimeError::Message(
+                "patch index paths are not supported in native runtime yet".to_string(),
+            )),
+        }
+    }
+
+    fn eval_binary(
+        &mut self,
+        op: &str,
+        left: Value,
+        right: Value,
+        env: &Env,
+    ) -> Result<Value, RuntimeError> {
+        if let Some(result) = eval_binary_builtin(op, &left, &right) {
+            return Ok(result);
+        }
+        let op_name = format!("({})", op);
+        if let Some(op_value) = env.get(&op_name) {
+            let applied = self.apply(op_value, left)?;
+            return self.apply(applied, right);
+        }
+        Err(RuntimeError::Message(format!(
+            "unsupported binary operator {op}"
+        )))
+    }
+
+    fn eval_jsx(&mut self, node: &HirJsxNode, env: &Env) -> Result<Value, RuntimeError> {
+        match node {
+            HirJsxNode::Element(element) => {
+                let mut attrs = Vec::new();
+                for attr in &element.attributes {
+                    let value = if let Some(expr) = &attr.value {
+                        self.eval_expr(expr, env)?
+                    } else {
+                        Value::Text("true".to_string())
+                    };
+                    let text = value_to_text(&value);
+                    let mut attr_map = HashMap::new();
+                    attr_map.insert("name".to_string(), Value::Text(attr.name.clone()));
+                    attr_map.insert("value".to_string(), Value::Text(text));
+                    attrs.push(Value::Record(attr_map));
+                }
+                let mut children = Vec::new();
+                for child in &element.children {
+                    self.push_jsx_child(&mut children, child, env)?;
+                }
+                let mut map = HashMap::new();
+                map.insert("tag".to_string(), Value::Text(element.name.clone()));
+                map.insert("attrs".to_string(), Value::List(attrs));
+                map.insert("children".to_string(), Value::List(children));
+                Ok(Value::Record(map))
+            }
+            HirJsxNode::Fragment(fragment) => {
+                let mut children = Vec::new();
+                for child in &fragment.children {
+                    self.push_jsx_child(&mut children, child, env)?;
+                }
+                Ok(Value::List(children))
+            }
+        }
+    }
+
+    fn push_jsx_child(
+        &mut self,
+        children: &mut Vec<Value>,
+        child: &HirJsxChild,
+        env: &Env,
+    ) -> Result<(), RuntimeError> {
+        match child {
+            HirJsxChild::Text(text) => {
+                children.push(Value::Text(text.clone()));
+            }
+            HirJsxChild::Expr(expr) => {
+                let value = self.eval_expr(expr, env)?;
+                append_html_value(children, value);
+            }
+            HirJsxChild::Element(node) => {
+                let value = self.eval_jsx(node, env)?;
+                append_html_value(children, value);
+            }
+        }
+        Ok(())
     }
 
     fn run_effect_value(&mut self, value: Value) -> Result<Value, RuntimeError> {
@@ -871,23 +1106,21 @@ fn insert_record_path(
     Ok(())
 }
 
-fn eval_binary(op: &str, left: Value, right: Value) -> Result<Value, RuntimeError> {
+fn eval_binary_builtin(op: &str, left: &Value, right: &Value) -> Option<Value> {
     match (op, left, right) {
-        ("+", Value::Int(a), Value::Int(b)) => Ok(Value::Int(a + b)),
-        ("-", Value::Int(a), Value::Int(b)) => Ok(Value::Int(a - b)),
-        ("*", Value::Int(a), Value::Int(b)) => Ok(Value::Int(a * b)),
-        ("/", Value::Int(a), Value::Int(b)) => Ok(Value::Int(a / b)),
-        ("==", a, b) => Ok(Value::Bool(values_equal(&a, &b))),
-        ("!=", a, b) => Ok(Value::Bool(!values_equal(&a, &b))),
-        ("<", Value::Int(a), Value::Int(b)) => Ok(Value::Bool(a < b)),
-        ("<=", Value::Int(a), Value::Int(b)) => Ok(Value::Bool(a <= b)),
-        (">", Value::Int(a), Value::Int(b)) => Ok(Value::Bool(a > b)),
-        (">=", Value::Int(a), Value::Int(b)) => Ok(Value::Bool(a >= b)),
-        ("&&", Value::Bool(a), Value::Bool(b)) => Ok(Value::Bool(a && b)),
-        ("||", Value::Bool(a), Value::Bool(b)) => Ok(Value::Bool(a || b)),
-        _ => Err(RuntimeError::Message(format!(
-            "unsupported binary operator {op}"
-        ))),
+        ("+", Value::Int(a), Value::Int(b)) => Some(Value::Int(a + b)),
+        ("-", Value::Int(a), Value::Int(b)) => Some(Value::Int(a - b)),
+        ("*", Value::Int(a), Value::Int(b)) => Some(Value::Int(a * b)),
+        ("/", Value::Int(a), Value::Int(b)) => Some(Value::Int(a / b)),
+        ("==", a, b) => Some(Value::Bool(values_equal(a, b))),
+        ("!=", a, b) => Some(Value::Bool(!values_equal(a, b))),
+        ("<", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a < b)),
+        ("<=", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a <= b)),
+        (">", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a > b)),
+        (">=", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a >= b)),
+        ("&&", Value::Bool(a), Value::Bool(b)) => Some(Value::Bool(*a && *b)),
+        ("||", Value::Bool(a), Value::Bool(b)) => Some(Value::Bool(*a || *b)),
+        _ => None,
     }
 }
 
@@ -906,18 +1139,6 @@ fn values_equal(left: &Value, right: &Value) -> bool {
     }
 }
 
-fn parse_number(text: &str) -> Result<Value, RuntimeError> {
-    if let Some(int) = parse_number_literal(text) {
-        Ok(Value::Int(int))
-    } else if let Ok(float) = text.parse::<f64>() {
-        Ok(Value::Float(float))
-    } else {
-        Err(RuntimeError::Message(format!(
-            "invalid numeric literal {text}"
-        )))
-    }
-}
-
 fn parse_number_literal(text: &str) -> Option<i64> {
     if text.contains('.') {
         return None;
@@ -929,6 +1150,125 @@ fn parse_number_literal(text: &str) -> Option<i64> {
         return None;
     }
     text.parse::<i64>().ok()
+}
+
+fn parse_number_value(text: &str) -> Option<Value> {
+    if let Some(int) = parse_number_literal(text) {
+        Some(Value::Int(int))
+    } else if let Ok(float) = text.parse::<f64>() {
+        Some(Value::Float(float))
+    } else {
+        None
+    }
+}
+
+fn is_callable(value: &Value) -> bool {
+    matches!(value, Value::Closure(_) | Value::Builtin(_) | Value::MultiClause(_))
+}
+
+fn is_match_failure_message(message: &str) -> bool {
+    message == "non-exhaustive match"
+}
+
+fn append_html_value(children: &mut Vec<Value>, value: Value) {
+    match value {
+        Value::List(items) => {
+            for item in items {
+                append_html_value(children, item);
+            }
+        }
+        Value::Unit => {}
+        other => children.push(other),
+    }
+}
+
+fn value_to_text(value: &Value) -> String {
+    match value {
+        Value::Text(text) => text.clone(),
+        _ => format_value(value),
+    }
+}
+
+fn render_html_value(value: &Value) -> Result<String, RuntimeError> {
+    match value {
+        Value::Text(text) => Ok(escape_html(text)),
+        Value::Record(map) => render_html_element(map),
+        Value::List(items) => {
+            let mut out = String::new();
+            for item in items {
+                out.push_str(&render_html_value(item)?);
+            }
+            Ok(out)
+        }
+        other => Ok(escape_html(&format_value(other))),
+    }
+}
+
+fn render_html_element(map: &HashMap<String, Value>) -> Result<String, RuntimeError> {
+    let tag = map
+        .get("tag")
+        .and_then(|value| match value {
+            Value::Text(text) => Some(text.clone()),
+            _ => None,
+        })
+        .ok_or_else(|| RuntimeError::Message("html element missing tag".to_string()))?;
+    let attrs = map
+        .get("attrs")
+        .and_then(|value| match value {
+            Value::List(items) => Some(items.clone()),
+            _ => None,
+        })
+        .unwrap_or_default();
+    let children = map
+        .get("children")
+        .and_then(|value| match value {
+            Value::List(items) => Some(items.clone()),
+            _ => None,
+        })
+        .unwrap_or_default();
+
+    let mut attr_text = String::new();
+    for attr in attrs {
+        if let Value::Record(attr_map) = attr {
+            let name = attr_map
+                .get("name")
+                .and_then(|value| match value {
+                    Value::Text(text) => Some(text.clone()),
+                    _ => None,
+                })
+                .unwrap_or_default();
+            let value = attr_map
+                .get("value")
+                .and_then(|value| match value {
+                    Value::Text(text) => Some(text.clone()),
+                    _ => None,
+                })
+                .unwrap_or_default();
+            if !name.is_empty() {
+                attr_text.push(' ');
+                attr_text.push_str(&name);
+                attr_text.push_str("=\"");
+                attr_text.push_str(&escape_html(&value));
+                attr_text.push('"');
+            }
+        }
+    }
+
+    let mut children_text = String::new();
+    for child in children {
+        children_text.push_str(&render_html_value(&child)?);
+    }
+    Ok(format!(
+        "<{tag}{attr_text}>{children_text}</{tag}>"
+    ))
+}
+
+fn escape_html(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 fn format_value(value: &Value) -> String {
@@ -981,6 +1321,7 @@ fn format_value(value: &Value) -> String {
         Value::Effect(_) => "<effect>".to_string(),
         Value::Resource(_) => "<resource>".to_string(),
         Value::Thunk(_) => "<thunk>".to_string(),
+        Value::MultiClause(_) => "<multi-clause>".to_string(),
         Value::ChannelSend(_) => "<send>".to_string(),
         Value::ChannelRecv(_) => "<recv>".to_string(),
         Value::FileHandle(_) => "<file>".to_string(),
@@ -1080,6 +1421,7 @@ fn register_builtins(env: &Env) {
     env.set("random".to_string(), build_random_record());
     env.set("channel".to_string(), build_channel_record());
     env.set("concurrent".to_string(), build_concurrent_record());
+    env.set("html".to_string(), build_html_record());
 }
 
 fn builtin(
@@ -1152,7 +1494,7 @@ fn build_file_record() -> Value {
     fields.insert(
         "close".to_string(),
         builtin("file.close", 1, |mut args, _| {
-            let handle = match args.remove(0) {
+            let _handle = match args.remove(0) {
                 Value::FileHandle(handle) => handle,
                 _ => {
                     return Err(RuntimeError::Message(
@@ -1161,10 +1503,7 @@ fn build_file_record() -> Value {
                 }
             };
             let effect = EffectValue::Thunk {
-                func: Arc::new(move |_| {
-                    drop(handle);
-                    Ok(Value::Unit)
-                }),
+                func: Arc::new(move |_| Ok(Value::Unit)),
             };
             Ok(Value::Effect(Arc::new(effect)))
         }),
@@ -1494,6 +1833,19 @@ fn build_concurrent_record() -> Value {
                 }),
             };
             Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    Value::Record(fields)
+}
+
+fn build_html_record() -> Value {
+    let mut fields = HashMap::new();
+    fields.insert(
+        "render".to_string(),
+        builtin("html.render", 1, |mut args, _| {
+            let value = args.pop().unwrap();
+            let rendered = render_html_value(&value)?;
+            Ok(Value::Text(rendered))
         }),
     );
     Value::Record(fields)
