@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use aivi::{
@@ -30,6 +31,17 @@ struct DocumentState {
 #[derive(Default)]
 struct BackendState {
     documents: HashMap<Url, DocumentState>,
+    workspace_root: Option<PathBuf>,
+    open_modules_by_uri: HashMap<Url, Vec<String>>,
+    open_module_index: HashMap<String, IndexedModule>,
+    disk_module_index: HashMap<String, IndexedModule>,
+    disk_index_root: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone)]
+struct IndexedModule {
+    uri: Url,
+    module: Module,
 }
 
 struct Backend {
@@ -108,18 +120,57 @@ impl Backend {
                 let range = Self::span_to_range(module.name.span);
                 return Some(Location::new(uri.clone(), range));
             }
+            if let Some(range) = Self::module_member_definition_range(&module, &ident) {
+                return Some(Location::new(uri.clone(), range));
+            }
             for export in module.exports.iter() {
                 if export.name == ident {
                     let range = Self::span_to_range(export.span.clone());
                     return Some(Location::new(uri.clone(), range));
                 }
             }
-            for item in module.items.iter() {
-                if let Some(range) = Self::item_definition_range(item, &ident) {
-                    return Some(Location::new(uri.clone(), range));
-                }
+        }
+        None
+    }
+
+    fn build_definition_with_workspace(
+        text: &str,
+        uri: &Url,
+        position: Position,
+        workspace_modules: &HashMap<String, IndexedModule>,
+    ) -> Option<Location> {
+        let ident = Self::extract_identifier(text, position)?;
+
+        if let Some(location) = Self::build_definition(text, uri, position) {
+            return Some(location);
+        }
+
+        let path = PathBuf::from(Self::path_from_uri(uri));
+        let (modules, _) = parse_modules(&path, text);
+        let current_module = Self::module_at_position(&modules, position)?;
+
+        if ident.contains('.') {
+            if let Some(indexed) = workspace_modules.get(&ident) {
+                let range = Self::span_to_range(indexed.module.name.span.clone());
+                return Some(Location::new(indexed.uri.clone(), range));
             }
         }
+
+        for use_decl in current_module.uses.iter() {
+            let imported = use_decl.wildcard
+                || use_decl.items.iter().any(|item| item.name == ident);
+            if !imported {
+                continue;
+            }
+
+            let Some(indexed) = workspace_modules.get(&use_decl.module.name) else {
+                continue;
+            };
+            if let Some(range) = Self::module_member_definition_range(&indexed.module, &ident) {
+                return Some(Location::new(indexed.uri.clone(), range));
+            }
+        }
+
         None
     }
 
@@ -870,22 +921,233 @@ impl Backend {
         }
     }
 
-    fn item_definition_range(item: &ModuleItem, ident: &str) -> Option<Range> {
-        match item {
-            ModuleItem::Def(def) if def.name.name == ident => Some(Self::span_to_range(def.name.span.clone())),
-            ModuleItem::TypeSig(sig) if sig.name.name == ident => Some(Self::span_to_range(sig.name.span.clone())),
-            ModuleItem::TypeDecl(decl) if decl.name.name == ident => Some(Self::span_to_range(decl.name.span.clone())),
-            ModuleItem::TypeAlias(alias) if alias.name.name == ident => Some(Self::span_to_range(alias.name.span.clone())),
-            ModuleItem::ClassDecl(class_decl) if class_decl.name.name == ident => {
-                Some(Self::span_to_range(class_decl.name.span.clone()))
+    fn module_member_definition_range(module: &Module, ident: &str) -> Option<Range> {
+        for item in module.items.iter() {
+            match item {
+                ModuleItem::Def(def) => {
+                    if def.name.name == ident {
+                        return Some(Self::span_to_range(def.name.span.clone()));
+                    }
+                }
+                ModuleItem::TypeSig(sig) => {
+                    if sig.name.name == ident {
+                        return Some(Self::span_to_range(sig.name.span.clone()));
+                    }
+                }
+                ModuleItem::TypeDecl(decl) => {
+                    if decl.name.name == ident {
+                        return Some(Self::span_to_range(decl.name.span.clone()));
+                    }
+                    for ctor in decl.constructors.iter() {
+                        if ctor.name.name == ident {
+                            return Some(Self::span_to_range(ctor.name.span.clone()));
+                        }
+                    }
+                }
+                ModuleItem::TypeAlias(alias) => {
+                    if alias.name.name == ident {
+                        return Some(Self::span_to_range(alias.name.span.clone()));
+                    }
+                }
+                ModuleItem::ClassDecl(class_decl) => {
+                    if class_decl.name.name == ident {
+                        return Some(Self::span_to_range(class_decl.name.span.clone()));
+                    }
+                    for member in class_decl.members.iter() {
+                        if member.name.name == ident {
+                            return Some(Self::span_to_range(member.name.span.clone()));
+                        }
+                    }
+                }
+                ModuleItem::InstanceDecl(instance_decl) => {
+                    if instance_decl.name.name == ident {
+                        return Some(Self::span_to_range(instance_decl.name.span.clone()));
+                    }
+                    for def in instance_decl.defs.iter() {
+                        if def.name.name == ident {
+                            return Some(Self::span_to_range(def.name.span.clone()));
+                        }
+                    }
+                }
+                ModuleItem::DomainDecl(domain_decl) => {
+                    if domain_decl.name.name == ident {
+                        return Some(Self::span_to_range(domain_decl.name.span.clone()));
+                    }
+                    for domain_item in domain_decl.items.iter() {
+                        match domain_item {
+                            DomainItem::TypeAlias(type_decl) => {
+                                if type_decl.name.name == ident {
+                                    return Some(Self::span_to_range(type_decl.name.span.clone()));
+                                }
+                                for ctor in type_decl.constructors.iter() {
+                                    if ctor.name.name == ident {
+                                        return Some(Self::span_to_range(ctor.name.span.clone()));
+                                    }
+                                }
+                            }
+                            DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                                if def.name.name == ident {
+                                    return Some(Self::span_to_range(def.name.span.clone()));
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            ModuleItem::InstanceDecl(instance_decl) if instance_decl.name.name == ident => {
-                Some(Self::span_to_range(instance_decl.name.span.clone()))
+        }
+        None
+    }
+
+    fn module_at_position<'a>(modules: &'a [Module], position: Position) -> Option<&'a Module> {
+        modules.iter().find(|module| {
+            let range = Self::span_to_range(module.span.clone());
+            Self::range_contains_position(&range, position)
+        })
+    }
+
+    fn range_contains_position(range: &Range, position: Position) -> bool {
+        let after_start = position.line > range.start.line
+            || (position.line == range.start.line && position.character >= range.start.character);
+        let before_end = position.line < range.end.line
+            || (position.line == range.end.line && position.character < range.end.character);
+        after_start && before_end
+    }
+
+    fn build_workspace_index(root: &Path) -> HashMap<String, IndexedModule> {
+        let mut modules = HashMap::new();
+        for path in Self::collect_aivi_paths(root) {
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let (file_modules, _) = parse_modules(&path, &text);
+            let Ok(uri) = Url::from_file_path(&path) else {
+                continue;
+            };
+            for module in file_modules {
+                modules
+                    .entry(module.name.name.clone())
+                    .or_insert_with(|| IndexedModule {
+                        uri: uri.clone(),
+                        module,
+                    });
             }
-            ModuleItem::DomainDecl(domain_decl) if domain_decl.name.name == ident => {
-                Some(Self::span_to_range(domain_decl.name.span.clone()))
+        }
+
+        modules
+    }
+
+    fn collect_aivi_paths(root: &Path) -> Vec<PathBuf> {
+        fn should_skip_dir(name: &str) -> bool {
+            matches!(
+                name,
+                ".git"
+                    | "target"
+                    | "node_modules"
+                    | "dist"
+                    | "out"
+                    | ".idea"
+                    | ".junie"
+                    | ".gemini"
+            )
+        }
+
+        fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
+            let Ok(entries) = fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                        if should_skip_dir(name) {
+                            continue;
+                        }
+                    }
+                    walk(&path, out);
+                    continue;
+                }
+                if path.extension().and_then(|e| e.to_str()) == Some("aivi") {
+                    out.push(path);
+                }
             }
-            _ => None,
+        }
+
+        let mut out = Vec::new();
+        walk(root, &mut out);
+        out.sort();
+        out
+    }
+
+    async fn workspace_modules_for(&self, uri: &Url) -> HashMap<String, IndexedModule> {
+        let (workspace_root, open_modules, disk_modules, disk_root) = {
+            let state = self.state.lock().await;
+            (
+                state.workspace_root.clone(),
+                state.open_module_index.clone(),
+                state.disk_module_index.clone(),
+                state.disk_index_root.clone(),
+            )
+        };
+
+        let fallback_root = PathBuf::from(Self::path_from_uri(uri))
+            .parent()
+            .map(|p| p.to_path_buf());
+        let root = workspace_root.or(fallback_root);
+
+        let disk_modules = if let Some(root) = root {
+            let needs_rebuild = disk_root.as_ref() != Some(&root) || disk_modules.is_empty();
+            if needs_rebuild {
+                let indexed = Self::build_workspace_index(&root);
+                let mut state = self.state.lock().await;
+                state.disk_index_root = Some(root.clone());
+                state.disk_module_index = indexed.clone();
+                indexed
+            } else {
+                disk_modules
+            }
+        } else {
+            disk_modules
+        };
+
+        let mut merged = disk_modules;
+        merged.extend(open_modules);
+        merged
+    }
+
+    async fn update_document(&self, uri: Url, text: String, version: Option<i32>) {
+        let path = PathBuf::from(Self::path_from_uri(&uri));
+        let (modules, _) = parse_modules(&path, &text);
+
+        let mut state = self.state.lock().await;
+
+        if let Some(existing) = state.open_modules_by_uri.remove(&uri) {
+            for module_name in existing {
+                state.open_module_index.remove(&module_name);
+            }
+        }
+
+        let mut module_names = Vec::new();
+        for module in modules {
+            module_names.push(module.name.name.clone());
+            state.open_module_index.insert(
+                module.name.name.clone(),
+                IndexedModule {
+                    uri: uri.clone(),
+                    module,
+                },
+            );
+        }
+        state.open_modules_by_uri.insert(uri.clone(), module_names);
+        state.documents.insert(uri, DocumentState { text, version });
+    }
+
+    async fn remove_document(&self, uri: &Url) {
+        let mut state = self.state.lock().await;
+        state.documents.remove(uri);
+        if let Some(existing) = state.open_modules_by_uri.remove(uri) {
+            for module_name in existing {
+                state.open_module_index.remove(&module_name);
+            }
         }
     }
 
@@ -1138,11 +1400,6 @@ impl Backend {
         }
     }
 
-    async fn update_document(&self, uri: Url, text: String, version: Option<i32>) {
-        let mut state = self.state.lock().await;
-        state.documents.insert(uri, DocumentState { text, version });
-    }
-
     async fn with_document_text<F, R>(&self, uri: &Url, f: F) -> Option<R>
     where
         F: FnOnce(&str) -> R,
@@ -1204,16 +1461,29 @@ module examples.compiler.app = {
         let path = PathBuf::from("test.aivi");
         let (modules, _) = parse_modules(&path, text);
         for module in modules {
+            for item in module.items.iter() {
+                if let Some(span) = match item {
+                    ModuleItem::Def(def) if def.name.name == name => Some(def.name.span.clone()),
+                    ModuleItem::TypeSig(sig) if sig.name.name == name => Some(sig.name.span.clone()),
+                    ModuleItem::TypeDecl(decl) if decl.name.name == name => Some(decl.name.span.clone()),
+                    ModuleItem::TypeAlias(alias) if alias.name.name == name => Some(alias.name.span.clone()),
+                    ModuleItem::ClassDecl(class_decl) if class_decl.name.name == name => {
+                        Some(class_decl.name.span.clone())
+                    }
+                    ModuleItem::InstanceDecl(instance_decl) if instance_decl.name.name == name => {
+                        Some(instance_decl.name.span.clone())
+                    }
+                    ModuleItem::DomainDecl(domain_decl) if domain_decl.name.name == name => {
+                        Some(domain_decl.name.span.clone())
+                    }
+                    _ => None,
+                } {
+                    return span;
+                }
+            }
             for export in module.exports.iter() {
                 if export.name == name {
                     return export.span.clone();
-                }
-            }
-            for item in module.items {
-                if let ModuleItem::Def(def) = item {
-                    if def.name.name == name {
-                        return def.name.span;
-                    }
                 }
             }
         }
@@ -1239,6 +1509,53 @@ module examples.compiler.app = {
         let location = Backend::build_definition(text, &uri, position).expect("definition found");
         let expected_span = find_symbol_span(text, "add");
         let expected_range = Backend::span_to_range(expected_span);
+        assert_eq!(location.range, expected_range);
+    }
+
+    #[test]
+    fn build_definition_resolves_def_across_files_via_use() {
+        let math_text = r#"@no_prelude
+module examples.compiler.math = {
+  export add
+  add = x y => x + y
+}
+"#;
+        let app_text = r#"@no_prelude
+module examples.compiler.app = {
+  export run
+  use examples.compiler.math (add)
+  run = add 1 2
+}
+"#;
+
+        let math_uri = Url::parse("file:///math.aivi").expect("valid uri");
+        let app_uri = Url::parse("file:///app.aivi").expect("valid uri");
+
+        let mut workspace = HashMap::new();
+        let math_path = PathBuf::from("math.aivi");
+        let (math_modules, _) = parse_modules(&math_path, math_text);
+        for module in math_modules {
+            workspace.insert(
+                module.name.name.clone(),
+                IndexedModule {
+                    uri: math_uri.clone(),
+                    module,
+                },
+            );
+        }
+
+        let position = position_for(app_text, "add 1 2");
+        let location = Backend::build_definition_with_workspace(
+            app_text,
+            &app_uri,
+            position,
+            &workspace,
+        )
+        .expect("definition found");
+
+        let expected_span = find_symbol_span(math_text, "add");
+        let expected_range = Backend::span_to_range(expected_span);
+        assert_eq!(location.uri, math_uri);
         assert_eq!(location.range, expected_range);
     }
 
@@ -1295,7 +1612,24 @@ module examples.compiler.app = {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
+        let root = params
+            .root_uri
+            .and_then(|uri| uri.to_file_path().ok())
+            .or_else(|| {
+                params
+                    .workspace_folders
+                    .as_ref()
+                    .and_then(|folders| folders.first())
+                    .and_then(|folder| folder.uri.to_file_path().ok())
+            });
+        if root.is_some() {
+            let mut state = self.state.lock().await;
+            state.workspace_root = root;
+            state.disk_module_index.clear();
+            state.disk_index_root = None;
+        }
+
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
@@ -1356,8 +1690,7 @@ impl LanguageServer for Backend {
 
     async fn did_close(&self, params: tower_lsp::lsp_types::DidCloseTextDocumentParams) {
         let uri = params.text_document.uri;
-        let mut state = self.state.lock().await;
-        state.documents.remove(&uri);
+        self.remove_document(&uri).await;
         self.client.publish_diagnostics(uri, Vec::new(), None).await;
     }
 
@@ -1376,10 +1709,13 @@ impl LanguageServer for Backend {
     ) -> Result<Option<GotoDefinitionResponse>> {
         let TextDocumentPositionParams { text_document, position } = params.text_document_position_params;
         let uri = text_document.uri;
-        let location = self
-            .with_document_text(&uri, |content| Self::build_definition(content, &uri, position))
-            .await
-            .flatten();
+        let location = match self.with_document_text(&uri, |content| content.to_string()).await {
+            Some(text) => {
+                let workspace = self.workspace_modules_for(&uri).await;
+                Self::build_definition_with_workspace(&text, &uri, position, &workspace)
+            }
+            None => None,
+        };
         Ok(location.map(GotoDefinitionResponse::Scalar))
     }
 
@@ -1389,10 +1725,13 @@ impl LanguageServer for Backend {
     ) -> Result<Option<GotoDeclarationResponse>> {
         let TextDocumentPositionParams { text_document, position } = params.text_document_position_params;
         let uri = text_document.uri;
-        let location = self
-            .with_document_text(&uri, |content| Self::build_definition(content, &uri, position))
-            .await
-            .flatten();
+        let location = match self.with_document_text(&uri, |content| content.to_string()).await {
+            Some(text) => {
+                let workspace = self.workspace_modules_for(&uri).await;
+                Self::build_definition_with_workspace(&text, &uri, position, &workspace)
+            }
+            None => None,
+        };
         Ok(location.map(GotoDeclarationResponse::Scalar))
     }
 
@@ -1402,10 +1741,13 @@ impl LanguageServer for Backend {
     ) -> Result<Option<GotoImplementationResponse>> {
         let TextDocumentPositionParams { text_document, position } = params.text_document_position_params;
         let uri = text_document.uri;
-        let location = self
-            .with_document_text(&uri, |content| Self::build_definition(content, &uri, position))
-            .await
-            .flatten();
+        let location = match self.with_document_text(&uri, |content| content.to_string()).await {
+            Some(text) => {
+                let workspace = self.workspace_modules_for(&uri).await;
+                Self::build_definition_with_workspace(&text, &uri, position, &workspace)
+            }
+            None => None,
+        };
         Ok(location.map(GotoImplementationResponse::Scalar))
     }
 

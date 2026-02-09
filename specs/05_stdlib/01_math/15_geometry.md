@@ -15,10 +15,10 @@ Almost every visual application needs to know when two things collide. This doma
 import aivi.std.math.geometry use { Ray, Sphere, intersect }
 
 // A ray firing forwards from origin
-let ray = Ray(origin: {x:0, y:0, z:0}, dir: {x:0, y:0, z:1})
+ray = Ray(origin: {x:0, y:0, z:0}, dir: {x:0, y:0, z:1})
 
 // A sphere 5 units away
-let sphere = Sphere(center: {x:0, y:0, z:5}, radius: 1.0)
+sphere = Sphere(center: {x:0, y:0, z:5}, radius: 1.0)
 
 if intersect(ray, sphere) {
     print("Hit!")

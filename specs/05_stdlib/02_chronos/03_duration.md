@@ -12,8 +12,8 @@ In many systems, a timeout is just an integer like `500`. But is that 500 millis
 import aivi.std.chronos.duration use { Duration }
 
 // Clear, unambiguous literals
-let timeout = 500`ms`
-let delay = 2`seconds`
+timeout = 500`ms`
+delay = 2`seconds`
 
 // Type-safe comparison
 if delay > timeout {

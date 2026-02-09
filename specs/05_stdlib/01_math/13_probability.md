@@ -15,11 +15,11 @@ This domain lets you define the *shape* of the chaotic world you want to simulat
 import aivi.std.math.probability use { Normal, uniform }
 
 // Create a Bell curve centered at 0 with standard deviation of 1
-let distribution = Normal(0.0, 1.0) 
+distribution = Normal(0.0, 1.0) 
 
 // Get a random number that fits this curve
 // (Most values will be near 0, few will be near -3 or 3)
-let sample = distribution |> sample()
+sample = distribution |> sample()
 ```
 
 ## Features

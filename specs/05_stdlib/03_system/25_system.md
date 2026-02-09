@@ -10,7 +10,7 @@ It allows you to read **Environment Variables** (like secret queries or API keys
 import aivi.std.system use { Env }
 
 // Read an environment variable
-let port = Env.get("PORT") |> Option.default("8080")
+port = Env.get("PORT") |> Option.default("8080")
 ```
 
 ## Goals for v1.0

@@ -8,11 +8,11 @@ The `Units` domain brings **Dimensional Analysis** to your code, solving the "Ma
 import aivi.std.core.units use { Length, Time, Velocity }
 
 // Define values with units attached
-let distance = 100.0`m`
-let time = 9.58`s`
+distance = 100.0`m`
+time = 9.58`s`
 
 // The compiler knows (Length / Time) results in Velocity
-let speed: Velocity = distance / time 
+speed: Velocity = distance / time 
 // speed is now roughly 10.43 (m/s)
 ```
 

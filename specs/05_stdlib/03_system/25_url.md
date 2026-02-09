@@ -66,16 +66,16 @@ toString url = // ... reconstruct string ...
 use aivi.std.system.url
 
 // Create using the ~u sigil
-let base = ~u(https://api.example.com/v1/search)
+base = ~u(https://api.example.com/v1/search)
 
 // Add parameter: "?q=aivi"
-let search = base + ("q", "aivi")
+search = base + ("q", "aivi")
 
 // Add another: "?q=aivi&sort=desc"
-let sorted = search + ("sort", "desc")
+sorted = search + ("sort", "desc")
 
 // Change protocol or path using record update
-let secure_login = base <| { 
+secure_login = base <| { 
   path: "/v1/login",
   protocol: "wss" 
 }

@@ -15,10 +15,10 @@ If you are doing cryptography, combinatorics, or financial calculations where a 
 import aivi.std.math.number use { BigInt, Ratio }
 
 // Calculate with atoms in the universe
-let huge = 10_000_000_000_000_000_000_000n
+huge = 10_000_000_000_000_000_000_000n
 
 // Exact fraction arithmetic
-let part = 1/3 + 1/6 
+part = 1/3 + 1/6 
 // -> Result is exactly 1/2, not 0.4999...
 ```
 

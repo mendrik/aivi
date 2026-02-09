@@ -14,7 +14,7 @@ import aivi.std.math.linalg use { solve, eigen }
 // Matrix A and Vector b
 // Solve for x in: Ax = b
 // (Finds the inputs that produce the known output)
-let x = solve(A, b)
+x = solve(A, b)
 ```
 
 ## Features

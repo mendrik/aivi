@@ -12,13 +12,13 @@ Manually calculating the new position of a 3D point after it's been rotated, mov
 import aivi.std.math.matrix use { Mat4 }
 
 // A generic "identity" matrix (does nothing)
-let m = Mat4.identity()
+m = Mat4.identity()
 
 // Create a instruction to move 10 units X
-let translation = Mat4.translate(10.0, 0.0, 0.0)
+translation = Mat4.translate(10.0, 0.0, 0.0)
 
 // Combine them
-let m_prime = m * translation
+m_prime = m * translation
 ```
 
 ## Features

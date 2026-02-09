@@ -7,7 +7,7 @@ The `Collections` domain is your toolbox for structured data. While `List` is gr
 ```aivi
 import aivi.std.core.collections use { Map, Set }
 
-let scores = Map.empty()
+scores = Map.empty()
     |> Map.insert("Alice", 100)
     |> Map.insert("Bob", 95)
 

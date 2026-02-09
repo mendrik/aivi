@@ -15,7 +15,7 @@ Direct file access is dangerous (locks, missing files, permissions). AIVI wraps 
 use aivi.std.system.file use { read_text, stat }
 
 // Safe reading
-let content = read_text "config.json"
+content = read_text "config.json"
 
 // Metadata inspection
 match stat "large_video.mp4" {

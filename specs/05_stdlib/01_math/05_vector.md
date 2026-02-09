@@ -15,11 +15,11 @@ Graphics, physics engines, and game logic run on vectors. While you *could* stor
 import aivi.std.math.vector use { Vec2, Vec3 }
 
 // Define using the `v2` tag
-let v1 = (1.0, 2.0)`v2`
-let v2 = (3.0, 4.0)`v2`
+v1 = (1.0, 2.0)`v2`
+v2 = (3.0, 4.0)`v2`
 
 // Add components parallelly
-let v3 = v1 + v2 // (4.0, 6.0)
+v3 = v1 + v2 // (4.0, 6.0)
 ```
 
 ## Features

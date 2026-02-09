@@ -15,14 +15,14 @@ If you need to find the shortest path between two points or see who is friends w
 import aivi.std.math.graph use { Graph, bfs }
 
 // Create a small network
-let g = Graph.fromEdges([
+g = Graph.fromEdges([
   (1, 2),  // Node 1 connects to 2
   (2, 3),  // Node 2 connects to 3
   (1, 3)   // Node 1 connects to 3
 ])
 
 // Find a path through the network
-let path = bfs(g, start: 1, end: 3)
+path = bfs(g, start: 1, end: 3)
 ```
 
 ## Features

@@ -8,8 +8,8 @@ The `Testing` domain is built right into the language because reliability should
 import aivi.std.testing use { assert, assert_eq }
 
 @test
-def addition_works() {
-    assert_eq(1 + 1, 2)
+addition_works _ = {
+    assert_eq (1 + 1) 2
 }
 ```
 

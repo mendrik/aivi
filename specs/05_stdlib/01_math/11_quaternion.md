@@ -12,13 +12,13 @@ A **Quaternion** is a four-dimensional mathematical object that solves this. It 
 import aivi.std.math.quaternion use { Quat }
 
 // Rotate 90 degrees around the Y (up) axis
-let q1 = Quat.fromEuler(0.0, 90.0, 0.0)
+q1 = Quat.fromEuler(0.0, 90.0, 0.0)
 
 // The "identity" quaternion means "no rotation"
-let q2 = Quat.identity()
+q2 = Quat.identity()
 
 // Smoothly transition halfway between "no rotation" and "90 degrees"
-let interpolated = Quat.slerp(q1, q2, 0.5)
+interpolated = Quat.slerp(q1, q2, 0.5)
 ```
 
 ## Features

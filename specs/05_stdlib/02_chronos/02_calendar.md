@@ -11,13 +11,13 @@ The `Calendar` domain hides this chaos. Writing `timestamp + 86400` works until 
 ```aivi
 import aivi.std.chronos.calendar use { Date, DateTime }
 
-let now = DateTime.now()
+now = DateTime.now()
 
-let birthday = ~d(1990-12-31)
-let timestamp = ~dt(2025-02-08T12:34:56Z)
+birthday = ~d(1990-12-31)
+timestamp = ~dt(2025-02-08T12:34:56Z)
 
 // "Human" math: Add 7 days, regardless of seconds
-let next_week = now + 7`days`
+next_week = now + 7`days`
 ```
 
 ## Features

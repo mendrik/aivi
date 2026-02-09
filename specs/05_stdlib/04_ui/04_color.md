@@ -9,9 +9,9 @@ Screens think in Red, Green, and Blue, but people think in **Hue**, **Saturation
 ```aivi
 import aivi.std.ui.color use { Color }
 
-let primary = #007bff
+primary = #007bff
 // Mathematically correct lightening
-let lighter = primary + 10`lightness`
+lighter = primary + 10`lightness`
 ```
 
 ## Features

@@ -2,15 +2,18 @@
   "files": [
     {
       "path": "examples/hello.aivi",
-      "byte_count": 12,
-      "line_count": 1,
+      "byte_count": 59,
+      "line_count": 4,
       "lines": [
-        "hello world"
+        "main = effect {",
+        "  _ <- print \"Hello, world!\"",
+        "  pure Unit",
+        "}"
       ],
       "tokens": [
         {
           "kind": "ident",
-          "text": "hello",
+          "text": "main",
           "span": {
             "start": {
               "line": 1,
@@ -18,7 +21,7 @@
             },
             "end": {
               "line": 1,
-              "column": 5
+              "column": 4
             }
           }
         },
@@ -28,6 +31,20 @@
           "span": {
             "start": {
               "line": 1,
+              "column": 5
+            },
+            "end": {
+              "line": 1,
+              "column": 5
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "=",
+          "span": {
+            "start": {
+              "line": 1,
               "column": 6
             },
             "end": {
@@ -37,8 +54,8 @@
           }
         },
         {
-          "kind": "ident",
-          "text": "world",
+          "kind": "whitespace",
+          "text": " ",
           "span": {
             "start": {
               "line": 1,
@@ -46,7 +63,231 @@
             },
             "end": {
               "line": 1,
+              "column": 7
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "effect",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 8
+            },
+            "end": {
+              "line": 1,
+              "column": 13
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 14
+            },
+            "end": {
+              "line": 1,
+              "column": 14
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "{",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 15
+            },
+            "end": {
+              "line": 1,
+              "column": 15
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "  ",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "line": 2,
+              "column": 2
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "_",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 3
+            },
+            "end": {
+              "line": 2,
+              "column": 3
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 4
+            },
+            "end": {
+              "line": 2,
+              "column": 4
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "<-",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 5
+            },
+            "end": {
+              "line": 2,
+              "column": 6
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 7
+            },
+            "end": {
+              "line": 2,
+              "column": 7
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "print",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 8
+            },
+            "end": {
+              "line": 2,
+              "column": 12
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 13
+            },
+            "end": {
+              "line": 2,
+              "column": 13
+            }
+          }
+        },
+        {
+          "kind": "string",
+          "text": "\"Hello, world!\"",
+          "span": {
+            "start": {
+              "line": 2,
+              "column": 14
+            },
+            "end": {
+              "line": 2,
+              "column": 28
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "  ",
+          "span": {
+            "start": {
+              "line": 3,
+              "column": 1
+            },
+            "end": {
+              "line": 3,
+              "column": 2
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "pure",
+          "span": {
+            "start": {
+              "line": 3,
+              "column": 3
+            },
+            "end": {
+              "line": 3,
+              "column": 6
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 3,
+              "column": 7
+            },
+            "end": {
+              "line": 3,
+              "column": 7
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "Unit",
+          "span": {
+            "start": {
+              "line": 3,
+              "column": 8
+            },
+            "end": {
+              "line": 3,
               "column": 11
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "}",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 1
+            },
+            "end": {
+              "line": 4,
+              "column": 1
             }
           }
         }

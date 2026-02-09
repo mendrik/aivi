@@ -12,11 +12,11 @@ While "imaginary" sounds made up, these numbers effectively power modern civiliz
 import aivi.std.math.complex use { Complex, i }
 
 // 3.0 Real, 4.0 Imaginary
-let z1 = 3.0 + 4.0 * i
-let z2 = 1.0 - 2.0 * i
+z1 = 3.0 + 4.0 * i
+z2 = 1.0 - 2.0 * i
 
 // Add them just like normal numbers
-let sum = z1 + z2
+sum = z1 + z2
 ```
 
 ## Features
