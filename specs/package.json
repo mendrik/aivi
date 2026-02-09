@@ -4,9 +4,9 @@
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "docs:dev": "vitepress dev specs",
-    "docs:build": "vitepress build specs",
-    "docs:preview": "vitepress preview specs"
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
   },
   "devDependencies": {
     "vitepress": "1.6.4"

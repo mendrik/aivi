@@ -11,6 +11,7 @@ mod rust_codegen;
 mod pm;
 mod kernel;
 mod rust_ir;
+mod rustc_backend;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,6 +32,7 @@ pub use runtime::run_native;
 pub use rust_codegen::{compile_rust, compile_rust_lib};
 pub use kernel::{KernelProgram, lower_hir as lower_kernel};
 pub use rust_ir::{RustIrProgram, lower_kernel as lower_rust_ir};
+pub use rustc_backend::{build_with_rustc, emit_rustc_source};
 pub use pm::{
     collect_aivi_sources, edit_cargo_toml_dependencies, read_aivi_toml, write_scaffold, AiviToml,
     CargoDepSpec, CargoDepSpecParseError, CargoManifestEdits, ProjectKind,

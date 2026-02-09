@@ -1,9 +1,9 @@
-node_modules/
+node_modules
 .idea/
 
 specs/.vitepress/cache/
 specs/.vitepress/dist/
 
 # Legacy pandoc build output
-specs/build/
+build
 target
