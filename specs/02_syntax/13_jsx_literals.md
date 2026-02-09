@@ -14,8 +14,8 @@ header = <div class="header">
 Desugars to:
 
 ```aivi
-header = div [ class "header" ] (
-  span [] (TextNode "AIVI")
+header = div [ attr "class" "header" ] (
+  span [] (text "AIVI")
 )
 ```
 
@@ -28,12 +28,12 @@ header = div [ class "header" ] (
 
 Attribute syntax:
 - `name="text"` — attribute value as text
-- `name={expr}` — attribute value as an AIVI expression
-- `name` alone — shorthand for `name=True`
+- `name={expr}` — attribute value as an AIVI expression (for `Html`, this must type-check as `Text`)
+- `name` alone — shorthand for `name="true"` in the `Html` domain
 - `{...record}` — spread attributes from a record
 
 ```aivi
-attrs = { class: "btn", disabled: True }
+attrs = { role: "button", disabled: "true" }
 button = <button {...attrs}>Click</button>
 ```
 
@@ -111,9 +111,9 @@ Desugars to:
 
 ```aivi
 items = fragment [
-  li [] (TextNode "First")
-  li [] (TextNode "Second")
-  li [] (TextNode "Third")
+  li [] (text "First")
+  li [] (text "Second")
+  li [] (text "Third")
 ]
 ```
 
@@ -132,8 +132,8 @@ items = fragment [
 | JSX | Desugars To |
 | :--- | :--- |
 | `<div>` | `div []` |
-| `<div class=x>` | `div [ class x ]` |
-| `<div>text</div>` | `div [] (TextNode "text")` |
+| `<div class=x>` | `div [ attr "class" x ]` |
+| `<div>text</div>` | `div [] (text "text")` |
 | `<div>{expr}</div>` | `div [] expr` |
 | `<div>{a}{b}</div>` | `div [] (fragment [a, b])` |
 | `<><A/><B/></>` | `fragment [A, B]` |

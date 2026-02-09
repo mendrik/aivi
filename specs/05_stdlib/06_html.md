@@ -6,6 +6,7 @@
 module aivi.std.html = {
   export domain Html
   export Element, Attribute, Children
+  export attr, fragment, text
   export div, span, p, a, ul, li, button, input, form
 }
 ```
@@ -22,6 +23,8 @@ Element = {
 Attribute = { name: Text, value: Text }
 
 Children = TextNode Text | Elements (List Element) | Empty
+
+> For v0.1, `Attribute.value` is `Text`. JSX attribute expressions must type-check as `Text` (or be explicitly converted).
 ```
 
 ## Domain Definition
@@ -71,6 +74,18 @@ input attrs = { tag: "input", attrs, children: Empty }
 
 form : List Attribute -> Children -> Element
 form attrs children = { tag: "form", attrs, children }
+
+// Attribute helper
+attr : Text -> Text -> Attribute
+attr name value = { name, value }
+
+// Fragment helper (used by JSX desugaring)
+fragment : List Element -> Children
+fragment els = Elements els
+
+// Text helper
+text : Text -> Children
+text t = TextNode t
 ```
 
 ## Usage Examples
@@ -117,7 +132,7 @@ Dashboard = { user, posts } => <main>
 JSX desugars to these constructors (rarely used directly):
 
 ```aivi
-header = div [ class "header" ] (
-  span [] (TextNode "AIVI")
+header = div [ attr "class" "header" ] (
+  span [] (text "AIVI")
 )
 ```

@@ -135,7 +135,7 @@ passwords |> filter isValidPassword
 // Single arg with _
 double = _ * 2
 isEven = _ % 2 == 0 
-getName = .name // Predicate shorthand for r => r.name
+getName = .name // Accessor shorthand for x => x.name
 
 // Equivalent explicit forms
 double = x => x * 2

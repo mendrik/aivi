@@ -27,7 +27,7 @@ list = ul [] +
 Deltas can represent style updates.
 
 ```aivi
-baseBtn = button [ class "btn" ]
+baseBtn = button [ attr "class" "btn" ]
 
 // + merges attributes
 primaryBtn = baseBtn + { class: "primary", disabled: False }
@@ -56,4 +56,3 @@ style = {
 *   **Type Safety**: `10px` + `5` is a type error.
 *   **Composition**: Building UIs becomes algebraic.
 *   **No "Stringly Typed" CSS**: Styles are typed records with unit validation.
-
