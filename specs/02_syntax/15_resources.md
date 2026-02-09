@@ -51,27 +51,3 @@ copy src dest = effect {
 }
 ```
 
-
-## 15.3 Ad-hoc cleanup (inline `resource`)
-
-Instead of a `defer` statement, define a small inline `resource` and bind it with `<-`. Cleanup happens automatically when the scope exits.
-
-```aivi
-main = effect {
-  s <- resource {
-    sock <- socket.connect "localhost" 8080
-    yield sock
-    _ <- socket.close sock
-  }
-
-  _ <- socket.send s "Hello"
-  pure Unit
-}
-```
-
-### Guarantees
-
-Cleanup code runs if:
-1. The block completes successfully.
-2. The block returns an error.
-3. The task executing the block is **cancelled**.

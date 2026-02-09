@@ -41,6 +41,12 @@ Decorators appear before the binding they annotate.
 | `@mcp_tool` | `@mcp_tool fetchData = ...` | Expose as MCP tool |
 | `@mcp_resource` | `@mcp_resource config = ...` | Expose as MCP resource |
 
+### Testing
+
+| Decorator | Usage | Meaning |
+| :--- | :--- | :--- |
+| `@test` | `@test add_is_commutative = ...` | Mark a definition as a test case |
+
 ### Pragmas (Module-level)
 
 | Decorator | Usage | Meaning |
