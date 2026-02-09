@@ -141,7 +141,6 @@ export default defineConfig({
         items: [
           { text: "WASM Target", link: "/ideas/01_wasm_target" },
           { text: "LiveView Frontend", link: "/ideas/02_liveview_frontend" },
-          { text: "HTML Domains", link: "/ideas/03_html_domains" },
           { text: "Meta-Domain", link: "/ideas/04_meta_domain" },
           { text: "Tooling", link: "/ideas/05_tooling" }
         ]
