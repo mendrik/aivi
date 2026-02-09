@@ -2,6 +2,13 @@
 
 Goal: make AIVI a “daily driver” language in editors while the compiler is still evolving.
 
+## Parallel M8 track docs
+
+- [M8 Overview](m8_lsp/00_overview)
+- [M8 Architecture](m8_lsp/01_architecture)
+- [M8 Features](m8_lsp/02_features)
+- [M8 Workplan](m8_lsp/03_workplan)
+
 ## Architecture
 
 - A single analysis engine shared by CLI + LSP:
@@ -54,6 +61,13 @@ Recommended layering:
 
 - `textDocument/formatting`:
   - CST-driven formatter
+  - stable formatting profile:
+    - deterministic output (same input -> same output)
+    - preserves comments + blank lines
+    - respects trailing commas + multiline layout
+  - request params:
+    - respect `tabSize`, `insertSpaces`, `trimTrailingWhitespace`, `insertFinalNewline`
+    - formatting is file-scoped (whole document) in L5
 - `textDocument/codeAction`:
   - quick fixes: “import missing name”, “add type annotation”, “add match cases”
 
@@ -62,6 +76,17 @@ Recommended layering:
 - Semantic tokens driven by:
   - resolved IDs (value/type/constructor/module)
   - typed info (effects, domains)
+  - stable token legend aligned with VS Code defaults:
+    - types: `type`, `class`, `enum`, `interface`, `typeParameter`
+    - values: `function`, `method`, `variable`, `parameter`, `property`, `enumMember`
+    - modules: `namespace`, `module`
+    - keywords/literals: `keyword`, `number`, `string`, `operator`
+  - modifiers:
+    - `declaration`, `definition`, `readonly`, `static`, `async`
+  - token sources:
+    - CST for keywords/literals/operators
+    - resolver for symbol identity + scope
+    - typechecker for value/type distinction + effects
 - Inlay hints:
   - inferred types for `let` bindings (optional)
   - effect requirements (optional)
@@ -74,6 +99,24 @@ Everything depends on robust span mapping:
 - `SourceMap` stores file text and line offsets.
 - Diagnostics include `(FileId, Span, message, severity, code)`.
 - LSP conversion maps spans to `Range`.
+
+### Formatting pipeline
+
+- Formatter consumes CST with trivia (comments/whitespace) preserved.
+- Formatting options are derived from `FormattingOptions` and a project profile.
+- Output is a single text edit (replace full document) to avoid range drift.
+- Formatting is idempotent and safe on partially parsed files (best-effort).
+
+### Semantic tokens pipeline
+
+- LSP advertises `semanticTokensProvider` with `legend` + `full` (delta optional).
+- Token emission is stable per file version and uses monotonic ranges.
+- Provide `semanticTokens/full` for initial support; add `semanticTokens/full/delta` later.
+- Mapping steps:
+  - CST walk emits base tokens (keywords, literals, operators).
+  - Resolver adds identifiers with symbol kinds + scope info.
+  - Typechecker refines token types + modifiers (e.g., `typeParameter`).
+- Errors do not stop tokenization; unknown nodes emit no tokens.
 
 ### Incrementality model
 
@@ -95,9 +138,11 @@ Mandatory:
 ## VS Code strategy
 
 Short-term:
-- Keep current TextMate grammar for highlighting.
-- Use `vscode-languageclient` to run `aivi lsp`.
+- update the vscode extension to use LSP (tower-lsp server).
+- keep TextMate grammar for basic highlighting.
+- enable semantic tokens (L6) for accurate, typed highlighting.
 
 Long-term:
-- Add tree-sitter grammar (optional) for better highlighting and folding.
+- Add tree-sitter grammar for better highlighting and folding.
+- Consider semantic token customization (themes + modifiers).
 

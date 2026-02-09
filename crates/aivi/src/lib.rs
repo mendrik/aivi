@@ -6,6 +6,7 @@ mod lexer;
 mod resolver;
 mod surface;
 mod typecheck;
+mod wasm;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -19,6 +20,7 @@ pub use hir::{HirModule, HirProgram};
 pub use resolver::check_modules;
 pub use surface::{parse_modules, parse_modules_from_tokens, Module};
 pub use typecheck::check_types;
+pub use wasm::{compile_wasm, run_wasm};
 
 #[derive(Debug)]
 pub enum AiviError {
@@ -26,6 +28,8 @@ pub enum AiviError {
     InvalidPath(String),
     Diagnostics,
     InvalidCommand(String),
+    Codegen(String),
+    Wasm(String),
 }
 
 impl std::fmt::Display for AiviError {
@@ -35,6 +39,8 @@ impl std::fmt::Display for AiviError {
             AiviError::InvalidPath(path) => write!(f, "Invalid path: {path}"),
             AiviError::Diagnostics => write!(f, "Diagnostics emitted"),
             AiviError::InvalidCommand(command) => write!(f, "Invalid command: {command}"),
+            AiviError::Codegen(message) => write!(f, "Codegen error: {message}"),
+            AiviError::Wasm(message) => write!(f, "WASM error: {message}"),
         }
     }
 }

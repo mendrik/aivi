@@ -27,6 +27,15 @@ cargo run -p aivi -- check examples/...
 
 # Desugar to a kernel-friendly HIR (JSON)
 cargo run -p aivi -- desugar examples/...
+
+# Build a WASM artifact (expects a main definition)
+cargo run -p aivi -- build path/to/module.aivi --target wasm32-wasi --out target/aivi.wasm
+
+# Run the WASM artifact under Wasmtime
+cargo run -p aivi -- run path/to/module.aivi --target wasm32-wasi
+
+# Example WASM run
+cargo run -p aivi -- run examples/10_wasm.aivi --target wasm32-wasi
 ```
 
 ## Test
@@ -34,3 +43,10 @@ cargo run -p aivi -- desugar examples/...
 ```bash
 cargo test
 ```
+
+## Notes
+
+- The WASM backend is intentionally minimal: it supports basic literals, simple arithmetic,
+- The WASM backend is intentionally minimal: it supports basic literals, simple arithmetic,
+  `if`, blocks with simple bindings, and `print` for `Text`. It currently expects a single
+  module and a `main` definition. More features will land in later phases.

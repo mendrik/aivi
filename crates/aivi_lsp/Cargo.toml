@@ -1,0 +1,9 @@
+[package]
+name = "aivi-lsp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aivi = { path = "../aivi" }
+tokio = { version = "1.37.0", features = ["io-std", "macros", "rt-multi-thread"] }
+tower-lsp = "0.20.0"

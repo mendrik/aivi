@@ -2,6 +2,14 @@
 
 Goal: `aivi mcp serve` starts an MCP server that exposes AIVI functions annotated as tools/resources, with schemas generated from AIVI types.
 
+## Parallel M9 track docs
+
+- [M9 Overview](m9_mcp/00_overview)
+- [M9 Host Architecture](m9_mcp/01_host_architecture)
+- [M9 Schema Mapping](m9_mcp/02_schema_mapping)
+- [M9 CLI + Ops](m9_mcp/03_cli_ops)
+- [M9 Test Plan](m9_mcp/04_test_plan)
+
 This aligns with `specs/ideas/05_tooling.md`.
 
 ## What “MCP support” means for AIVI
