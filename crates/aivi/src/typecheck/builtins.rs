@@ -19,6 +19,7 @@ impl TypeChecker {
             "Html",
             "DateTime",
             "FileHandle",
+            "FileStats",
             "Send",
             "Recv",
             "Closed",
@@ -188,6 +189,42 @@ impl TypeChecker {
                         Box::new(
                             Type::con("Effect").app(vec![Type::con("Text"), Type::con("Text")]),
                         ),
+                    ),
+                ),
+                (
+                    "write_text".to_string(),
+                    Type::Func(
+                        Box::new(Type::con("Text")),
+                        Box::new(Type::Func(
+                            Box::new(Type::con("Text")),
+                            Box::new(
+                                Type::con("Effect").app(vec![Type::con("Text"), Type::con("Unit")]),
+                            ),
+                        )),
+                    ),
+                ),
+                (
+                    "exists".to_string(),
+                    Type::Func(
+                        Box::new(Type::con("Text")),
+                        Box::new(Type::con("Effect").app(vec![Type::con("Text"), Type::con("Bool")])),
+                    ),
+                ),
+                (
+                    "stat".to_string(),
+                    Type::Func(
+                        Box::new(Type::con("Text")),
+                        Box::new(
+                            Type::con("Effect")
+                                .app(vec![Type::con("Text"), Type::con("FileStats")]),
+                        ),
+                    ),
+                ),
+                (
+                    "delete".to_string(),
+                    Type::Func(
+                        Box::new(Type::con("Text")),
+                        Box::new(Type::con("Effect").app(vec![Type::con("Text"), Type::con("Unit")])),
                     ),
                 ),
             ]

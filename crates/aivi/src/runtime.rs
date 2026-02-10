@@ -1380,6 +1380,121 @@ fn build_file_record() -> Value {
             Ok(Value::Effect(Arc::new(effect)))
         }),
     );
+    fields.insert(
+        "write_text".to_string(),
+        builtin("file.write_text", 2, |mut args, _| {
+            let content = match args.remove(1) {
+                Value::Text(text) => text,
+                _ => {
+                    return Err(RuntimeError::Message(
+                        "file.write_text expects Text content".to_string(),
+                    ))
+                }
+            };
+            let path = match args.remove(0) {
+                Value::Text(text) => text,
+                _ => {
+                    return Err(RuntimeError::Message(
+                        "file.write_text expects Text path".to_string(),
+                    ))
+                }
+            };
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| match std::fs::write(&path, content.as_bytes()) {
+                    Ok(()) => Ok(Value::Unit),
+                    Err(err) => Err(RuntimeError::Error(Value::Text(err.to_string()))),
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    fields.insert(
+        "exists".to_string(),
+        builtin("file.exists", 1, |mut args, _| {
+            let path = match args.remove(0) {
+                Value::Text(text) => text,
+                _ => {
+                    return Err(RuntimeError::Message(
+                        "file.exists expects Text path".to_string(),
+                    ))
+                }
+            };
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| Ok(Value::Bool(std::path::Path::new(&path).exists()))),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    fields.insert(
+        "stat".to_string(),
+        builtin("file.stat", 1, |mut args, _| {
+            let path = match args.remove(0) {
+                Value::Text(text) => text,
+                _ => {
+                    return Err(RuntimeError::Message(
+                        "file.stat expects Text path".to_string(),
+                    ))
+                }
+            };
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| {
+                    let metadata = std::fs::metadata(&path)
+                        .map_err(|err| RuntimeError::Error(Value::Text(err.to_string())))?;
+                    let created = metadata
+                        .created()
+                        .map_err(|err| RuntimeError::Error(Value::Text(err.to_string())))?;
+                    let modified = metadata
+                        .modified()
+                        .map_err(|err| RuntimeError::Error(Value::Text(err.to_string())))?;
+                    let created_ms = created
+                        .duration_since(UNIX_EPOCH)
+                        .map_err(|err| RuntimeError::Error(Value::Text(err.to_string())))?
+                        .as_millis();
+                    let modified_ms = modified
+                        .duration_since(UNIX_EPOCH)
+                        .map_err(|err| RuntimeError::Error(Value::Text(err.to_string())))?
+                        .as_millis();
+                    let size = i64::try_from(metadata.len())
+                        .map_err(|_| RuntimeError::Error(Value::Text("file too large".to_string())))?;
+                    let created = i64::try_from(created_ms)
+                        .map_err(|_| RuntimeError::Error(Value::Text("timestamp overflow".to_string())))?;
+                    let modified = i64::try_from(modified_ms)
+                        .map_err(|_| RuntimeError::Error(Value::Text("timestamp overflow".to_string())))?;
+                    let mut stats = HashMap::new();
+                    stats.insert("size".to_string(), Value::Int(size));
+                    stats.insert("created".to_string(), Value::Int(created));
+                    stats.insert("modified".to_string(), Value::Int(modified));
+                    stats.insert("is_file".to_string(), Value::Bool(metadata.is_file()));
+                    stats.insert(
+                        "is_directory".to_string(),
+                        Value::Bool(metadata.is_dir()),
+                    );
+                    Ok(Value::Record(stats))
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    fields.insert(
+        "delete".to_string(),
+        builtin("file.delete", 1, |mut args, _| {
+            let path = match args.remove(0) {
+                Value::Text(text) => text,
+                _ => {
+                    return Err(RuntimeError::Message(
+                        "file.delete expects Text path".to_string(),
+                    ))
+                }
+            };
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| match std::fs::remove_file(&path) {
+                    Ok(()) => Ok(Value::Unit),
+                    Err(err) => Err(RuntimeError::Error(Value::Text(err.to_string()))),
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
     Value::Record(fields)
 }
 
