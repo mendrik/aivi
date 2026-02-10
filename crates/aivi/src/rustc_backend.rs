@@ -157,6 +157,14 @@ fn emit_module(module: RustIrModule) -> Result<String, AiviError> {
     out.push_str("    }))\n");
     out.push_str("}\n\n");
 
+    out.push_str("fn builtin_println(value: Value) -> Value {\n");
+    out.push_str("    Value::Effect(Rc::new(move || {\n");
+    out.push_str("        let text = format_value(&value);\n");
+    out.push_str("        println!(\"{}\", text);\n");
+    out.push_str("        Ok(Value::Unit)\n");
+    out.push_str("    }))\n");
+    out.push_str("}\n\n");
+
     out.push_str("#[derive(Clone)]\n");
     out.push_str("enum PathSeg {\n");
     out.push_str("    Field(String),\n");
@@ -283,6 +291,34 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
             }
         }
         RustIrExpr::LitString { text, .. } => format!("Ok(Value::Text({:?}.to_string()))", text),
+        RustIrExpr::TextInterpolate { parts, .. } => {
+            let ind = "    ".repeat(indent);
+            let ind2 = "    ".repeat(indent + 1);
+            let mut out = String::new();
+            out.push_str("{\n");
+            out.push_str(&ind2);
+            out.push_str("let mut s = String::new();\n");
+            for part in parts {
+                match part {
+                    crate::rust_ir::RustIrTextPart::Text { text } => {
+                        out.push_str(&ind2);
+                        out.push_str(&format!("s.push_str({text:?});\n"));
+                    }
+                    crate::rust_ir::RustIrTextPart::Expr { expr } => {
+                        let expr_code = emit_expr(expr, indent + 1)?;
+                        out.push_str(&ind2);
+                        out.push_str(&format!("let v = ({expr_code})?;\n"));
+                        out.push_str(&ind2);
+                        out.push_str("s.push_str(&format_value(&v));\n");
+                    }
+                }
+            }
+            out.push_str(&ind2);
+            out.push_str("Ok(Value::Text(s))\n");
+            out.push_str(&ind);
+            out.push_str("}");
+            out
+        }
         RustIrExpr::LitSigil {
             tag, body, flags, ..
         } => {
@@ -435,6 +471,13 @@ fn emit_builtin_call(
             }
             let arg_code = emit_expr(&args[0], indent)?;
             Ok(format!("({arg_code}).map(builtin_print)"))
+        }
+        Builtin::Println => {
+            if args.len() != 1 {
+                return Err(AiviError::Codegen("println expects 1 arg".to_string()));
+            }
+            let arg_code = emit_expr(&args[0], indent)?;
+            Ok(format!("({arg_code}).map(builtin_println)"))
         }
         Builtin::Bind => {
             if args.len() != 2 {

@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::hir::{
     HirBlockItem, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirPathSegment, HirPattern,
-    HirProgram, HirRecordField,
+    HirProgram, HirRecordField, HirTextPart,
 };
 use crate::AiviError;
 
@@ -249,6 +249,19 @@ impl Runtime {
                 self.force_value(value)
             }
             HirExpr::LitString { text, .. } => Ok(Value::Text(text.clone())),
+            HirExpr::TextInterpolate { parts, .. } => {
+                let mut out = String::new();
+                for part in parts {
+                    match part {
+                        HirTextPart::Text { text } => out.push_str(text),
+                        HirTextPart::Expr { expr } => {
+                            let value = self.eval_expr(expr, env)?;
+                            out.push_str(&format_value(&value));
+                        }
+                    }
+                }
+                Ok(Value::Text(out))
+            }
             HirExpr::LitSigil {
                 tag, body, flags, ..
             } => {
@@ -1212,6 +1225,21 @@ fn register_builtins(env: &Env) {
                     print!("{text}");
                     let mut out = std::io::stdout();
                     let _ = out.flush();
+                    Ok(Value::Unit)
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+
+    env.set(
+        "println".to_string(),
+        builtin("println", 1, |mut args, _| {
+            let value = args.remove(0);
+            let text = format_value(&value);
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| {
+                    println!("{text}");
                     Ok(Value::Unit)
                 }),
             };

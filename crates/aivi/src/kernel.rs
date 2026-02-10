@@ -24,6 +24,13 @@ pub struct KernelDef {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "kind")]
+pub enum KernelTextPart {
+    Text { text: String },
+    Expr { expr: KernelExpr },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "kind")]
 pub enum KernelExpr {
     Var {
         id: u32,
@@ -36,6 +43,10 @@ pub enum KernelExpr {
     LitString {
         id: u32,
         text: String,
+    },
+    TextInterpolate {
+        id: u32,
+        parts: Vec<KernelTextPart>,
     },
     LitSigil {
         id: u32,
@@ -251,6 +262,18 @@ fn lower_expr(expr: HirExpr) -> KernelExpr {
         HirExpr::Var { id, name } => KernelExpr::Var { id, name },
         HirExpr::LitNumber { id, text } => KernelExpr::LitNumber { id, text },
         HirExpr::LitString { id, text } => KernelExpr::LitString { id, text },
+        HirExpr::TextInterpolate { id, parts } => KernelExpr::TextInterpolate {
+            id,
+            parts: parts
+                .into_iter()
+                .map(|part| match part {
+                    crate::hir::HirTextPart::Text { text } => KernelTextPart::Text { text },
+                    crate::hir::HirTextPart::Expr { expr } => KernelTextPart::Expr {
+                        expr: lower_expr(expr),
+                    },
+                })
+                .collect(),
+        },
         HirExpr::LitSigil {
             id,
             tag,

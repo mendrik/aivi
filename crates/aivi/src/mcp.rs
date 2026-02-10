@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::surface::{
     BlockItem, BlockKind, Def, DomainItem, Expr, ListItem, Module, ModuleItem, Pattern,
-    RecordField, TypeExpr, TypeSig,
+    RecordField, TextPart, TypeExpr, TypeSig,
 };
 use crate::AiviError;
 
@@ -203,6 +203,10 @@ fn type_is_effectful_return(ty: &TypeExpr) -> bool {
 
 fn expr_is_effectful(expr: &Expr) -> bool {
     match expr {
+        Expr::TextInterpolate { parts, .. } => parts.iter().any(|part| match part {
+            TextPart::Text { .. } => false,
+            TextPart::Expr { expr, .. } => expr_is_effectful(expr),
+        }),
         Expr::Block { kind, items, .. } => {
             if matches!(
                 kind,

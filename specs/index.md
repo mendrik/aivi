@@ -93,13 +93,14 @@ A high-integrity functional language with a Rust-first compilation pipeline.
 58. [File Domain](05_stdlib/03_system/20_file)
 59. [Console Domain](05_stdlib/03_system/21_console)
 60. [HTTP Domain](05_stdlib/03_system/19_http)
-61. [URL Domain](05_stdlib/03_system/25_url)
-62. [Crypto Domain](05_stdlib/03_system/22_crypto)
-63. [System Domain](05_stdlib/03_system/25_system)
-64. [Log Domain](05_stdlib/03_system/26_log)
+61. [Database Domain](05_stdlib/03_system/23_database)
+62. [URL Domain](05_stdlib/03_system/25_url)
+63. [Crypto Domain](05_stdlib/03_system/22_crypto)
+64. [System Domain](05_stdlib/03_system/25_system)
+65. [Log Domain](05_stdlib/03_system/26_log)
 
 #### UI
-65. [Color Domain](05_stdlib/04_ui/04_color)
+66. [Color Domain](05_stdlib/04_ui/04_color)
 
 ### Execution & Concurrency
 

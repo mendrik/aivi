@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::surface::{BlockItem, BlockKind, Def, DomainItem, Expr, Module, ModuleItem, Pattern};
+use crate::surface::{
+    BlockItem, BlockKind, Def, DomainItem, Expr, Module, ModuleItem, Pattern, TextPart,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirProgram {
@@ -21,6 +23,13 @@ pub struct HirDef {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "kind")]
+pub enum HirTextPart {
+    Text { text: String },
+    Expr { expr: HirExpr },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "kind")]
 pub enum HirExpr {
     Var {
         id: u32,
@@ -33,6 +42,10 @@ pub enum HirExpr {
     LitString {
         id: u32,
         text: String,
+    },
+    TextInterpolate {
+        id: u32,
+        parts: Vec<HirTextPart>,
     },
     LitSigil {
         id: u32,
@@ -301,6 +314,18 @@ fn lower_expr_inner(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
         Expr::Ident(name) => HirExpr::Var {
             id: id_gen.next(),
             name: name.name,
+        },
+        Expr::TextInterpolate { parts, .. } => HirExpr::TextInterpolate {
+            id: id_gen.next(),
+            parts: parts
+                .into_iter()
+                .map(|part| match part {
+                    TextPart::Text { text, .. } => HirTextPart::Text { text },
+                    TextPart::Expr { expr, .. } => HirTextPart::Expr {
+                        expr: lower_expr(*expr, id_gen),
+                    },
+                })
+                .collect(),
         },
         Expr::Literal(literal) => match literal {
             crate::surface::Literal::Number { text, .. } => {
@@ -704,6 +729,10 @@ fn contains_hole(expr: &Expr) -> bool {
     match expr {
         Expr::Ident(name) => name.name == "_",
         Expr::Literal(_) => false,
+        Expr::TextInterpolate { parts, .. } => parts.iter().any(|part| match part {
+            TextPart::Text { .. } => false,
+            TextPart::Expr { expr, .. } => contains_hole(expr),
+        }),
         Expr::List { items, .. } => items.iter().any(|item| contains_hole(&item.expr)),
         Expr::Tuple { items, .. } => items.iter().any(contains_hole),
         Expr::Record { fields, .. } => fields.iter().any(|field| {
@@ -764,6 +793,19 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
             })
         }
         Expr::Ident(_) | Expr::Literal(_) | Expr::Raw { .. } => expr,
+        Expr::TextInterpolate { parts, span } => Expr::TextInterpolate {
+            parts: parts
+                .into_iter()
+                .map(|part| match part {
+                    TextPart::Text { .. } => part,
+                    TextPart::Expr { expr, span } => TextPart::Expr {
+                        expr: Box::new(replace_holes_inner(*expr, counter, params)),
+                        span,
+                    },
+                })
+                .collect(),
+            span,
+        },
         Expr::List { items, span } => Expr::List {
             items: items
                 .into_iter()

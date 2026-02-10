@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use crate::diagnostics::{Diagnostic, FileDiagnostic, Span};
 use crate::surface::{
     BlockItem, BlockKind, Def, DomainItem, Expr, Literal, Module, ModuleItem, PathSegment, Pattern,
-    RecordField, RecordPatternField, SpannedName, TypeAlias, TypeDecl, TypeExpr, TypeSig,
+    RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeDecl, TypeExpr, TypeSig,
 };
 
 mod builtins;
@@ -387,6 +387,13 @@ impl TypeChecker {
 
         env.insert(
             "print".to_string(),
+            Scheme::mono(Type::Func(
+                Box::new(Type::con("Text")),
+                Box::new(Type::con("Effect").app(vec![Type::con("Text"), Type::con("Unit")])),
+            )),
+        );
+        env.insert(
+            "println".to_string(),
             Scheme::mono(Type::Func(
                 Box::new(Type::con("Text")),
                 Box::new(Type::con("Effect").app(vec![Type::con("Text"), Type::con("Unit")])),
@@ -1044,6 +1051,14 @@ impl TypeChecker {
                 },
                 _ => Ok(self.literal_type(literal)),
             },
+            Expr::TextInterpolate { parts, .. } => {
+                for part in parts {
+                    if let TextPart::Expr { expr, .. } = part {
+                        let _ = self.infer_expr(expr, env)?;
+                    }
+                }
+                Ok(Type::con("Text"))
+            }
             Expr::List { items, .. } => self.infer_list(items, env),
             Expr::Tuple { items, .. } => self.infer_tuple(items, env),
             Expr::Record { fields, .. } => self.infer_record(fields, env),
@@ -2289,6 +2304,7 @@ fn expr_span(expr: &Expr) -> Span {
     match expr {
         Expr::Ident(name) => name.span.clone(),
         Expr::Literal(literal) => literal_span(literal),
+        Expr::TextInterpolate { span, .. } => span.clone(),
         Expr::List { span, .. }
         | Expr::Tuple { span, .. }
         | Expr::Record { span, .. }
@@ -2337,6 +2353,19 @@ fn desugar_holes(expr: Expr) -> Expr {
 
 fn desugar_holes_inner(expr: Expr, is_root: bool) -> Expr {
     let expr = match expr {
+        Expr::TextInterpolate { parts, span } => Expr::TextInterpolate {
+            parts: parts
+                .into_iter()
+                .map(|part| match part {
+                    TextPart::Text { .. } => part,
+                    TextPart::Expr { expr, span } => TextPart::Expr {
+                        expr: Box::new(desugar_holes_inner(*expr, false)),
+                        span,
+                    },
+                })
+                .collect(),
+            span,
+        },
         Expr::List { items, span } => {
             let items = items
                 .into_iter()

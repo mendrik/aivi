@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::cst::CstToken;
-use crate::diagnostics::{Diagnostic, FileDiagnostic, Position, Span};
+use crate::diagnostics::{Diagnostic, DiagnosticLabel, FileDiagnostic, Position, Span};
 use crate::lexer::{filter_tokens, lex, Token, TokenKind};
 
 #[derive(Debug, Clone)]
@@ -175,9 +175,25 @@ pub enum Literal {
 }
 
 #[derive(Debug, Clone)]
+pub enum TextPart {
+    Text {
+        text: String,
+        span: Span,
+    },
+    Expr {
+        expr: Box<Expr>,
+        span: Span,
+    },
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Ident(SpannedName),
     Literal(Literal),
+    TextInterpolate {
+        parts: Vec<TextPart>,
+        span: Span,
+    },
     List {
         items: Vec<ListItem>,
         span: Span,
@@ -1484,11 +1500,7 @@ impl Parser {
         }
 
         if let Some(string) = self.consume_string() {
-            let span = string.span.clone();
-            return Some(Expr::Literal(Literal::String {
-                text: string.text,
-                span,
-            }));
+            return Some(self.parse_text_literal_expr(string));
         }
 
         if let Some(sigil) = self.consume_sigil() {
@@ -1782,10 +1794,7 @@ impl Parser {
             }));
         }
         if let Some(string) = self.consume_string() {
-            return Some(Pattern::Literal(Literal::String {
-                text: string.text,
-                span: string.span,
-            }));
+            return Some(Pattern::Literal(self.parse_text_literal_plain(string)));
         }
         if let Some(sigil) = self.consume_sigil() {
             if let Some((tag, body, flags)) = parse_sigil_text(&sigil.text) {
@@ -2035,6 +2044,177 @@ impl Parser {
         Some(token.clone())
     }
 
+    fn parse_text_literal_plain(&mut self, token: Token) -> Literal {
+        let span = token.span.clone();
+        Literal::String {
+            text: decode_text_literal(&token.text).unwrap_or_else(|| token.text.clone()),
+            span,
+        }
+    }
+
+    fn parse_text_literal_expr(&mut self, token: Token) -> Expr {
+        let span = token.span.clone();
+        let Some(inner) = strip_text_literal_quotes(&token.text) else {
+            return Expr::Literal(Literal::String {
+                text: token.text,
+                span,
+            });
+        };
+
+        let raw_chars: Vec<char> = inner.chars().collect();
+        let mut parts: Vec<TextPart> = Vec::new();
+
+        let mut text_buf = String::new();
+        let mut text_start = 0usize;
+        let mut i = 0usize;
+
+        while i < raw_chars.len() {
+            let ch = raw_chars[i];
+            if ch == '\\' {
+                if i + 1 >= raw_chars.len() {
+                    self.emit_diag(
+                        "E1520",
+                        "unterminated escape sequence in text literal",
+                        span.clone(),
+                    );
+                    text_buf.push('\\');
+                    i += 1;
+                    continue;
+                }
+                let esc = raw_chars[i + 1];
+                match decode_escape(esc) {
+                    Some(decoded) => text_buf.push(decoded),
+                    None => {
+                        let esc_span = span_in_text_literal(&token.span, i, i + 2);
+                        self.emit_diag(
+                            "E1521",
+                            &format!("unknown escape sequence '\\{esc}'"),
+                            esc_span,
+                        );
+                        text_buf.push(esc);
+                    }
+                }
+                i += 2;
+                continue;
+            }
+
+            if ch == '{' {
+                if !text_buf.is_empty() {
+                    let part_span = span_in_text_literal(&token.span, text_start, i);
+                    parts.push(TextPart::Text {
+                        text: std::mem::take(&mut text_buf),
+                        span: part_span,
+                    });
+                }
+
+                let open_index = i;
+                let remainder: String = raw_chars[i + 1..].iter().collect();
+                let Some(close_offset) = find_interpolation_close(&remainder) else {
+                    let open_span = span_in_text_literal(&token.span, open_index, open_index + 1);
+                    self.emit_diag("E1522", "unterminated text interpolation", open_span);
+                    text_buf.push('{');
+                    text_start = i;
+                    i += 1;
+                    continue;
+                };
+
+                let close_index = i + 1 + close_offset;
+                let expr_raw: String = raw_chars[i + 1..close_index].iter().collect();
+                let expr_start_col =
+                    token.span.start.column + 1 + open_index + 1; // opening quote + '{'
+                let expr_line = token.span.start.line;
+
+                match self.parse_embedded_expr(&expr_raw, expr_line, expr_start_col) {
+                    Some(expr) => {
+                        let part_span =
+                            span_in_text_literal(&token.span, open_index, close_index + 1);
+                        parts.push(TextPart::Expr {
+                            expr: Box::new(expr),
+                            span: part_span,
+                        });
+                    }
+                    None => {
+                        let part_span =
+                            span_in_text_literal(&token.span, open_index, close_index + 1);
+                        parts.push(TextPart::Text {
+                            text: format!("{{{expr_raw}}}"),
+                            span: part_span,
+                        });
+                    }
+                }
+
+                i = close_index + 1;
+                text_start = i;
+                continue;
+            }
+
+            text_buf.push(ch);
+            i += 1;
+        }
+
+        if !text_buf.is_empty() {
+            let part_span = span_in_text_literal(&token.span, text_start, raw_chars.len());
+            parts.push(TextPart::Text {
+                text: text_buf,
+                span: part_span,
+            });
+        }
+
+        let has_expr = parts.iter().any(|part| matches!(part, TextPart::Expr { .. }));
+        if !has_expr {
+            let mut out = String::new();
+            for part in parts {
+                if let TextPart::Text { text, .. } = part {
+                    out.push_str(&text);
+                }
+            }
+            return Expr::Literal(Literal::String { text: out, span });
+        }
+
+        Expr::TextInterpolate { parts, span }
+    }
+
+    fn parse_embedded_expr(
+        &mut self,
+        text: &str,
+        line: usize,
+        column: usize,
+    ) -> Option<Expr> {
+        let (cst_tokens, lex_diags) = lex(text);
+        for diag in lex_diags {
+            self.diagnostics.push(FileDiagnostic {
+                path: self.path.clone(),
+                diagnostic: Diagnostic {
+                    code: diag.code,
+                    message: diag.message,
+                    span: shift_span(&diag.span, line - 1, column - 1),
+                    labels: diag
+                        .labels
+                        .into_iter()
+                        .map(|label| DiagnosticLabel {
+                            message: label.message,
+                            span: shift_span(&label.span, line - 1, column - 1),
+                        })
+                        .collect(),
+                },
+            });
+        }
+        let mut tokens = filter_tokens(&cst_tokens);
+        for token in &mut tokens {
+            token.span = shift_span(&token.span, line - 1, column - 1);
+        }
+
+        let mut parser = Parser::new(tokens, Path::new(&self.path));
+        let expr = parser.parse_expr();
+        parser.consume_newlines();
+        if parser.pos < parser.tokens.len() {
+            let span = parser.peek_span().unwrap_or_else(|| parser.previous_span());
+            parser.emit_diag("E1523", "unexpected tokens in text interpolation", span);
+        }
+        self.diagnostics.append(&mut parser.diagnostics);
+        expr
+    }
+
     fn consume_number_suffix(&mut self, number: Token, prefix: Option<Span>) -> (String, Span) {
         let mut text = number.text.clone();
         let mut span = number.span.clone();
@@ -2221,10 +2401,103 @@ fn merge_span(start: Span, end: Span) -> Span {
     }
 }
 
+fn shift_span(span: &Span, line_offset: usize, col_offset: usize) -> Span {
+    Span {
+        start: Position {
+            line: span.start.line + line_offset,
+            column: span.start.column + col_offset,
+        },
+        end: Position {
+            line: span.end.line + line_offset,
+            column: span.end.column + col_offset,
+        },
+    }
+}
+
+fn strip_text_literal_quotes(text: &str) -> Option<&str> {
+    let inner = text.strip_prefix('"')?;
+    Some(inner.strip_suffix('"').unwrap_or(inner))
+}
+
+fn decode_escape(ch: char) -> Option<char> {
+    match ch {
+        'n' => Some('\n'),
+        'r' => Some('\r'),
+        't' => Some('\t'),
+        '\\' => Some('\\'),
+        '"' => Some('"'),
+        '{' => Some('{'),
+        '}' => Some('}'),
+        _ => None,
+    }
+}
+
+fn decode_text_literal(text: &str) -> Option<String> {
+    let inner = strip_text_literal_quotes(text)?;
+    let mut out = String::new();
+    let chars: Vec<char> = inner.chars().collect();
+    let mut i = 0usize;
+    while i < chars.len() {
+        let ch = chars[i];
+        if ch == '\\' && i + 1 < chars.len() {
+            let esc = chars[i + 1];
+            out.push(decode_escape(esc).unwrap_or(esc));
+            i += 2;
+            continue;
+        }
+        out.push(ch);
+        i += 1;
+    }
+    Some(out)
+}
+
+fn span_in_text_literal(token_span: &Span, start: usize, end: usize) -> Span {
+    let line = token_span.start.line;
+    let base_col = token_span.start.column + 1;
+    let start_col = base_col + start;
+    let end_col = if end > start {
+        base_col + end - 1
+    } else {
+        start_col
+    };
+    Span {
+        start: Position {
+            line,
+            column: start_col,
+        },
+        end: Position {
+            line,
+            column: end_col,
+        },
+    }
+}
+
+fn find_interpolation_close(remainder: &str) -> Option<usize> {
+    let (tokens, _) = lex(remainder);
+    let mut depth = 0usize;
+    for token in tokens {
+        if token.kind != "symbol" {
+            continue;
+        }
+        match token.text.as_str() {
+            "{" => depth += 1,
+            "}" => {
+                if depth == 0 {
+                    return Some(token.span.start.column.saturating_sub(1));
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 fn expr_span(expr: &Expr) -> Span {
     match expr {
         Expr::Ident(name) => name.span.clone(),
         Expr::Literal(literal) => literal_span(literal),
+        Expr::TextInterpolate { span, .. } => span.clone(),
         Expr::List { span, .. }
         | Expr::Tuple { span, .. }
         | Expr::Record { span, .. }

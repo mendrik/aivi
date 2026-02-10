@@ -28,6 +28,14 @@ pub enum Builtin {
     Pure,
     Bind,
     Print,
+    Println,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "kind")]
+pub enum RustIrTextPart {
+    Text { text: String },
+    Expr { expr: RustIrExpr },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -53,6 +61,10 @@ pub enum RustIrExpr {
     LitString {
         id: u32,
         text: String,
+    },
+    TextInterpolate {
+        id: u32,
+        parts: Vec<RustIrTextPart>,
     },
     LitSigil {
         id: u32,
@@ -236,6 +248,22 @@ fn lower_expr(
         }
         KernelExpr::LitNumber { id, text } => RustIrExpr::LitNumber { id, text },
         KernelExpr::LitString { id, text } => RustIrExpr::LitString { id, text },
+        KernelExpr::TextInterpolate { id, parts } => RustIrExpr::TextInterpolate {
+            id,
+            parts: parts
+                .into_iter()
+                .map(|part| {
+                    Ok(match part {
+                        crate::kernel::KernelTextPart::Text { text } => {
+                            RustIrTextPart::Text { text }
+                        }
+                        crate::kernel::KernelTextPart::Expr { expr } => RustIrTextPart::Expr {
+                            expr: lower_expr(expr, globals, locals)?,
+                        },
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+        },
         KernelExpr::LitSigil {
             id,
             tag,
@@ -468,6 +496,7 @@ fn resolve_builtin(name: &str) -> Option<Builtin> {
         "pure" => Some(Builtin::Pure),
         "bind" => Some(Builtin::Bind),
         "print" => Some(Builtin::Print),
+        "println" => Some(Builtin::Println),
         _ => None,
     }
 }

@@ -84,6 +84,8 @@ activeUsers : Source Db (List User)
 activeUsers = db.query "SELECT id, name FROM users WHERE active = 1"
 ```
 
+See the [Database Domain](../05_stdlib/03_system/23_database.md) for table operations, deltas, and migrations.
+
 
 ## 12.5 Email Sources
 
