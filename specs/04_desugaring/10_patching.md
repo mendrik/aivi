@@ -80,6 +80,33 @@ Predicate `pred` uses the unified predicate desugaring table (Section 8).
 
 For constructors with direct payload (not record), `value` refers to the payload position.
 
+## Map key selectors
+
+When a path segment selects a `Map` entry, desugar to `Map` operations. The selector focuses on the **value**.
+
+Assume `m : Map K V` and `k : K`:
+
+| Surface | Desugaring |
+| :--- | :--- |
+| `m <| { ["k"]: v }` | `Map.insert "k" ⟦v⟧ ⟦m⟧` |
+| `m <| { ["k"]: f }` | `Map.update "k" ⟦f⟧ ⟦m⟧` |
+| `m <| { ["k"]: - }` | `Map.remove "k" ⟦m⟧` |
+| `m <| { ["k"].path: f }` | `Map.update "k" (λv0. update v0 "path" ⟦f⟧) ⟦m⟧` |
+
+### Map traversal `map[*]`
+
+| Surface | Desugaring |
+| :--- | :--- |
+| `map[*].path: f` | `Map.map (λv0. update v0 "path" ⟦f⟧) ⟦map⟧` |
+
+### Map predicate traversal `map[pred]`
+
+Predicate `pred` is applied to an entry record `{ key, value }`.
+
+| Surface | Desugaring |
+| :--- | :--- |
+| `map[pred].path: f` | `Map.mapWithKey (λk v. case (⟦pred→λ⟧ { key: k, value: v }) of \| True -> update v "path" ⟦f⟧ \| False -> v) ⟦map⟧` |
+
 # Summary: smallest set of kernel primitives assumed
 
 * `λ`, application

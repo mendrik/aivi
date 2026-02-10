@@ -33,8 +33,8 @@ pub struct AiviHttpError {
 }
 
 pub enum AiviWsMessage {
-    Text(String),
-    Binary(Vec<u8>),
+    TextMsg(String),
+    BinaryMsg(Vec<u8>),
     Ping,
     Pong,
     Close,
@@ -307,8 +307,8 @@ fn convert_response(response: AiviResponse) -> Result<Response<Body>, AiviHttpEr
 
 fn map_ws_message(msg: tokio_tungstenite::tungstenite::Message) -> AiviWsMessage {
     match msg {
-        tokio_tungstenite::tungstenite::Message::Text(text) => AiviWsMessage::Text(text),
-        tokio_tungstenite::tungstenite::Message::Binary(data) => AiviWsMessage::Binary(data),
+        tokio_tungstenite::tungstenite::Message::Text(text) => AiviWsMessage::TextMsg(text),
+        tokio_tungstenite::tungstenite::Message::Binary(data) => AiviWsMessage::BinaryMsg(data),
         tokio_tungstenite::tungstenite::Message::Ping(_) => AiviWsMessage::Ping,
         tokio_tungstenite::tungstenite::Message::Pong(_) => AiviWsMessage::Pong,
         tokio_tungstenite::tungstenite::Message::Close(_) => AiviWsMessage::Close,
@@ -318,8 +318,8 @@ fn map_ws_message(msg: tokio_tungstenite::tungstenite::Message) -> AiviWsMessage
 
 fn to_ws_message(msg: AiviWsMessage) -> tokio_tungstenite::tungstenite::Message {
     match msg {
-        AiviWsMessage::Text(text) => tokio_tungstenite::tungstenite::Message::Text(text),
-        AiviWsMessage::Binary(data) => tokio_tungstenite::tungstenite::Message::Binary(data),
+        AiviWsMessage::TextMsg(text) => tokio_tungstenite::tungstenite::Message::Text(text),
+        AiviWsMessage::BinaryMsg(data) => tokio_tungstenite::tungstenite::Message::Binary(data),
         AiviWsMessage::Ping => tokio_tungstenite::tungstenite::Message::Ping(Vec::new()),
         AiviWsMessage::Pong => tokio_tungstenite::tungstenite::Message::Pong(Vec::new()),
         AiviWsMessage::Close => tokio_tungstenite::tungstenite::Message::Close(None),

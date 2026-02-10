@@ -71,6 +71,10 @@ Sep        := ( Newline | ";" ) { ( Newline | ";" ) } ;
 FieldSep   := Sep | "," ;
 ```
 
+### Ellipsis
+
+- `...` is a single token (ellipsis) used for list rest patterns and spread entries.
+
 
 ## 0.2 Top level
 
@@ -214,8 +218,24 @@ TupleLit       := "(" Expr "," Expr { "," Expr } ")" ;
 ListLit        := "[" [ Expr { FieldSep Expr } | Range ] "]" ;
 Range          := Expr ".." Expr ;
 
-RecordLit      := "{" { RecordField } "}" ;
+RecordLit      := "{" { RecordEntry } "}" ;
+RecordEntry    := RecordField | RecordSpread ;
 RecordField    := lowerIdent [ ":" Expr ] [ FieldSep ] ;
+RecordSpread   := "..." Expr [ FieldSep ] ;
+
+MapLit         := "~map" "{" [ MapEntry { FieldSep MapEntry } ] "}" ;
+SetLit         := "~set" "[" [ SetEntry { FieldSep SetEntry } ] "]" ;
+MapEntry       := Spread | Expr "=>" Expr ;
+SetEntry       := Spread | Expr ;
+Spread         := "..." Expr ;
+
+SigilLit       := MapLit | SetLit | RawSigilLit ;
+RawSigilLit    := "~" lowerIdent SigilBody ;
+SigilBody      := SigilParen | SigilBracket | SigilBrace | SigilRegex ;
+SigilParen     := "(" SigilText ")" ;
+SigilBracket   := "[" SigilText "]" ;
+SigilBrace     := "{" SigilText "}" ;
+SigilRegex     := "/" SigilRegexText "/" [ lowerIdent ] ;
 
 Literal        := "True"
                | "False"
@@ -224,7 +244,8 @@ Literal        := "True"
                | TextLit
                | CharLit
                | IsoInstantLit
-               | SuffixedNumberLit ;
+               | SuffixedNumberLit
+               | SigilLit ;
 ```
 
 **Notes**
@@ -233,6 +254,8 @@ Literal        := "True"
 - Multi-statement expression blocks use `do { ... }`, so the parser never needs to guess whether `{ ... }` is a record literal or a block.
 - `.field` is shorthand for `x => x.field` (a unary accessor function).
 - `_` is *not* a value. It only appears in expressions as part of the placeholder-lambda sugar (see `specs/04_desugaring/02_functions.md`).
+- `RawSigilLit` content (`SigilText` / `SigilRegexText`) is lexed as raw text until the matching delimiter; `~map{}` and `~set[]` are parsed as structured literals (`MapLit` / `SetLit`).
+- `RecordSpread` (`...expr`) merges fields left-to-right; later fields override earlier ones.
 
 
 ## 0.4 Patching

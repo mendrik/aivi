@@ -5,7 +5,8 @@ use std::sync::{mpsc, Arc, Mutex};
 use crate::hir::{HirBlockItem, HirExpr};
 use aivi_http_server::{ServerHandle, WebSocketHandle};
 
-use super::{Env, Runtime, RuntimeError};
+use super::environment::Env;
+use super::{Runtime, RuntimeError};
 
 pub(super) type BuiltinFunc =
     dyn Fn(Vec<Value>, &mut Runtime) -> Result<Value, RuntimeError> + Send + Sync;

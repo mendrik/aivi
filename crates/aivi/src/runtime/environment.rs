@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use super::Value;
+use super::values::Value;
 
 #[derive(Clone)]
 pub(super) struct Env {

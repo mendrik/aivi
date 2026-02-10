@@ -91,6 +91,14 @@ alice : User
 alice = { id: 1, name: "Alice", email: None }
 ```
 
+Record literals can spread existing records:
+
+```aivi
+alice = { ...defaults, name: "Alice" }
+```
+
+Spreads merge fields left-to-right; later entries override earlier ones.
+
 Functions specify **minimum required fields**, not exact shapes.
 
 ```aivi
