@@ -153,12 +153,23 @@ export default defineConfig({
             items: [
                 { text: 'File', link: '/05_stdlib/03_system/20_file' },
                 { text: 'Console', link: '/05_stdlib/03_system/21_console' },
-                { text: 'HTTP', link: '/05_stdlib/03_system/19_http' },
                 { text: 'Database', link: '/05_stdlib/03_system/23_database' },
                 { text: 'URL', link: '/05_stdlib/03_system/25_url' },
                 { text: 'Crypto', link: '/05_stdlib/03_system/22_crypto' },
                 { text: 'System', link: '/05_stdlib/03_system/25_system' },
                 { text: 'Log', link: '/05_stdlib/03_system/26_log' },
+            ]
+          },
+          {
+            text: 'Network',
+            collapsed: true,
+            items: [
+                { text: 'Network', link: '/05_stdlib/03_network/00_network' },
+                { text: 'HTTP Utils', link: '/05_stdlib/03_network/01_http' },
+                { text: 'HTTPS', link: '/05_stdlib/03_network/02_https' },
+                { text: 'HTTP Server', link: '/05_stdlib/03_network/03_http_server' },
+                { text: 'Sockets', link: '/05_stdlib/03_network/04_sockets' },
+                { text: 'Streams', link: '/05_stdlib/03_network/05_streams' },
             ]
           },
           {
