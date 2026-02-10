@@ -29,9 +29,10 @@ A high-integrity functional language with a Rust-first compilation pipeline.
 10. [Pattern Matching](02_syntax/08_pattern_matching)
 11. [Effects](02_syntax/09_effects)
 12. [Modules](02_syntax/10_modules)
-13. [External Sources](02_syntax/12_external_sources)
-14. [Decorators](02_syntax/14_decorators)
-15. [Resources](02_syntax/15_resources)
+13. [Sigils](02_syntax/13_sigils)
+14. [External Sources](02_syntax/12_external_sources)
+15. [Decorators](02_syntax/14_decorators)
+16. [Resources](02_syntax/15_resources)
 
 ### Kernel (Core Calculus)
 

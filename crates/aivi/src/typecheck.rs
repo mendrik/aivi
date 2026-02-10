@@ -13,6 +13,7 @@ struct TypeVarId(u32);
 enum Type {
     Var(TypeVarId),
     Con(String, Vec<Type>),
+    App(Box<Type>, Vec<Type>),
     Func(Box<Type>, Box<Type>),
     Tuple(Vec<Type>),
     Record { fields: BTreeMap<String, Type>, open: bool },
@@ -148,6 +149,21 @@ struct TypeChecker {
     builtin_types: HashSet<String>,
     builtins: TypeEnv,
     checked_defs: HashSet<String>,
+    classes: HashMap<String, ClassDeclInfo>,
+    instances: Vec<InstanceDeclInfo>,
+    method_to_classes: HashMap<String, Vec<String>>,
+}
+
+#[derive(Clone, Debug)]
+struct ClassDeclInfo {
+    params: Vec<TypeExpr>,
+    members: HashMap<String, TypeExpr>,
+}
+
+#[derive(Clone, Debug)]
+struct InstanceDeclInfo {
+    class_name: String,
+    params: Vec<TypeExpr>,
 }
 
 fn ordered_modules<'a>(modules: &'a [Module]) -> Vec<&'a Module> {
@@ -219,6 +235,7 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
         checker.reset_module_context(module);
         let mut env = checker.builtins.clone();
         checker.register_module_types(module);
+        checker.collect_classes_and_instances(module);
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
         checker.register_imports(module, &module_exports, &mut env);
@@ -254,6 +271,7 @@ pub fn infer_value_types(
         checker.reset_module_context(module);
         let mut env = checker.builtins.clone();
         checker.register_module_types(module);
+        checker.collect_classes_and_instances(module);
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
         checker.register_imports(module, &module_exports, &mut env);
@@ -318,6 +336,9 @@ impl TypeChecker {
             builtin_types: HashSet::new(),
             builtins: TypeEnv::default(),
             checked_defs: HashSet::new(),
+            classes: HashMap::new(),
+            instances: Vec::new(),
+            method_to_classes: HashMap::new(),
         };
         checker.register_builtin_types();
         checker.register_builtin_values();
@@ -329,6 +350,40 @@ impl TypeChecker {
         self.type_constructors = self.builtin_type_constructors();
         self.aliases.clear();
         self.checked_defs.clear();
+        self.classes.clear();
+        self.instances.clear();
+        self.method_to_classes.clear();
+    }
+
+    fn collect_classes_and_instances(&mut self, module: &Module) {
+        for item in &module.items {
+            match item {
+                ModuleItem::ClassDecl(class_decl) => {
+                    let mut members = HashMap::new();
+                    for member in &class_decl.members {
+                        members.insert(member.name.name.clone(), member.ty.clone());
+                        self.method_to_classes
+                            .entry(member.name.name.clone())
+                            .or_default()
+                            .push(class_decl.name.name.clone());
+                    }
+                    self.classes.insert(
+                        class_decl.name.name.clone(),
+                        ClassDeclInfo {
+                            params: class_decl.params.clone(),
+                            members,
+                        },
+                    );
+                }
+                ModuleItem::InstanceDecl(instance_decl) => {
+                    self.instances.push(InstanceDeclInfo {
+                        class_name: instance_decl.name.name.clone(),
+                        params: instance_decl.params.clone(),
+                    });
+                }
+                _ => {}
+            }
+        }
     }
 
     fn register_builtin_types(&mut self) {
@@ -808,15 +863,6 @@ impl TypeChecker {
                         .unwrap_or_else(|| Scheme::mono(self.fresh_var()));
                     env.insert(def.name.name.clone(), scheme);
                 }
-                ModuleItem::InstanceDecl(instance) => {
-                    for def in &instance.defs {
-                        let scheme = sigs
-                            .get(&def.name.name)
-                            .cloned()
-                            .unwrap_or_else(|| Scheme::mono(self.fresh_var()));
-                        env.insert(def.name.name.clone(), scheme);
-                    }
-                }
                 ModuleItem::DomainDecl(domain) => {
                     for domain_item in &domain.items {
                         match domain_item {
@@ -849,9 +895,7 @@ impl TypeChecker {
                     self.check_def(def, sigs, env, module, &mut diagnostics);
                 }
                 ModuleItem::InstanceDecl(instance) => {
-                    for def in &instance.defs {
-                        self.check_def(def, sigs, env, module, &mut diagnostics);
-                    }
+                    self.check_instance_decl(instance, env, module, &mut diagnostics);
                 }
                 ModuleItem::DomainDecl(domain) => {
                     for domain_item in &domain.items {
@@ -867,6 +911,128 @@ impl TypeChecker {
             }
         }
         diagnostics
+    }
+
+    fn check_instance_decl(
+        &mut self,
+        instance: &crate::surface::InstanceDecl,
+        env: &TypeEnv,
+        module: &Module,
+        diagnostics: &mut Vec<FileDiagnostic>,
+    ) {
+        let Some(class_info) = self.classes.get(&instance.name.name).cloned() else {
+            diagnostics.push(self.error_to_diag(
+                module,
+                TypeError {
+                    span: instance.span.clone(),
+                    message: format!("unknown class '{}'", instance.name.name),
+                    expected: None,
+                    found: None,
+                },
+            ));
+            return;
+        };
+
+        if instance.params.len() != class_info.params.len() {
+            diagnostics.push(self.error_to_diag(
+                module,
+                TypeError {
+                    span: instance.span.clone(),
+                    message: format!(
+                        "instance '{}' expects {} parameter(s), found {}",
+                        instance.name.name,
+                        class_info.params.len(),
+                        instance.params.len()
+                    ),
+                    expected: None,
+                    found: None,
+                },
+            ));
+            return;
+        }
+
+        let mut defs_by_name: HashMap<String, &Def> = HashMap::new();
+        for def in &instance.defs {
+            if defs_by_name
+                .insert(def.name.name.clone(), def)
+                .is_some()
+            {
+                diagnostics.push(self.error_to_diag(
+                    module,
+                    TypeError {
+                        span: def.span.clone(),
+                        message: format!("duplicate instance method '{}'", def.name.name),
+                        expected: None,
+                        found: None,
+                    },
+                ));
+            }
+        }
+
+        for (member_name, member_sig) in class_info.members.iter() {
+            let Some(def) = defs_by_name.get(member_name).copied() else {
+                diagnostics.push(self.error_to_diag(
+                    module,
+                    TypeError {
+                        span: instance.span.clone(),
+                        message: format!("missing instance method '{}'", member_name),
+                        expected: None,
+                        found: None,
+                    },
+                ));
+                continue;
+            };
+
+            let base_subst = self.subst.clone();
+            let mut ctx = TypeContext::new(&self.type_constructors);
+            for (class_param, inst_param) in class_info.params.iter().zip(instance.params.iter()) {
+                let class_ty = self.type_from_expr(class_param, &mut ctx);
+                let inst_ty = self.type_from_expr(inst_param, &mut ctx);
+                if let Err(err) = self.unify_with_span(class_ty, inst_ty, instance.span.clone()) {
+                    diagnostics.push(self.error_to_diag(module, err));
+                    self.subst = base_subst;
+                    return;
+                }
+            }
+            let expected = self.type_from_expr(member_sig, &mut ctx);
+
+            let expr = desugar_holes(def.expr.clone());
+            let mut local_env = env.clone();
+            local_env.insert(def.name.name.clone(), Scheme::mono(expected.clone()));
+
+            let inferred = if def.params.is_empty() {
+                self.infer_expr(&expr, &mut local_env)
+            } else {
+                self.infer_lambda(&def.params, &expr, &mut local_env)
+            };
+
+            match inferred {
+                Ok(inferred) => {
+                    if let Err(err) = self.unify_with_span(inferred, expected, def.span.clone()) {
+                        diagnostics.push(self.error_to_diag(module, err));
+                    }
+                }
+                Err(err) => {
+                    diagnostics.push(self.error_to_diag(module, err));
+                }
+            }
+
+            self.subst = base_subst;
+        }
+
+        for method_name in defs_by_name.keys() {
+            if !class_info.members.contains_key(method_name) {
+                diagnostics.push(self.error_to_diag(
+                    module,
+                    TypeError {
+                        span: instance.span.clone(),
+                        message: format!("unknown instance method '{}'", method_name),
+                        expected: None,
+                        found: None,
+                    },
+                ));
+            }
+        }
     }
 
     fn check_def(
@@ -1121,6 +1287,12 @@ impl TypeChecker {
     }
 
     fn infer_call(&mut self, func: &Expr, args: &[Expr], env: &mut TypeEnv) -> Result<Type, TypeError> {
+        if let Expr::Ident(name) = func {
+            if env.get(&name.name).is_none() && self.method_to_classes.contains_key(&name.name) {
+                return self.infer_method_call(name, args, env);
+            }
+        }
+
         let mut func_ty = self.infer_expr(func, env)?;
         for arg in args {
             let arg_ty = self.infer_expr(arg, env)?;
@@ -1133,6 +1305,110 @@ impl TypeChecker {
             func_ty = result_ty;
         }
         Ok(func_ty)
+    }
+
+    fn infer_method_call(
+        &mut self,
+        method: &SpannedName,
+        args: &[Expr],
+        env: &mut TypeEnv,
+    ) -> Result<Type, TypeError> {
+        let mut arg_tys = Vec::new();
+        for arg in args {
+            arg_tys.push(self.infer_expr(arg, env)?);
+        }
+
+        let Some(classes) = self.method_to_classes.get(&method.name).cloned() else {
+            return Err(TypeError {
+                span: method.span.clone(),
+                message: format!("unknown method '{}'", method.name),
+                expected: None,
+                found: None,
+            });
+        };
+
+        let base_subst = self.subst.clone();
+        let mut candidates: Vec<(HashMap<TypeVarId, Type>, Type)> = Vec::new();
+
+        for class_name in classes {
+            let Some(class_info) = self.classes.get(&class_name).cloned() else {
+                continue;
+            };
+            let Some(member_ty_expr) = class_info.members.get(&method.name).cloned() else {
+                continue;
+            };
+
+            let instances: Vec<InstanceDeclInfo> = self
+                .instances
+                .iter()
+                .filter(|instance| instance.class_name == class_name)
+                .cloned()
+                .collect();
+
+            for instance in instances {
+                if instance.params.len() != class_info.params.len() {
+                    continue;
+                }
+
+                self.subst = base_subst.clone();
+
+                let mut ctx = TypeContext::new(&self.type_constructors);
+                let mut ok = true;
+                for (class_param, inst_param) in class_info
+                    .params
+                    .iter()
+                    .zip(instance.params.iter())
+                {
+                    let class_ty = self.type_from_expr(class_param, &mut ctx);
+                    let inst_ty = self.type_from_expr(inst_param, &mut ctx);
+                    if self
+                        .unify_with_span(class_ty, inst_ty, method.span.clone())
+                        .is_err()
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+                if !ok {
+                    continue;
+                }
+
+                let member_ty = self.type_from_expr(&member_ty_expr, &mut ctx);
+                let result_ty = self.fresh_var();
+                let mut expected = result_ty.clone();
+                for arg_ty in arg_tys.iter().rev() {
+                    expected = Type::Func(Box::new(arg_ty.clone()), Box::new(expected));
+                }
+
+                if self
+                    .unify_with_span(member_ty, expected, method.span.clone())
+                    .is_ok()
+                {
+                    candidates.push((self.subst.clone(), self.apply(result_ty)));
+                }
+            }
+        }
+
+        self.subst = base_subst;
+        match candidates.len() {
+            0 => Err(TypeError {
+                span: method.span.clone(),
+                message: format!("no instance found for method '{}'", method.name),
+                expected: None,
+                found: None,
+            }),
+            1 => {
+                let (subst, result) = candidates.remove(0);
+                self.subst = subst;
+                Ok(result)
+            }
+            _ => Err(TypeError {
+                span: method.span.clone(),
+                message: format!("ambiguous instance for method '{}'", method.name),
+                expected: None,
+                found: None,
+            }),
+        }
     }
 
     fn infer_lambda(
@@ -1680,6 +1956,51 @@ impl TypeChecker {
                 }
                 Ok(())
             }
+            (Type::App(base_a, args_a), Type::App(base_b, args_b)) => {
+                if args_a.len() != args_b.len() {
+                    return Err(TypeError {
+                        span,
+                        message: "type mismatch".to_string(),
+                        expected: Some(Type::App(base_a, args_a)),
+                        found: Some(Type::App(base_b, args_b)),
+                    });
+                }
+                self.unify(*base_a, *base_b, span.clone())?;
+                for (a, b) in args_a.into_iter().zip(args_b.into_iter()) {
+                    self.unify(a, b, span.clone())?;
+                }
+                Ok(())
+            }
+            (Type::App(base_a, args_a), Type::Con(name_b, args_b)) => {
+                if args_a.len() != args_b.len() {
+                    return Err(TypeError {
+                        span,
+                        message: "type mismatch".to_string(),
+                        expected: Some(Type::App(base_a, args_a)),
+                        found: Some(Type::Con(name_b, args_b)),
+                    });
+                }
+                self.unify(*base_a, Type::Con(name_b, Vec::new()), span.clone())?;
+                for (a, b) in args_a.into_iter().zip(args_b.into_iter()) {
+                    self.unify(a, b, span.clone())?;
+                }
+                Ok(())
+            }
+            (Type::Con(name_a, args_a), Type::App(base_b, args_b)) => {
+                if args_a.len() != args_b.len() {
+                    return Err(TypeError {
+                        span,
+                        message: "type mismatch".to_string(),
+                        expected: Some(Type::Con(name_a, args_a)),
+                        found: Some(Type::App(base_b, args_b)),
+                    });
+                }
+                self.unify(Type::Con(name_a, Vec::new()), *base_b, span.clone())?;
+                for (a, b) in args_a.into_iter().zip(args_b.into_iter()) {
+                    self.unify(a, b, span.clone())?;
+                }
+                Ok(())
+            }
             (Type::Func(a1, b1), Type::Func(a2, b2)) => {
                 self.unify(*a1, *a2, span.clone())?;
                 self.unify(*b1, *b2, span)
@@ -1763,6 +2084,7 @@ impl TypeChecker {
         match self.apply(ty.clone()) {
             Type::Var(id) => id == var,
             Type::Con(_, args) => args.iter().any(|arg| self.occurs(var, arg)),
+            Type::App(base, args) => self.occurs(var, &base) || args.iter().any(|arg| self.occurs(var, arg)),
             Type::Func(a, b) => self.occurs(var, &a) || self.occurs(var, &b),
             Type::Tuple(items) => items.iter().any(|item| self.occurs(var, item)),
             Type::Record { fields, .. } => fields.values().any(|field| self.occurs(var, field)),
@@ -1792,6 +2114,11 @@ impl TypeChecker {
         match self.apply(ty.clone()) {
             Type::Var(id) => vec![id].into_iter().collect(),
             Type::Con(_, args) => args.iter().flat_map(|arg| self.free_vars(arg)).collect(),
+            Type::App(base, args) => {
+                let mut vars = self.free_vars(&base);
+                vars.extend(args.iter().flat_map(|arg| self.free_vars(arg)));
+                vars
+            }
             Type::Func(a, b) => {
                 let mut vars = self.free_vars(&a);
                 vars.extend(self.free_vars(&b));
@@ -1815,6 +2142,10 @@ impl TypeChecker {
             Type::Var(id) => mapping.get(id).cloned().unwrap_or(Type::Var(*id)),
             Type::Con(name, args) => Type::Con(
                 name.clone(),
+                args.iter().map(|arg| self.substitute(arg, mapping)).collect(),
+            ),
+            Type::App(base, args) => Type::App(
+                Box::new(self.substitute(base, mapping)),
                 args.iter().map(|arg| self.substitute(arg, mapping)).collect(),
             ),
             Type::Func(a, b) => Type::Func(
@@ -1851,6 +2182,10 @@ impl TypeChecker {
             Type::Con(name, args) => {
                 Type::Con(name, args.into_iter().map(|arg| self.apply(arg)).collect())
             }
+            Type::App(base, args) => Type::App(
+                Box::new(self.apply(*base)),
+                args.into_iter().map(|arg| self.apply(arg)).collect(),
+            ),
             Type::Func(a, b) => {
                 Type::Func(Box::new(self.apply(*a)), Box::new(self.apply(*b)))
             }
@@ -1899,10 +2234,11 @@ impl TypeChecker {
                         existing.append(&mut args_ty);
                         Type::Con(name, existing)
                     }
-                    other => {
-                        let _ = other;
-                        Type::Con("Unknown".to_string(), args_ty)
+                    Type::App(base, mut existing) => {
+                        existing.append(&mut args_ty);
+                        Type::App(base, existing)
                     }
+                    other => Type::App(Box::new(other), args_ty),
                 }
             }
             TypeExpr::Func { params, result, .. } => {
@@ -1987,7 +2323,11 @@ impl Type {
                 existing.extend(args);
                 Type::Con(name, existing)
             }
-            other => other,
+            Type::App(base, mut existing) => {
+                existing.extend(args);
+                Type::App(base, existing)
+            }
+            other => Type::App(Box::new(other), args),
         }
     }
 }
@@ -2029,6 +2369,14 @@ impl TypePrinter {
                     let args_str = args.iter().map(|arg| self.print(arg)).collect::<Vec<_>>();
                     format!("{} {}", name, args_str.join(" "))
                 }
+            }
+            Type::App(base, args) => {
+                let base_str = match **base {
+                    Type::Func(_, _) | Type::Tuple(_) | Type::Record { .. } => format!("({})", self.print(base)),
+                    _ => self.print(base),
+                };
+                let args_str = args.iter().map(|arg| self.print(arg)).collect::<Vec<_>>();
+                format!("{} {}", base_str, args_str.join(" "))
             }
             Type::Func(a, b) => {
                 let left = match **a {

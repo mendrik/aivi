@@ -104,8 +104,8 @@ Scope: Expose AIVI modules as Model Context Protocol (MCP) tools/resources.
 Scope: Advanced typing features.
 
 - [x] Row polymorphism (open records).
-- [ ] Type classes (ad-hoc polymorphism).
-- [ ] Higher-Kinded Types (HKTs).
+- [x] Type classes (ad-hoc polymorphism).
+- [x] Higher-Kinded Types (HKTs).
 
 ---
 

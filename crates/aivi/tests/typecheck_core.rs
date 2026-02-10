@@ -144,3 +144,64 @@ module test.open = {
 "#;
     check_ok(source);
 }
+
+#[test]
+fn typecheck_type_classes_resolve_instances() {
+    let source = r#"
+module test.classes = {
+  export value
+
+  class Eq A = {
+    eq: A -> A -> Bool
+  }
+
+  instance Eq Bool = {
+    eq: x y => x == y
+  }
+
+  value = eq True False
+}
+"#;
+    check_ok(source);
+}
+
+#[test]
+fn typecheck_type_classes_missing_instance_errors() {
+    let source = r#"
+module test.classes_err = {
+  export value
+
+  class Eq A = {
+    eq: A -> A -> Bool
+  }
+
+  value = eq True False
+}
+"#;
+    check_err(source);
+}
+
+#[test]
+fn typecheck_hkts_functor_map() {
+    let source = r#"
+module test.functor = {
+  export value
+
+  Option A = None | Some A
+
+  class Functor (F *) = {
+    map: F A -> (A -> B) -> F B
+  }
+
+  instance Functor (Option *) = {
+    map: opt f => opt ?
+      | None => None
+      | Some x => Some (f x)
+  }
+
+  inc x = x + 1
+  value = map (Some 1) inc
+}
+"#;
+    check_ok(source);
+}
