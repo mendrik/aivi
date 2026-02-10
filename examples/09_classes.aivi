@@ -1,5 +1,5 @@
 module examples.compiler.classes = {
-  export Eq, Functor, Option
+  export Eq, Functor, Option, isNone
 
   class Eq A = {
     eq: A -> A -> Bool
@@ -20,4 +20,15 @@ module examples.compiler.classes = {
       | None => None
       | Some x => Some (f x)
   }
+
+  instance Eq (Option Bool) = {
+    eq: a b => (a, b) ?
+      | (None, None) => True
+      | (Some x, Some y) => x == y
+      | _ => False
+  }
+
+  isNone = opt => opt ?
+    | None => True
+    | Some _ => False
 }

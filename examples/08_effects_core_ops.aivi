@@ -10,8 +10,17 @@ module examples.runtime_effects_core_ops = {
       if m == 42 then fail "boom" else pure m
     )
 
-    res ?
-      | Ok _  => pure Unit
-      | Err _ => pure Unit
+    verdict <- res ?
+      | Ok _  => pure "ok"
+      | Err _ => pure "err"
+
+    _ <- print verdict
+
+    _ <- if m > 40 then effect {
+      _ <- print "branch"
+      pure Unit
+    } else pure Unit
+
+    pure Unit
   }
 }

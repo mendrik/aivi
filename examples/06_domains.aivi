@@ -1,5 +1,5 @@
 module examples.compiler.domains = {
-  export Date, Calendar, addWeek
+  export Date, Calendar, addWeek, addTwoWeeks, shiftBy
 
   Date = { year: Int, month: Int, day: Int }
 
@@ -19,4 +19,10 @@ module examples.compiler.domains = {
 
   addWeek : Date -> Date
   addWeek d = d + 1w
+
+  addTwoWeeks : Date -> Date
+  addTwoWeeks d = d + 1w + 1w
+
+  shiftBy : Date -> Delta -> Date
+  shiftBy d delta = d + delta
 }

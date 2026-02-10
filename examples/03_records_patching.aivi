@@ -1,5 +1,5 @@
 module examples.compiler.records_patching = {
-  export User, user1, user2, store2
+  export User, user1, user2, user3, store2, store3, promote
 
   User = { name: Text, age: Int, tags: List Text }
 
@@ -15,6 +15,17 @@ module examples.compiler.records_patching = {
     tags: append _ ["vip"]
   }
 
+  promote = user => user <| {
+    tags: append _ ["core"]
+  }
+
+  bumpName = name => "{name}+"
+
+  user3 = user2 <| {
+    name: bumpName
+    age: _ + 2
+  }
+
   Item = { price: Int, active: Bool }
   Store = { items: List Item }
 
@@ -26,5 +37,10 @@ module examples.compiler.records_patching = {
 
   store2 = store <| {
     items[active].price: _ + 5
+  }
+
+  store3 = store2 <| {
+    items[price > 15].price: _ - 2
+    items[price > 15].active: True
   }
 }
