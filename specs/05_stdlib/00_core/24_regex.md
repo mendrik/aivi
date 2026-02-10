@@ -5,7 +5,7 @@ The `Regex` domain handles **Pattern Matching** for text. Whether you're validat
 ## Overview
 
 ```aivi
-use aivi.std.regex (Regex)
+use aivi.regex (Regex)
 
 email_pattern = ~r/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/
 match = Regex.test(email_pattern, "user@example.com")

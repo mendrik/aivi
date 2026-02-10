@@ -9,7 +9,7 @@ Whether you're simulating heat flow across a computer chip, calculating structur
 ## Overview
 
 ```aivi
-use aivi.std.math.linalg (solve, eigen)
+use aivi.linalg (solve, eigen)
 
 // Matrix A and Vector b
 // Solve for x in: Ax = b
@@ -56,7 +56,7 @@ solve2x2 m v = solve2x2Raw m v
 ## Usage Examples
 
 ```aivi
-use aivi.std.linear_algebra
+use aivi.linear_algebra
 
 v1 = { size: 3, data: [1.0, 2.0, 3.0] }
 v2 = { size: 3, data: [4.0, 5.0, 6.0] }

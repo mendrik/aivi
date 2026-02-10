@@ -9,7 +9,7 @@ Manually calculating the new position of a 3D point after it's been rotated, mov
 ## Overview
 
 ```aivi
-use aivi.std.math.matrix (Mat4)
+use aivi.matrix (Mat4)
 
 // A generic "identity" matrix (does nothing)
 m = Mat4.identity()
@@ -198,7 +198,7 @@ multiply4 a b = {
 ## Usage Examples
 
 ```aivi
-use aivi.std.matrix
+use aivi.matrix
 
 scale2 = { m00: 2.0, m01: 0.0, m10: 0.0, m11: 2.0 }
 rotate2 = { m00: 0.0, m01: -1.0, m10: 1.0, m11: 0.0 }

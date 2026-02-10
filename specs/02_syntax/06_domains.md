@@ -10,7 +10,7 @@ To use a domain, you `use` it. This brings its operators and literals into scope
 
 ```aivi
 // Bring Vector math into scope
-use aivi.std.math.vector
+use aivi.vector
 
 position = (10, 20)
 velocity = (1, 0)

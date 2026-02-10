@@ -5,7 +5,7 @@ The `Crypto` domain provides essential tools for security and uniqueness.
 From generating unguessable **UUIDs** for database keys to hashing passwords with **SHA-256**, these functions ensure your program's sensitive data remains secure, unique, and tamper-evident.
 
 ```aivi
-use aivi.std.system.crypto
+use aivi.crypto
 ```
 
 ## Functions

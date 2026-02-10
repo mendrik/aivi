@@ -9,7 +9,7 @@ The `Calendar` domain hides this chaos. Writing `timestamp + 86400` works until 
 ## Overview
 
 ```aivi
-use aivi.std.chronos.calendar (Date, DateTime)
+use aivi.calendar (Date, DateTime)
 
 now = DateTime.now()
 
@@ -92,7 +92,7 @@ negateDelta End       = End  // idempotent
 ## Usage Examples
 
 ```aivi
-use aivi.std.calendar
+use aivi.calendar
 
 today = { year: 2025, month: 2, day: 8 }
 

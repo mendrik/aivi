@@ -7,7 +7,7 @@ It allows you to read **Environment Variables** (like secret queries or API keys
 ## Overview
 
 ```aivi
-use aivi.std.system (Env)
+use aivi.system (Env)
 
 // Read an environment variable
 port = Env.get("PORT") |> Option.default("8080")

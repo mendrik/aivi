@@ -82,7 +82,7 @@ aivi install path:../local/aivi-qux
 aivi install aivi-bar@latest --no-fetch
 
 # Install embedded stdlib modules into src/
-aivi install aivi.std.number
+aivi install aivi.number
 
 # Search crates.io for AIVI packages
 aivi search prelude

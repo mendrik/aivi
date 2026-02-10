@@ -12,7 +12,7 @@ Almost every visual application needs to know when two things collide. This doma
 ## Overview
 
 ```aivi
-use aivi.std.math.geometry (Ray, Sphere, intersect)
+use aivi.geometry (Ray, Sphere, intersect)
 
 // A ray firing forwards from origin
 ray = Ray(origin: {x:0, y:0, z:0}, dir: {x:0, y:0, z:1})
@@ -72,7 +72,7 @@ area poly = polygonArea poly.vertices
 ## Usage Examples
 
 ```aivi
-use aivi.std.geometry
+use aivi.geometry
 
 p1 = { x: 0.0, y: 0.0 }
 p2 = { x: 3.0, y: 4.0 }

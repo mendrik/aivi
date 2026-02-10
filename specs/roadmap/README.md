@@ -123,7 +123,7 @@ Scope: Advanced typing features.
 9. **Domains**: Custom literals and operators. (In Progress)
 
 ### Standard Library Plan
-- **Phase 1**: Compiler intrinsics + thin wrappers (`aivi.std.core`).
+- **Phase 1**: Compiler intrinsics + thin wrappers (`aivi`).
 - **Phase 2**: Implement stdlib in AIVI language where possible.
 - **Phase 3**: Optimization (persistent collections, HAMT).
 - **Modules**: `Prelude`, `Core` (Int/Float/Bool/Text/List), `Collections`, `Bytes`, `Json`.

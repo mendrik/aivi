@@ -3,7 +3,7 @@
 The `Sockets` domain exposes low-level TCP/UDP sockets for custom protocols and long-lived connections.
 
 ```aivi
-use aivi.std.network.sockets
+use aivi.net.sockets
 ```
 
 ## Types

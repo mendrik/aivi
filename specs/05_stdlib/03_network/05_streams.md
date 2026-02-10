@@ -3,7 +3,7 @@
 The `Streams` domain provides stream-oriented utilities for processing inbound and outbound data without loading everything into memory.
 
 ```aivi
-use aivi.std.network.streams
+use aivi.net.streams
 ```
 
 ## Types

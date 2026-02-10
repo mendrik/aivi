@@ -5,7 +5,7 @@ The `Testing` domain is built right into the language because reliability should
 ## Overview
 
 ```aivi
-use aivi.std.testing (assert, assert_eq)
+use aivi.testing (assert, assert_eq)
 
 @test
 addition_works _ = {

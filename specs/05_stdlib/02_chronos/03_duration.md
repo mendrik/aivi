@@ -9,7 +9,7 @@ In many systems, a timeout is just an integer like `500`. But is that 500 millis
 ## Overview
 
 ```aivi
-use aivi.std.chronos.duration (Duration)
+use aivi.duration (Duration)
 
 // Clear, unambiguous literals
 timeout = 500ms
@@ -57,7 +57,7 @@ domain Duration over Span = {
 ## Usage Examples
 
 ```aivi
-use aivi.std.duration
+use aivi.duration
 
 timeout = { millis: 0 } + 30s
 delay = timeout + 500ms

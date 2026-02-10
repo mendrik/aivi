@@ -7,7 +7,7 @@ Screens think in Red, Green, and Blue, but people think in **Hue**, **Saturation
 ## Overview
 
 ```aivi
-use aivi.std.ui.color (Color)
+use aivi.color (Color)
 
 primary = #007bff
 // Mathematically correct lightening
@@ -80,7 +80,7 @@ toHex { r, g, b } = // Format as "#rrggbb"
 ## Usage Examples
 
 ```aivi
-use aivi.std.color
+use aivi.color
 
 primary = { r: 255, g: 85, b: 0 }  // Orange
 

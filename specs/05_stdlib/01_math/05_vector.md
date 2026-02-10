@@ -12,7 +12,7 @@ Graphics, physicsows for clean math (`v1 + v2`) and is often hardware-accelerate
 ## Overview
 
 ```aivi
-use aivi.std.math.vector (Vec2, Vec3)
+use aivi.vector (Vec2, Vec3)
 
 // Define using the `v2` tag
 v1 = (1.0, 2.0)v2
@@ -88,7 +88,7 @@ cross v1 v2 = {
 ## Usage Examples
 
 ```aivi
-use aivi.std.vector
+use aivi.vector
 
 position = { x: 10.0, y: 20.0 }
 velocity = { x: 1.0, y: 0.5 }

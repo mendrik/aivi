@@ -22,7 +22,7 @@ module my.utility.math = {
 ## 10.2 Module Pathing (Dot Separator)
 
 Modules are identified by hierarchical paths using common **dot notation**. This separates logical namespaces. By convention:
-- `aivi.std.*` — Standard library
+- `aivi.*` — Standard library
 - `vendor.name.*` — Foreign libraries
 - `user.app.*` — Application-specific logic
 
@@ -35,18 +35,18 @@ Use the `use` keyword to bring symbols from another module into the current scop
 
 ### Basic Import
 ```aivi
-use aivi.std.core
+use aivi
 ```
 
 ### Selective / Selective Hiding
 ```aivi
-use aivi.std.calendar (Date, isLeapYear)
-use aivi.std.list hiding (map, filter)
+use aivi.calendar (Date, isLeapYear)
+use aivi.list hiding (map, filter)
 ```
 
 ### Renaming / Aliasing
 ```aivi
-use aivi.std.calendar as Cal
+use aivi.calendar as Cal
 use vendor.legacy.math (v1_add as add)
 ```
 
@@ -83,9 +83,9 @@ Modules are statically resolved but behave like first-class records within the c
 
 ### Nested Modules
 ```aivi
-module aivi.std = {
-  module core = { ... }
+module aivi = {
   module calendar = { ... }
+  module number = { ... }
 }
 ```
 
@@ -97,9 +97,9 @@ module aivi.prelude = {
   export domain Calendar, Color
   export List, Result, Ok, Err
   
-  use aivi.std.calendar (domain Calendar)
-  use aivi.std.color (domain Color)
-  use aivi.std.core (List, Result, Ok, Err)
+  use aivi.calendar (domain Calendar)
+  use aivi.color (domain Color)
+  use aivi (List, Result, Ok, Err)
 }
 ```
 
@@ -112,7 +112,7 @@ To opt-out of this behavior (mandatory for the core stdlib itself):
 
 ```aivi
 @no_prelude
-module aivi.std.bootstrap = {
+module aivi.bootstrap = {
   // Pure bootstrap logic
 }
 ```

@@ -48,7 +48,7 @@ height   = 100svh // typed Style viewport delta
 JSX literals are sugar for the `Html` [domain](https://mendrik.github.io/aivi/02_syntax/06_domains) and [JSX literals](https://mendrik.github.io/aivi/02_syntax/13_jsx_literals):
 
 ```tsx
-use aivi.std.html
+use aivi.html
 
 Header = title => <div class="header">
   <h1>{title}</h1>

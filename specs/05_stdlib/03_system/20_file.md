@@ -12,7 +12,7 @@ Direct file access is dangerous (locks, missing files, permissions). AIVI wraps 
 ## Overview
 
 ```aivi
-use aivi.std.system.file (read_text, stat)
+use aivi.file (read_text, stat)
 
 // Safe reading
 content = read_text "config.json"

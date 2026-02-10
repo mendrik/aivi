@@ -3,7 +3,7 @@
 The `Https` domain mirrors `Http`, but enforces secure (TLS) connections. It is intended for production use where transport security is required.
 
 ```aivi
-use aivi.std.network.https
+use aivi.net.https
 ```
 
 ## Functions
@@ -34,4 +34,4 @@ Performs a custom HTTPS request.
 
 ## Types
 
-Uses the same `Request` and `Response` types as `aivi.std.network.http`.
+Uses the same `Request` and `Response` types as `aivi.net.http`.

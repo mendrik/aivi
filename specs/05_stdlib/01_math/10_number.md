@@ -1,21 +1,21 @@
 # Number Domains (BigInt, Rational, Complex)
 
-The `aivi.std.number` family groups numeric domains that sit above `Int` and `Float`:
+The `aivi.number` family groups numeric domains that sit above `Int` and `Float`:
 
-- `aivi.std.number.bigint` for arbitrary-precision integers
-- `aivi.std.number.rational` for exact fractions
-- `aivi.std.number.complex` for complex arithmetic
+- `aivi.number.bigint` for arbitrary-precision integers
+- `aivi.number.rational` for exact fractions
+- `aivi.number.complex` for complex arithmetic
 
 You can use either the facade module or the specific domain module depending on how much you want in scope.
 
 ```aivi
 // Facade (types + helpers)
-use aivi.std.number
+use aivi.number
 
 // Domain modules (operators + literals)
-use aivi.std.number.bigint
-use aivi.std.number.rational
-use aivi.std.number.complex
+use aivi.number.bigint
+use aivi.number.rational
+use aivi.number.complex
 ```
 
 
@@ -48,7 +48,7 @@ toInt : BigInt -> Int
 Example:
 
 ```aivi
-use aivi.std.number.bigint
+use aivi.number.bigint
 
 huge = 10_000_000_000_000_000_000_000n
 sum = huge + 1n
@@ -86,7 +86,7 @@ round : Decimal -> Int -> Decimal
 Example:
 
 ```aivi
-use aivi.std.number.decimal
+use aivi.number.decimal
 
 price = 19.99dec
 tax = price * 0.2dec
@@ -122,7 +122,7 @@ denominator : Rational -> BigInt
 Example:
 
 ```aivi
-use aivi.std.number.rational
+use aivi.number.rational
 
 // exact 1/2
 half = normalize (fromInt 1 / fromInt 2) 
@@ -160,7 +160,7 @@ domain Complex over Complex = {
 Example:
 
 ```aivi
-use aivi.std.number.complex
+use aivi.number.complex
 
 z1 = 3.0 + 4.0 * i
 z2 = 1.0 - 2.0 * i
@@ -172,7 +172,7 @@ sum = z1 + z2
 The `Quaternion` domain provides tools for handling **3D rotations** without gimbal lock.
 
 ```aivi
-use aivi.std.number.quaternion (Quat)
+use aivi.number.quaternion (Quat)
 
 // Rotate 90 degrees around the Y (up) axis
 q1 = Quat.fromEuler(0.0, 90.0, 0.0)
@@ -229,7 +229,7 @@ normalize q = q / magnitude q
 ```
 
 ```aivi
-use aivi.std.number.quaternion
+use aivi.number.quaternion
 
 axis = { x: 0.0, y: 1.0, z: 0.0 }
 spin = fromAxisAngle axis 1.570796

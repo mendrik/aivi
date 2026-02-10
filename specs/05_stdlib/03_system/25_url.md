@@ -7,7 +7,7 @@ A URL isn't just text; it's a structured address with protocols, hosts, and quer
 ## Module
 
 ```aivi
-module aivi.std.system.url = {
+module aivi.url = {
   export domain Url
   export Url
   export parse, toString
@@ -63,7 +63,7 @@ toString url = // ... reconstruct string ...
 ## Usage Examples
 
 ```aivi
-use aivi.std.system.url
+use aivi.url
 
 // Create using the ~u sigil
 base = ~u(https://api.example.com/v1/search)

@@ -4,7 +4,7 @@ use crate::surface::{parse_modules, Module};
 
 const CORE_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.core = {
+module aivi = {
   export Unit, Bool, Int, Float, Text, Char
   export List, Option, Result, Tuple
   export None, Some, Ok, Err, True, False
@@ -14,12 +14,12 @@ module aivi.std.core = {
 
 const UNITS_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.core.units = {
+module aivi.units = {
   export Unit, Quantity
   export defineUnit, convert, sameUnit
   export domain Units
 
-  use aivi.std.core
+  use aivi
 
   Unit = { name: Text, factor: Float }
   Quantity = { value: Float, unit: Unit }
@@ -52,23 +52,12 @@ module aivi.std.core.units = {
 }
 "#;
 
-const UNITS_FACADE_SOURCE: &str = r#"
-@no_prelude
-module aivi.std.units = {
-  export Unit, Quantity
-  export defineUnit, convert, sameUnit
-  export domain Units
-
-  use aivi.std.core.units
-}
-"#;
-
 const REGEX_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.core.regex = {
+module aivi.regex = {
   export Regex, compile, test
 
-  use aivi.std.core
+  use aivi
 
   Regex = Text
 
@@ -80,21 +69,12 @@ module aivi.std.core.regex = {
 }
 "#;
 
-const REGEX_FACADE_SOURCE: &str = r#"
-@no_prelude
-module aivi.std.regex = {
-  export Regex, compile, test
-
-  use aivi.std.core.regex
-}
-"#;
-
 const TESTING_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.core.testing = {
+module aivi.testing = {
   export assert, assert_eq
 
-  use aivi.std.core
+  use aivi
 
   assert : Bool -> Effect Text Unit
   assert ok = if ok then pure Unit else fail "assertion failed"
@@ -104,34 +84,25 @@ module aivi.std.core.testing = {
 }
 "#;
 
-const TESTING_FACADE_SOURCE: &str = r#"
-@no_prelude
-module aivi.std.testing = {
-  export assert, assert_eq
-
-  use aivi.std.core.testing
-}
-"#;
-
 const NUMBER_FACADE_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.number = {
+module aivi.number = {
   export BigInt, Rational, Complex, i
   export fromInt, toInt, absInt, gcdInt, normalize
 
-  use aivi.std.number.bigint (BigInt, fromInt, toInt, absInt)
-  use aivi.std.number.rational (Rational, gcdInt, normalize)
-  use aivi.std.number.complex (Complex, i)
+  use aivi.number.bigint (BigInt, fromInt, toInt, absInt)
+  use aivi.number.rational (Rational, gcdInt, normalize)
+  use aivi.number.complex (Complex, i)
 }
 "#;
 
 const BIGINT_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.number.bigint = {
+module aivi.number.bigint = {
   export BigInt, fromInt, toInt, absInt
   export domain BigInt
 
-  use aivi.std.core
+  use aivi
 
   BigInt = { sign: Int, limbs: List Int }
 
@@ -166,12 +137,12 @@ module aivi.std.number.bigint = {
 
 const RATIONAL_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.number.rational = {
+module aivi.number.rational = {
   export Rational, gcdInt, normalize
   export domain Rational
 
-  use aivi.std.core
-  use aivi.std.number.bigint (BigInt, fromInt, toInt, absInt)
+  use aivi
+  use aivi.number.bigint (BigInt, fromInt, toInt, absInt)
 
   BigInt = { sign: Int, limbs: List Int }
   Rational = { num: BigInt, den: BigInt }
@@ -222,11 +193,11 @@ module aivi.std.number.rational = {
 
 const COMPLEX_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.number.complex = {
+module aivi.number.complex = {
   export Complex, i
   export domain Complex
 
-  use aivi.std.core
+  use aivi
 
   Complex = { re: Float, im: Float }
 
@@ -254,13 +225,13 @@ module aivi.std.number.complex = {
 
 const NETWORK_HTTP_SERVER_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.network.http_server = {
+module aivi.net.http_server = {
   export Header, Request, Response, ServerConfig
   export HttpError, WsError, WsMessage, ServerReply
   export Server, WebSocket
   export listen, stop, ws_recv, ws_send, ws_close
 
-  use aivi.std.core
+  use aivi
 
   Header = { name: Text, value: Text }
   Request = { method: Text, path: Text, headers: List Header, body: List Int, remote_addr: Option Text }
@@ -295,7 +266,7 @@ module aivi.std.network.http_server = {
 
 const NETWORK_FACADE_SOURCE: &str = r#"
 @no_prelude
-module aivi.std.network = { }
+module aivi.net = { }
 "#;
 
 const PRELUDE_SOURCE: &str = r#"
@@ -313,11 +284,11 @@ module aivi.prelude = {
   export domain Color
   export domain Vector
 
-  use aivi.std.core
-  use aivi.std.calendar
-  use aivi.std.duration
-  use aivi.std.color
-  use aivi.std.vector
+  use aivi
+  use aivi.calendar
+  use aivi.duration
+  use aivi.color
+  use aivi.vector
 
   class Eq A = {
     eq: A -> A -> Bool
@@ -357,20 +328,17 @@ module aivi.prelude = {
 
 pub fn embedded_stdlib_modules() -> Vec<Module> {
     let mut modules = Vec::new();
-    modules.extend(parse_embedded("aivi.std.core", CORE_SOURCE));
-    modules.extend(parse_embedded("aivi.std.core.units", UNITS_SOURCE));
-    modules.extend(parse_embedded("aivi.std.units", UNITS_FACADE_SOURCE));
-    modules.extend(parse_embedded("aivi.std.core.regex", REGEX_SOURCE));
-    modules.extend(parse_embedded("aivi.std.regex", REGEX_FACADE_SOURCE));
-    modules.extend(parse_embedded("aivi.std.core.testing", TESTING_SOURCE));
-    modules.extend(parse_embedded("aivi.std.testing", TESTING_FACADE_SOURCE));
-    modules.extend(parse_embedded("aivi.std.number.bigint", BIGINT_SOURCE));
-    modules.extend(parse_embedded("aivi.std.number.rational", RATIONAL_SOURCE));
-    modules.extend(parse_embedded("aivi.std.number.complex", COMPLEX_SOURCE));
-    modules.extend(parse_embedded("aivi.std.number", NUMBER_FACADE_SOURCE));
-    modules.extend(parse_embedded("aivi.std.network", NETWORK_FACADE_SOURCE));
+    modules.extend(parse_embedded("aivi", CORE_SOURCE));
+    modules.extend(parse_embedded("aivi.units", UNITS_SOURCE));
+    modules.extend(parse_embedded("aivi.regex", REGEX_SOURCE));
+    modules.extend(parse_embedded("aivi.testing", TESTING_SOURCE));
+    modules.extend(parse_embedded("aivi.number.bigint", BIGINT_SOURCE));
+    modules.extend(parse_embedded("aivi.number.rational", RATIONAL_SOURCE));
+    modules.extend(parse_embedded("aivi.number.complex", COMPLEX_SOURCE));
+    modules.extend(parse_embedded("aivi.number", NUMBER_FACADE_SOURCE));
+    modules.extend(parse_embedded("aivi.net", NETWORK_FACADE_SOURCE));
     modules.extend(parse_embedded(
-        "aivi.std.network.http_server",
+        "aivi.net.http_server",
         NETWORK_HTTP_SERVER_SOURCE,
     ));
     modules.extend(parse_embedded("aivi.prelude", PRELUDE_SOURCE));
@@ -379,20 +347,17 @@ pub fn embedded_stdlib_modules() -> Vec<Module> {
 
 pub fn embedded_stdlib_source(module_name: &str) -> Option<&'static str> {
     match module_name {
-        "aivi.std.core" => Some(CORE_SOURCE),
-        "aivi.std.core.units" => Some(UNITS_SOURCE),
-        "aivi.std.units" => Some(UNITS_FACADE_SOURCE),
-        "aivi.std.core.regex" => Some(REGEX_SOURCE),
-        "aivi.std.regex" => Some(REGEX_FACADE_SOURCE),
-        "aivi.std.core.testing" => Some(TESTING_SOURCE),
-        "aivi.std.testing" => Some(TESTING_FACADE_SOURCE),
-        "aivi.std.number" => Some(NUMBER_FACADE_SOURCE),
-        "aivi.std.number.bigint" => Some(BIGINT_SOURCE),
-        "aivi.std.number.rational" => Some(RATIONAL_SOURCE),
-        "aivi.std.number.complex" => Some(COMPLEX_SOURCE),
+        "aivi" => Some(CORE_SOURCE),
+        "aivi.units" => Some(UNITS_SOURCE),
+        "aivi.regex" => Some(REGEX_SOURCE),
+        "aivi.testing" => Some(TESTING_SOURCE),
+        "aivi.number" => Some(NUMBER_FACADE_SOURCE),
+        "aivi.number.bigint" => Some(BIGINT_SOURCE),
+        "aivi.number.rational" => Some(RATIONAL_SOURCE),
+        "aivi.number.complex" => Some(COMPLEX_SOURCE),
         "aivi.prelude" => Some(PRELUDE_SOURCE),
-        "aivi.std.network" => Some(NETWORK_FACADE_SOURCE),
-        "aivi.std.network.http_server" => Some(NETWORK_HTTP_SERVER_SOURCE),
+        "aivi.net" => Some(NETWORK_FACADE_SOURCE),
+        "aivi.net.http_server" => Some(NETWORK_HTTP_SERVER_SOURCE),
         _ => None,
     }
 }

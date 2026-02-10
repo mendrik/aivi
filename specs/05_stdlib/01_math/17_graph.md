@@ -12,7 +12,7 @@ If you need to find the shortest path between two points or see who is friends w
 ## Overview
 
 ```aivi
-use aivi.std.math.graph (Graph, bfs)
+use aivi.graph (Graph, bfs)
 
 // Create a small network
 g = Graph.fromEdges([
@@ -59,7 +59,7 @@ shortestPath g start goal = dijkstra g start goal
 ## Usage Examples
 
 ```aivi
-use aivi.std.graph
+use aivi.graph
 
 g0 = { nodes: [], edges: [] }
 g1 = addEdge g0 { from: 1, to: 2, weight: 1.0 }

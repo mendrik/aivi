@@ -5,7 +5,7 @@ The `Units` domain brings **Dimensional Analysis** to your code, solving the "Ma
 ## Overview
 
 ```aivi
-use aivi.std.core.units (Length, Time, Velocity)
+use aivi.units (Length, Time, Velocity)
 
 // Define values with units attached
 distance = 100.0m
@@ -57,7 +57,7 @@ sameUnit a b = a.unit.name == b.unit.name
 ## Usage Examples
 
 ```aivi
-use aivi.std.units
+use aivi.units
 
 meter = defineUnit "m" 1.0
 kilometer = defineUnit "km" 1000.0

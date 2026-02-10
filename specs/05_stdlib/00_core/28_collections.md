@@ -5,7 +5,7 @@ The `Collections` domain is your toolbox for structured data. While `List` is gr
 ## Overview
 
 ```aivi
-use aivi.std.core.collections (Map, Set)
+use aivi.collections (Map, Set)
 
 scores = Map.empty()
   |> Map.insert("Alice", 100)
@@ -64,7 +64,7 @@ Rules:
 The `Collections` domain provides `++` as a right-biased merge for `Map` and union for `Set`.
 
 ```aivi
-use aivi.std.core.collections (Map, Set, domain Collections)
+use aivi.collections (Map, Set, domain Collections)
 
 merged = map1 ++ map2
 allTags = set1 ++ set2

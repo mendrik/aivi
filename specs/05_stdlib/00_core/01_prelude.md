@@ -15,11 +15,11 @@ module aivi.prelude = {
   export domain Vector
   
   // Re-exports
-  use aivi.std.core
-  use aivi.std.calendar
-  use aivi.std.duration
-  use aivi.std.color
-  use aivi.std.vector
+  use aivi
+  use aivi.calendar
+  use aivi.duration
+  use aivi.color
+  use aivi.vector
 }
 ```
 
@@ -29,7 +29,7 @@ module aivi.prelude = {
 @no_prelude
 module my.custom.module = {
   // Nothing used automatically
-  use aivi.std.core (Int, Bool)
+  use aivi (Int, Bool)
 }
 ```
 

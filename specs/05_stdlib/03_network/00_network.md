@@ -1,15 +1,15 @@
-# Network Package
+# Net Package
 
-The `Network` package groups networking domains under a single entry point. These modules cover outbound HTTP/HTTPS, inbound servers, raw sockets, and stream utilities.
+The `Net` package groups networking domains under a single entry point. These modules cover outbound HTTP/HTTPS, inbound servers, raw sockets, and stream utilities.
 
 ```aivi
-use aivi.std.network
+use aivi.net
 ```
 
 ## Modules
 
-- `aivi.std.network.http`
-- `aivi.std.network.https`
-- `aivi.std.network.http_server`
-- `aivi.std.network.sockets`
-- `aivi.std.network.streams`
+- `aivi.net.http`
+- `aivi.net.https`
+- `aivi.net.http_server`
+- `aivi.net.sockets`
+- `aivi.net.streams`
