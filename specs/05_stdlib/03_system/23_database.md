@@ -17,18 +17,14 @@ User = { id: Int, name: Text, email: Text?, active: Bool, loginCount: Int, creat
 
 @static
 userTable : Table User
-userTable = db.table "users" User {
-  id
-  autoIncrement
-  name
-  varchar(100) notNull
-  email
-  varchar(255)
-  active
-  boolean default true
-  createdAt
-  timestamp default now()
-}
+userTable = db.table "users" [
+  { name: "id", type: IntType, constraints: [AutoIncrement, NotNull], default: None }
+  { name: "name", type: Varchar 100, constraints: [NotNull], default: None }
+  { name: "email", type: Varchar 255, constraints: [], default: None }
+  { name: "active", type: BoolType, constraints: [NotNull], default: Some (DefaultBool True) }
+  { name: "loginCount", type: IntType, constraints: [NotNull], default: Some (DefaultInt 0) }
+  { name: "createdAt", type: TimestampType, constraints: [NotNull], default: Some DefaultNow }
+]
 
 getActiveUsers : Effect DbError (List User)
 getActiveUsers = effect {
@@ -37,11 +33,39 @@ getActiveUsers = effect {
 }
 ```
 
+Table schemas are defined with ordinary values. `db.table` takes a table name and a
+list of `Column` values; the row type comes from the table binding's type annotation.
+
 ## Types
 
 ```aivi
 // Tables are sequences of rows
 type Table A = List A
+
+// Schema definitions are regular AIVI values.
+// The row type is inferred from the table binding (e.g. Table User).
+type ColumnType =
+  | IntType
+  | BoolType
+  | TimestampType
+  | Varchar Int
+
+type ColumnConstraint =
+  | AutoIncrement
+  | NotNull
+
+type ColumnDefault =
+  | DefaultBool Bool
+  | DefaultInt Int
+  | DefaultText Text
+  | DefaultNow
+
+type Column = {
+  name: Text
+  type: ColumnType
+  constraints: List ColumnConstraint
+  default: ColumnDefault?
+}
 
 // Predicate alias
 type Pred A = A => Bool
@@ -79,7 +103,7 @@ createUser newUser = effect {
 
 activateUsers : Effect DbError Unit
 activateUsers = effect {
-  _ <- userTable + upd (not active) { active: true, loginCount: _ + 1 }
+  _ <- userTable + upd (!active) { active: True, loginCount: _ + 1 }
   pure Unit
 }
 
