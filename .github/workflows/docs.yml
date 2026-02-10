@@ -11,7 +11,10 @@ on:
 permissions:
   contents: read
   pages: write
+  actions: write
   id-token: write
+  deployments: write
+
 
 jobs:
   build:
