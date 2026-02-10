@@ -64,6 +64,11 @@
       "settings": { "foreground": "#C586C0" }
     },
     {
+      "name": "AIVI Placeholders",
+      "scope": ["variable.language.placeholder.aivi"],
+      "settings": { "foreground": "#D7BA7D", "fontStyle": "bold" }
+    },
+    {
       "name": "AIVI Types",
       "scope": ["entity.name.type.aivi"],
       "settings": { "foreground": "#4EC9B0" }
@@ -74,9 +79,14 @@
       "settings": { "foreground": "#569CD6", "fontStyle": "bold" }
     },
     {
+      "name": "AIVI Match Operator",
+      "scope": ["keyword.operator.match.aivi"],
+      "settings": { "foreground": "#C586C0", "fontStyle": "bold" }
+    },
+    {
       "name": "AIVI Arrow Operators",
       "scope": ["keyword.operator.arrow.aivi"],
-      "settings": { "foreground": "#C586C0", "fontStyle": "bold" }
+      "settings": { "foreground": "#c53665"}
     },
     {
       "name": "AIVI Comparison Operators",
@@ -90,4 +100,3 @@
     }
   ]
 }
-

@@ -18,6 +18,9 @@
       "include": "#decorator"
     },
     {
+      "include": "#placeholder"
+    },
+    {
       "include": "#keyword"
     },
     {
@@ -37,6 +40,9 @@
     },
     {
       "include": "#cmp"
+    },
+    {
+      "include": "#question"
     },
     {
       "include": "#operator"
@@ -129,6 +135,22 @@
         {
           "match": "(<\\||\\|>|\\|(?!\\|))",
           "name": "keyword.operator.pipe.aivi"
+        }
+      ]
+    },
+    "placeholder": {
+      "patterns": [
+        {
+          "match": "\\b_\\b",
+          "name": "variable.language.placeholder.aivi"
+        }
+      ]
+    },
+    "question": {
+      "patterns": [
+        {
+          "match": "\\?(?!\\?)",
+          "name": "keyword.operator.match.aivi"
         }
       ]
     },

@@ -95,6 +95,7 @@ fn aivi_tmlanguage() -> serde_json::Value {
         { "include": "#string" },
         { "include": "#number" },
         { "include": "#decorator" },
+        { "include": "#placeholder" },
         { "include": "#keyword" },
         { "include": "#boolean" },
         { "include": "#constructor" },
@@ -102,14 +103,31 @@ fn aivi_tmlanguage() -> serde_json::Value {
         { "include": "#pipe" },
         { "include": "#arrow" },
         { "include": "#cmp" },
+        { "include": "#question" },
         { "include": "#operator" }
       ],
       "repository": {
+        "placeholder": {
+          "patterns": [
+            {
+              "name": "variable.language.placeholder.aivi",
+              "match": "\\b_\\b"
+            }
+          ]
+        },
         "pipe": {
           "patterns": [
             {
               "name": "keyword.operator.pipe.aivi",
               "match": r"(<\||\|>|\|(?!\|))"
+            }
+          ]
+        },
+        "question": {
+          "patterns": [
+            {
+              "name": "keyword.operator.match.aivi",
+              "match": r"\?(?!\?)"
             }
           ]
         },

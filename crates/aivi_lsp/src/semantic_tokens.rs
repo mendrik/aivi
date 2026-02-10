@@ -88,6 +88,9 @@ impl Backend {
                 }
             }
             "ident" => {
+                if token.text == "_" {
+                    return Some(Self::SEM_TOKEN_KEYWORD);
+                }
                 if Self::KEYWORDS.contains(&token.text.as_str()) {
                     return Some(Self::SEM_TOKEN_KEYWORD);
                 }
