@@ -1,3 +1,5 @@
+#![recursion_limit = "512"]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -239,19 +241,47 @@ fn aivi_tmlanguage() -> serde_json::Value {
 	            }
 	          ]
 	        },
-	        "string": {
-	          "patterns": [
-	            {
-	              "name": "string.quoted.double.aivi",
-	              "begin": "\"",
-	              "end": "\"",
-	              "patterns": [
-	                {
-	                  "name": "constant.character.escape.aivi",
-	                  "match": r#"\\([\\\"nrt]|u\{[0-9a-fA-F]+\})"#
-	                }
-	              ]
-	            },
+        "string": {
+          "patterns": [
+            {
+              "name": "string.quoted.double.aivi",
+              "begin": "\"",
+              "end": "\"",
+              "patterns": [
+                {
+                  "name": "constant.character.escape.aivi",
+                  "match": r#"\\([\\\"nrt]|u\{[0-9a-fA-F]+\})"#
+                },
+                {
+                  "name": "meta.interpolation.aivi",
+                  "begin": r"\{",
+                  "beginCaptures": {
+                    "0": { "name": "punctuation.section.interpolation.begin.aivi" }
+                  },
+                  "end": r"\}",
+                  "endCaptures": {
+                    "0": { "name": "punctuation.section.interpolation.end.aivi" }
+                  },
+                  "patterns": [
+                    { "include": "#comment" },
+                    { "include": "#sigil" },
+                    { "include": "#string" },
+                    { "include": "#number" },
+                    { "include": "#decorator" },
+                    { "include": "#placeholder" },
+                    { "include": "#keyword" },
+                    { "include": "#boolean" },
+                    { "include": "#constructor" },
+                    { "include": "#type" },
+                    { "include": "#pipe" },
+                    { "include": "#arrow" },
+                    { "include": "#cmp" },
+                    { "include": "#question" },
+                    { "include": "#operator" }
+                  ]
+                }
+              ]
+            },
             {
               "name": "string.quoted.other.backtick.aivi",
               "begin": "`",

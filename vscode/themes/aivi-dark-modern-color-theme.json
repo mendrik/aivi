@@ -34,6 +34,14 @@
       "settings": { "foreground": "#CE9178" }
     },
     {
+      "name": "AIVI String Interpolation Braces",
+      "scope": [
+        "punctuation.section.interpolation.begin.aivi",
+        "punctuation.section.interpolation.end.aivi"
+      ],
+      "settings": { "foreground": "#C586C0", "fontStyle": "bold" }
+    },
+    {
       "name": "AIVI Sigil Tags",
       "scope": ["entity.name.function.sigil.aivi"],
       "settings": { "foreground": "#DCDCAA" }

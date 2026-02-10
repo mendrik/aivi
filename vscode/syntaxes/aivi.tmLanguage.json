@@ -288,6 +288,68 @@
             {
               "match": "\\\\([\\\\\\\"nrt]|u\\{[0-9a-fA-F]+\\})",
               "name": "constant.character.escape.aivi"
+            },
+            {
+              "begin": "\\{",
+              "beginCaptures": {
+                "0": {
+                  "name": "punctuation.section.interpolation.begin.aivi"
+                }
+              },
+              "end": "\\}",
+              "endCaptures": {
+                "0": {
+                  "name": "punctuation.section.interpolation.end.aivi"
+                }
+              },
+              "name": "meta.interpolation.aivi",
+              "patterns": [
+                {
+                  "include": "#comment"
+                },
+                {
+                  "include": "#sigil"
+                },
+                {
+                  "include": "#string"
+                },
+                {
+                  "include": "#number"
+                },
+                {
+                  "include": "#decorator"
+                },
+                {
+                  "include": "#placeholder"
+                },
+                {
+                  "include": "#keyword"
+                },
+                {
+                  "include": "#boolean"
+                },
+                {
+                  "include": "#constructor"
+                },
+                {
+                  "include": "#type"
+                },
+                {
+                  "include": "#pipe"
+                },
+                {
+                  "include": "#arrow"
+                },
+                {
+                  "include": "#cmp"
+                },
+                {
+                  "include": "#question"
+                },
+                {
+                  "include": "#operator"
+                }
+              ]
             }
           ]
         },
