@@ -2,6 +2,10 @@
 title: AIVI Language Specification
 ---
 
+<p align="center">
+    <img src="../assets/aivi-128.png" alt="AIVI Logo" width="128" height="128">
+</p>
+
 # AIVI Language Specification
 
 A high-integrity functional language with a Rust-first compilation pipeline.

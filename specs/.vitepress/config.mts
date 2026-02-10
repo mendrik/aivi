@@ -27,10 +27,15 @@ function resolveBase(): string {
   return '/'
 }
 
+const base = resolveBase()
+
 export default defineConfig({
   title: "AIVI Language Specification",
   description: "A high-integrity functional language with a Rust-first compilation pipeline.",
-  base: resolveBase(),
+  base,
+  head: [
+    ['link', { rel: 'icon', href: `${base}favicon.png` }]
+  ],
   themeConfig: {
     search: {
       provider: 'local'

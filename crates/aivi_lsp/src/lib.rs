@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -370,14 +370,31 @@ impl Backend {
         let (modules, _) = parse_modules(&path, text);
         let current_module = Self::module_at_position(&modules, position)?;
 
+        let mut workspace_module_list = Vec::new();
+        let mut seen_modules = HashSet::new();
+        for indexed in workspace_modules.values() {
+            seen_modules.insert(indexed.module.name.name.clone());
+            workspace_module_list.push(indexed.module.clone());
+        }
+        for module in modules.iter() {
+            if seen_modules.insert(module.name.name.clone()) {
+                workspace_module_list.push(module.clone());
+            }
+        }
+        let (_, inferred) = infer_value_types(&workspace_module_list);
+
         let call = current_module
             .items
             .iter()
             .find_map(|item| Self::call_info_in_item(item, position))?;
 
         let callee_name = Self::callee_ident_name(call.func)?;
-        let signature_label =
-            Self::resolve_type_signature_label(current_module, &callee_name, workspace_modules)?;
+        let signature_label = Self::resolve_type_signature_label(
+            current_module,
+            &callee_name,
+            workspace_modules,
+            &inferred,
+        )?;
 
         Some(SignatureHelp {
             signatures: vec![SignatureInformation {
@@ -395,8 +412,14 @@ impl Backend {
         current_module: &Module,
         ident: &str,
         workspace_modules: &HashMap<String, IndexedModule>,
+        inferred: &HashMap<String, HashMap<String, String>>,
     ) -> Option<String> {
         if let Some(label) = Self::type_signature_label_in_module(current_module, ident) {
+            return Some(label);
+        }
+        if let Some(label) =
+            Self::inferred_signature_label(&current_module.name.name, ident, inferred)
+        {
             return Some(label);
         }
 
@@ -412,9 +435,25 @@ impl Backend {
             if let Some(label) = Self::type_signature_label_in_module(&indexed.module, ident) {
                 return Some(label);
             }
+            if let Some(label) =
+                Self::inferred_signature_label(&indexed.module.name.name, ident, inferred)
+            {
+                return Some(label);
+            }
         }
 
         None
+    }
+
+    fn inferred_signature_label(
+        module_name: &str,
+        ident: &str,
+        inferred: &HashMap<String, HashMap<String, String>>,
+    ) -> Option<String> {
+        inferred
+            .get(module_name)
+            .and_then(|types| types.get(ident))
+            .map(|ty| format!("`{ident}` : `{ty}`"))
     }
 
     fn type_signature_label_in_module(module: &Module, ident: &str) -> Option<String> {
@@ -1377,44 +1416,52 @@ impl Backend {
         }
     }
 
-    fn build_completion_items(text: &str, uri: &Url) -> Vec<CompletionItem> {
+    fn build_completion_items(
+        text: &str,
+        uri: &Url,
+        workspace_modules: &HashMap<String, IndexedModule>,
+    ) -> Vec<CompletionItem> {
         let path = PathBuf::from(Self::path_from_uri(uri));
         let (modules, _) = parse_modules(&path, text);
         let mut items = Vec::new();
-        for keyword in Self::KEYWORDS {
-            items.push(CompletionItem {
-                label: keyword.to_string(),
-                kind: Some(CompletionItemKind::KEYWORD),
-                ..CompletionItem::default()
-            });
-        }
-        for sigil in Self::SIGILS {
-            items.push(CompletionItem {
-                label: sigil.to_string(),
-                kind: Some(CompletionItemKind::SNIPPET),
-                ..CompletionItem::default()
-            });
-        }
-        for module in modules {
-            items.push(CompletionItem {
-                label: module.name.name.clone(),
-                kind: Some(CompletionItemKind::MODULE),
-                ..CompletionItem::default()
-            });
-            for export in module.exports {
+        let mut seen = HashSet::new();
+        let mut push_item = |label: String, kind: CompletionItemKind| {
+            let key = format!("{label}:{kind:?}");
+            if seen.insert(key) {
                 items.push(CompletionItem {
-                    label: export.name,
-                    kind: Some(CompletionItemKind::PROPERTY),
+                    label,
+                    kind: Some(kind),
                     ..CompletionItem::default()
                 });
             }
+        };
+        for keyword in Self::KEYWORDS {
+            push_item(keyword.to_string(), CompletionItemKind::KEYWORD);
+        }
+        for sigil in Self::SIGILS {
+            push_item(sigil.to_string(), CompletionItemKind::SNIPPET);
+        }
+
+        let mut module_list = Vec::new();
+        let mut seen_modules = HashSet::new();
+        for module in modules {
+            seen_modules.insert(module.name.name.clone());
+            module_list.push(module);
+        }
+        for indexed in workspace_modules.values() {
+            if seen_modules.insert(indexed.module.name.name.clone()) {
+                module_list.push(indexed.module.clone());
+            }
+        }
+
+        for module in module_list {
+            push_item(module.name.name.clone(), CompletionItemKind::MODULE);
+            for export in module.exports {
+                push_item(export.name, CompletionItemKind::PROPERTY);
+            }
             for item in module.items {
                 if let Some((label, kind)) = Self::completion_from_item(item) {
-                    items.push(CompletionItem {
-                        label,
-                        kind: Some(kind),
-                        ..CompletionItem::default()
-                    });
+                    push_item(label, kind);
                 }
             }
         }
@@ -2056,7 +2103,7 @@ module examples.compiler.app = {
     fn completion_items_include_keywords_and_defs() {
         let text = sample_text();
         let uri = sample_uri();
-        let items = Backend::build_completion_items(text, &uri);
+        let items = Backend::build_completion_items(text, &uri, &HashMap::new());
         let labels: Vec<&str> = items.iter().map(|item| item.label.as_str()).collect();
         assert!(labels.contains(&"module"));
         assert!(labels.contains(&"examples.compiler.math"));
@@ -2483,11 +2530,12 @@ impl LanguageServer for Backend {
                     .and_then(|folders| folders.first())
                     .and_then(|folder| folder.uri.to_file_path().ok())
             });
-        if root.is_some() {
+        if let Some(root) = root.clone() {
+            let indexed = Self::build_workspace_index(&root);
             let mut state = self.state.lock().await;
-            state.workspace_root = root;
-            state.disk_module_index.clear();
-            state.disk_index_root = None;
+            state.workspace_root = Some(root.clone());
+            state.disk_index_root = Some(root);
+            state.disk_module_index = indexed;
         }
 
         Ok(InitializeResult {
@@ -2770,10 +2818,16 @@ impl LanguageServer for Backend {
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         let uri = params.text_document_position.text_document.uri;
-        let items = self
-            .with_document_text(&uri, |content| Self::build_completion_items(content, &uri))
+        let items = match self
+            .with_document_text(&uri, |content| content.to_string())
             .await
-            .unwrap_or_default();
+        {
+            Some(text) => {
+                let workspace = self.workspace_modules_for(&uri).await;
+                Self::build_completion_items(&text, &uri, &workspace)
+            }
+            None => Vec::new(),
+        };
         Ok(Some(CompletionResponse::Array(items)))
     }
 }
