@@ -16,6 +16,14 @@ log : String -> Effect Unit
 
 Prints a message to the standard output, followed by a newline.
 
+### `println`
+
+```aivi
+println : String -> Effect Unit
+```
+
+Alias for `log`.
+
 ### `print`
 
 ```aivi
@@ -23,9 +31,6 @@ print : String -> Effect Unit
 ```
 
 Prints a message to the standard output, **without** a trailing newline.
-```
-
-Prints a message to the standard output.
 
 ### `error`
 

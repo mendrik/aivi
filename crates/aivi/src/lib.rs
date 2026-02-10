@@ -42,8 +42,8 @@ pub use rustc_backend::{build_with_rustc, emit_rustc_source};
 pub use surface::{
     parse_modules, parse_modules_from_tokens, BlockItem, ClassDecl, Def, DomainDecl, DomainItem,
     Expr, InstanceDecl, ListItem, Literal, MatchArm, Module, ModuleItem, PathSegment, Pattern,
-    RecordField, RecordPatternField, SpannedName, TypeAlias, TypeCtor, TypeDecl, TypeExpr, TypeSig,
-    UseDecl,
+    RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeCtor, TypeDecl,
+    TypeExpr, TypeSig, UseDecl,
 };
 pub use typecheck::{check_types, infer_value_types};
 

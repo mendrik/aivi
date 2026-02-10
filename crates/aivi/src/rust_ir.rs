@@ -253,7 +253,7 @@ fn lower_expr(
             parts: parts
                 .into_iter()
                 .map(|part| {
-                    Ok(match part {
+                    Ok::<RustIrTextPart, AiviError>(match part {
                         crate::kernel::KernelTextPart::Text { text } => {
                             RustIrTextPart::Text { text }
                         }

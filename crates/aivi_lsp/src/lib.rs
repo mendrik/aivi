@@ -841,6 +841,13 @@ impl Backend {
 
     fn collect_expr_references(expr: &Expr, ident: &str, uri: &Url, locations: &mut Vec<Location>) {
         match expr {
+            Expr::TextInterpolate { parts, .. } => {
+                for part in parts {
+                    if let aivi::TextPart::Expr { expr, .. } = part {
+                        Self::collect_expr_references(expr, ident, uri, locations);
+                    }
+                }
+            }
             Expr::Ident(name) => {
                 if name.name == ident {
                     locations.push(Location::new(
@@ -1499,6 +1506,10 @@ impl Backend {
             Expr::List { items, .. } => items
                 .iter()
                 .find_map(|item| Self::find_call_info(&item.expr, position)),
+            Expr::TextInterpolate { parts, .. } => parts.iter().find_map(|part| match part {
+                aivi::TextPart::Text { .. } => None,
+                aivi::TextPart::Expr { expr, .. } => Self::find_call_info(expr, position),
+            }),
             Expr::Tuple { items, .. } => items
                 .iter()
                 .find_map(|item| Self::find_call_info(item, position)),
@@ -1591,6 +1602,7 @@ impl Backend {
                 | Literal::Bool { span, .. }
                 | Literal::DateTime { span, .. } => span,
             },
+            Expr::TextInterpolate { span, .. } => span,
             Expr::List { span, .. }
             | Expr::Tuple { span, .. }
             | Expr::Record { span, .. }

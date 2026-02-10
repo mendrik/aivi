@@ -19,7 +19,7 @@ content = read_text "config.json"
 
 // Metadata inspection
 match stat "large_video.mp4" {
-    | Ok info => print "File size: ${info.size} bytes"
+    | Ok info => print "File size: {info.size} bytes"
     | Err _   => print "File not found"
 }
 ```

@@ -2518,6 +2518,10 @@ fn contains_hole(expr: &Expr) -> bool {
     match expr {
         Expr::Ident(name) => name.name == "_",
         Expr::Literal(_) => false,
+        Expr::TextInterpolate { parts, .. } => parts.iter().any(|part| match part {
+            TextPart::Text { .. } => false,
+            TextPart::Expr { expr, .. } => contains_hole(expr),
+        }),
         Expr::List { items, .. } => items.iter().any(|item| contains_hole(&item.expr)),
         Expr::Tuple { items, .. } => items.iter().any(contains_hole),
         Expr::Record { fields, .. } => fields.iter().any(|field| {
@@ -2575,6 +2579,19 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
             })
         }
         Expr::Ident(_) | Expr::Literal(_) | Expr::Raw { .. } => expr,
+        Expr::TextInterpolate { parts, span } => Expr::TextInterpolate {
+            parts: parts
+                .into_iter()
+                .map(|part| match part {
+                    TextPart::Text { .. } => part,
+                    TextPart::Expr { expr, span } => TextPart::Expr {
+                        expr: Box::new(replace_holes_inner(*expr, counter, params)),
+                        span,
+                    },
+                })
+                .collect(),
+            span,
+        },
         Expr::List { items, span } => Expr::List {
             items: items
                 .into_iter()
