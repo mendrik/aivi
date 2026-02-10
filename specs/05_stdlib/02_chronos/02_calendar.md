@@ -9,7 +9,7 @@ The `Calendar` domain hides this chaos. Writing `timestamp + 86400` works until 
 ## Overview
 
 ```aivi
-import aivi.std.chronos.calendar use { Date, DateTime }
+use aivi.std.chronos.calendar (Date, DateTime)
 
 now = DateTime.now()
 

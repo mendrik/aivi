@@ -46,13 +46,18 @@ pub fn build_with_rustc(
 }
 
 pub fn emit_rustc_source(program: RustIrProgram) -> Result<String, AiviError> {
-    if program.modules.len() != 1 {
-        return Err(AiviError::Codegen(
-            "rustc backend currently supports a single module".to_string(),
-        ));
+    let mut modules = program.modules.into_iter();
+    let Some(first) = modules.next() else {
+        return Err(AiviError::Codegen("no modules to build".to_string()));
+    };
+    let mut defs = first.defs;
+    for module in modules {
+        defs.extend(module.defs);
     }
-    let module = program.modules.into_iter().next().unwrap();
-    emit_module(module)
+    emit_module(RustIrModule {
+        name: first.name,
+        defs,
+    })
 }
 
 fn emit_module(module: RustIrModule) -> Result<String, AiviError> {

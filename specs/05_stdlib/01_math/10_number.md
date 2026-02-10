@@ -127,7 +127,7 @@ sum = z1 + z2
 The `Quaternion` domain provides tools for handling **3D rotations** without gimbal lock.
 
 ```aivi
-import aivi.std.number.quaternion use { Quat }
+use aivi.std.number.quaternion (Quat)
 
 // Rotate 90 degrees around the Y (up) axis
 q1 = Quat.fromEuler(0.0, 90.0, 0.0)

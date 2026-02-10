@@ -98,6 +98,12 @@ A high-integrity functional language targeting WebAssembly.
 #### UI
 64. [Color](05_stdlib/04_ui/04_color.md)
 
+### Execution & Concurrency
+
+107. [Concurrency](06_runtime/01_concurrency.md)
+108. [Rustc Native Pipeline](06_runtime/02_rustc_native_pipeline.md)
+109. [Package Manager (Cargo-backed)](06_runtime/03_package_manager.md)
+
 
 ## Building the Specification
 

@@ -73,25 +73,22 @@ enum RuntimeError {
 }
 
 pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
-    if program.modules.len() != 1 {
-        return Err(AiviError::Runtime(
-            "native runtime expects a single module".to_string(),
-        ));
+    if program.modules.is_empty() {
+        return Err(AiviError::Runtime("no modules to run".to_string()));
     }
-    let module = match program.modules.into_iter().next() {
-        Some(module) => module,
-        None => return Err(AiviError::Runtime("no modules to run".to_string())),
-    };
-    if module.defs.is_empty() {
+
+    let mut grouped: HashMap<String, Vec<HirExpr>> = HashMap::new();
+    for module in program.modules {
+        for def in module.defs {
+            grouped.entry(def.name).or_default().push(def.expr);
+        }
+    }
+    if grouped.is_empty() {
         return Err(AiviError::Runtime("no definitions to run".to_string()));
     }
 
     let globals = Env::new(None);
     register_builtins(&globals);
-    let mut grouped: HashMap<String, Vec<HirExpr>> = HashMap::new();
-    for def in module.defs {
-        grouped.entry(def.name).or_default().push(def.expr);
-    }
     for (name, exprs) in grouped {
         if exprs.len() == 1 {
             let thunk = ThunkValue {

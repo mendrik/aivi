@@ -65,23 +65,27 @@ aivi clean
 aivi clean --all
 ```
 
-## Add Rust dependencies
+## Add AIVI dependencies
 
-`aivi install` edits `[dependencies]` in `Cargo.toml` and (by default) runs `cargo fetch`.
+`aivi install` edits `[dependencies]` in `Cargo.toml`, validates the dependency has
+`[package.metadata.aivi]`, and (by default) runs `cargo fetch`.
 
 ```bash
 cd my-app
 
-aivi install anyhow@^1
-aivi install serde@latest
-aivi install git+https://github.com/owner/repo.git#rev=<sha>
-aivi install path:../some-local-crate
+aivi install aivi-foo@^0.1
+aivi install aivi-bar@latest
+aivi install git+https://github.com/owner/aivi-baz.git#rev=<sha>
+aivi install path:../local/aivi-qux
 
 # Offline / no network
-aivi install serde@latest --no-fetch
+aivi install aivi-bar@latest --no-fetch
 
 # Install embedded stdlib modules into src/
 aivi install aivi.std.number
+
+# Search crates.io for AIVI packages
+aivi search prelude
 ```
 
 ## Editor support (LSP)

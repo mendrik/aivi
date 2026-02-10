@@ -11,7 +11,7 @@ The **Fast Fourier Transform (FFT)** is a legendary algorithm that converts Time
 ## Overview
 
 ```aivi
-import aivi.std.math.signal use { fft, ifft }
+use aivi.std.math.signal (fft, ifft)
 
 // A simple signal (e.g., audio samples)
 timeDomain = [1.0, 0.5, 0.25, 0.125]

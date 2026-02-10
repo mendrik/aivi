@@ -11,7 +11,7 @@ It builds on existing AIVI features:
 ## Overview
 
 ```aivi
-use aivi.std.system.database
+use aivi.std.system.database as db
 
 User = { id: Int, name: Text, email: Text?, active: Bool, loginCount: Int, createdAt: Instant }
 

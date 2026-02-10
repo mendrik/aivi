@@ -7,7 +7,7 @@ The `Log` domain provides **Structured Logging** for modern observability.
 ## Overview
 
 ```aivi
-import aivi.std.system.log use { info, error }
+use aivi.std.system.log (info, error)
 
 info("Server started", { port: 8080, env: "prod" })
 ```

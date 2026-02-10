@@ -9,7 +9,7 @@ In many systems, a timeout is just an integer like `500`. But is that 500 millis
 ## Overview
 
 ```aivi
-import aivi.std.chronos.duration use { Duration }
+use aivi.std.chronos.duration (Duration)
 
 // Clear, unambiguous literals
 timeout = 500ms

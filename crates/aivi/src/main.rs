@@ -469,9 +469,10 @@ fn cmd_search(args: &[String]) -> Result<(), AiviError> {
     let query = args
         .first()
         .ok_or_else(|| AiviError::InvalidCommand("search expects <query>".to_string()))?;
+    let keyword_query = format!("keyword:aivi {query}");
     let output = Command::new("cargo")
         .arg("search")
-        .arg(query)
+        .arg(keyword_query)
         .arg("--limit")
         .arg("20")
         .output()?;
@@ -486,13 +487,12 @@ fn cmd_search(args: &[String]) -> Result<(), AiviError> {
 }
 
 fn cmd_install(args: &[String]) -> Result<(), AiviError> {
-    let mut require_aivi = false;
     let mut fetch = true;
     let mut spec = None;
 
     for arg in args.iter().cloned() {
         match arg.as_str() {
-            "--require-aivi" => require_aivi = true,
+            "--require-aivi" => {}
             "--no-fetch" => fetch = false,
             _ if arg.starts_with('-') => {
                 return Err(AiviError::InvalidCommand(format!("unknown flag {arg}")))
@@ -530,6 +530,8 @@ fn cmd_install(args: &[String]) -> Result<(), AiviError> {
 
     let cargo_toml_path = root.join("Cargo.toml");
     let original = std::fs::read_to_string(&cargo_toml_path)?;
+    let cargo_lock_path = root.join("Cargo.lock");
+    let original_lock = std::fs::read_to_string(&cargo_lock_path).ok();
     let edits = aivi::edit_cargo_toml_dependencies(&original, &dep)?;
     if edits.changed {
         std::fs::write(&cargo_toml_path, edits.updated_manifest)?;
@@ -541,17 +543,97 @@ fn cmd_install(args: &[String]) -> Result<(), AiviError> {
             .current_dir(&root)
             .status()?;
         if !status.success() {
+            restore_install_manifest(&cargo_toml_path, &original, &cargo_lock_path, &original_lock);
             return Err(AiviError::Cargo("cargo fetch failed".to_string()));
         }
     }
 
-    if require_aivi {
-        return Err(AiviError::Cargo(
-            "--require-aivi is not supported without cargo metadata inspection".to_string(),
-        ));
+    if let Err(err) = ensure_aivi_dependency(&root, &dep) {
+        restore_install_manifest(&cargo_toml_path, &original, &cargo_lock_path, &original_lock);
+        return Err(err);
     }
 
     Ok(())
+}
+
+fn restore_install_manifest(
+    cargo_toml_path: &Path,
+    original: &str,
+    cargo_lock_path: &Path,
+    original_lock: &Option<String>,
+) {
+    let _ = std::fs::write(cargo_toml_path, original);
+    match original_lock {
+        Some(contents) => {
+            let _ = std::fs::write(cargo_lock_path, contents);
+        }
+        None => {
+            let _ = std::fs::remove_file(cargo_lock_path);
+        }
+    }
+}
+
+fn ensure_aivi_dependency(root: &Path, dep: &CargoDepSpec) -> Result<(), AiviError> {
+    let output = Command::new("cargo")
+        .arg("metadata")
+        .arg("--format-version")
+        .arg("1")
+        .current_dir(root)
+        .output()?;
+    if !output.status.success() {
+        return Err(AiviError::Cargo(format!(
+            "cargo metadata failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )));
+    }
+
+    #[derive(serde::Deserialize)]
+    struct CargoMetadata {
+        packages: Vec<CargoMetadataPackage>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct CargoMetadataPackage {
+        name: String,
+        metadata: serde_json::Value,
+    }
+
+    let metadata: CargoMetadata = serde_json::from_slice(&output.stdout)
+        .map_err(|err| AiviError::Cargo(format!("failed to parse cargo metadata: {err}")))?;
+
+    let package = metadata
+        .packages
+        .iter()
+        .find(|pkg| pkg.name == dep.name())
+        .ok_or_else(|| {
+            AiviError::Cargo(format!(
+                "dependency {} not found in cargo metadata",
+                dep.name()
+            ))
+        })?;
+
+    if !is_aivi_metadata(&package.metadata) {
+        return Err(AiviError::Cargo(format!(
+            "dependency {} is not an AIVI package (missing [package.metadata.aivi])",
+            dep.name()
+        )));
+    }
+
+    Ok(())
+}
+
+fn is_aivi_metadata(metadata: &serde_json::Value) -> bool {
+    let Some(aivi) = metadata.get("aivi") else {
+        return false;
+    };
+    let Some(aivi) = aivi.as_object() else {
+        return false;
+    };
+    let language_version = aivi
+        .get("language_version")
+        .and_then(serde_json::Value::as_str);
+    let kind = aivi.get("kind").and_then(serde_json::Value::as_str);
+    matches!(language_version, Some(_)) && matches!(kind, Some("lib" | "bin"))
 }
 
 fn install_stdlib_module(root: &Path, spec: &str) -> Result<bool, AiviError> {

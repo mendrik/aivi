@@ -2,12 +2,6 @@ use crate::hir::HirProgram;
 use crate::AiviError;
 
 pub fn compile_rust(program: HirProgram) -> Result<String, AiviError> {
-    if program.modules.len() != 1 {
-        return Err(AiviError::Codegen(
-            "Rust build currently supports a single module".to_string(),
-        ));
-    }
-
     let json = serde_json::to_vec(&program)
         .map_err(|err| AiviError::Codegen(format!("failed to serialize program: {err}")))?;
     let escaped = escape_bytes(&json);
@@ -33,12 +27,6 @@ pub fn compile_rust(program: HirProgram) -> Result<String, AiviError> {
 }
 
 pub fn compile_rust_lib(program: HirProgram) -> Result<String, AiviError> {
-    if program.modules.len() != 1 {
-        return Err(AiviError::Codegen(
-            "Rust build currently supports a single module".to_string(),
-        ));
-    }
-
     let json = serde_json::to_vec(&program)
         .map_err(|err| AiviError::Codegen(format!("failed to serialize program: {err}")))?;
     let escaped = escape_bytes(&json);

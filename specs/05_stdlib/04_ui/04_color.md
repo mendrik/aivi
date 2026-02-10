@@ -7,7 +7,7 @@ Screens think in Red, Green, and Blue, but people think in **Hue**, **Saturation
 ## Overview
 
 ```aivi
-import aivi.std.ui.color use { Color }
+use aivi.std.ui.color (Color)
 
 primary = #007bff
 // Mathematically correct lightening

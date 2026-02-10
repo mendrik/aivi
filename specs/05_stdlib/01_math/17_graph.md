@@ -12,7 +12,7 @@ If you need to find the shortest path between two points or see who is friends w
 ## Overview
 
 ```aivi
-import aivi.std.math.graph use { Graph, bfs }
+use aivi.std.math.graph (Graph, bfs)
 
 // Create a small network
 g = Graph.fromEdges([

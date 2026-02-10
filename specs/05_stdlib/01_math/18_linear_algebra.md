@@ -9,7 +9,7 @@ Whether you're simulating heat flow across a computer chip, calculating structur
 ## Overview
 
 ```aivi
-import aivi.std.math.linalg use { solve, eigen }
+use aivi.std.math.linalg (solve, eigen)
 
 // Matrix A and Vector b
 // Solve for x in: Ax = b

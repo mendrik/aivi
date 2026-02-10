@@ -9,7 +9,7 @@ Manually calculating the new position of a 3D point after it's been rotated, mov
 ## Overview
 
 ```aivi
-import aivi.std.math.matrix use { Mat4 }
+use aivi.std.math.matrix (Mat4)
 
 // A generic "identity" matrix (does nothing)
 m = Mat4.identity()

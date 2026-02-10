@@ -12,7 +12,7 @@ Almost every visual application needs to know when two things collide. This doma
 ## Overview
 
 ```aivi
-import aivi.std.math.geometry use { Ray, Sphere, intersect }
+use aivi.std.math.geometry (Ray, Sphere, intersect)
 
 // A ray firing forwards from origin
 ray = Ray(origin: {x:0, y:0, z:0}, dir: {x:0, y:0, z:1})

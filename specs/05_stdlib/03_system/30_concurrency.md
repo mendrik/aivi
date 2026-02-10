@@ -5,7 +5,7 @@ The `Concurrency` domain unlocks the power of doing multiple things at once.
 It provides **Fibers** (lightweight threads) and **Channels** for safe communication. Whether you're fetching two APIs in parallel or building a background worker, this domain gives you the high-level tools (`par`, `scope`) to write concurrent code that doesn't melt your brain.
 
 ```aivi
-use std.Concurrency
+use aivi.std.system.concurrency as concurrent
 ```
 
 ## Functions

@@ -108,3 +108,4 @@ A high-integrity functional language with a Rust-first compilation pipeline.
 
 107. [Concurrency](06_runtime/01_concurrency)
 108. [Rustc Native Pipeline](06_runtime/02_rustc_native_pipeline)
+109. [Package Manager (Cargo-backed)](06_runtime/03_package_manager)

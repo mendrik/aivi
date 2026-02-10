@@ -12,7 +12,7 @@ This domain lets you define the *shape* of the chaotic world you want to simulat
 ## Overview
 
 ```aivi
-import aivi.std.math.probability use { Normal, uniform }
+use aivi.std.math.probability (Normal, uniform)
 
 // Create a Bell curve centered at 0 with standard deviation of 1
 distribution = Normal(0.0, 1.0) 

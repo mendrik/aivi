@@ -5,7 +5,7 @@ The `Units` domain brings **Dimensional Analysis** to your code, solving the "Ma
 ## Overview
 
 ```aivi
-import aivi.std.core.units use { Length, Time, Velocity }
+use aivi.std.core.units (Length, Time, Velocity)
 
 // Define values with units attached
 distance = 100.0m
