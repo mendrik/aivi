@@ -59,7 +59,6 @@ export default defineConfig({
         text: 'Syntax',
         collapsed: true,
         items: [
-          { text: 'Concrete Syntax', link: '/02_syntax/00_grammar' },
           { text: 'Bindings and Scope', link: '/02_syntax/01_bindings' },
           { text: 'Functions and Pipes', link: '/02_syntax/02_functions' },
           { text: 'The Type System', link: '/02_syntax/03_types' },
@@ -74,6 +73,7 @@ export default defineConfig({
           { text: 'External Sources', link: '/02_syntax/12_external_sources' },
           { text: 'Decorators', link: '/02_syntax/14_decorators' },
           { text: 'Resources', link: '/02_syntax/15_resources' },
+          { text: 'Concrete Syntax', link: '/02_syntax/00_grammar' },
         ]
       },
       {
@@ -119,6 +119,7 @@ export default defineConfig({
             collapsed: true,
             items: [
                 { text: 'Prelude', link: '/05_stdlib/00_core/01_prelude' },
+                { text: 'Text', link: '/05_stdlib/00_core/02_text' },
                 { text: 'Units', link: '/05_stdlib/00_core/16_units' },
                 { text: 'Regex', link: '/05_stdlib/00_core/24_regex' },
                 { text: 'Testing', link: '/05_stdlib/00_core/27_testing' },
@@ -129,6 +130,7 @@ export default defineConfig({
             text: 'Math & Science',
             collapsed: true,
             items: [
+                { text: 'Math', link: '/05_stdlib/01_math/01_math' },
                 { text: 'Vector', link: '/05_stdlib/01_math/05_vector' },
                 { text: 'Matrix', link: '/05_stdlib/01_math/09_matrix' },
                 { text: 'Number (BigInt, Rational, Complex, Quaternion)', link: '/05_stdlib/01_math/10_number' },
