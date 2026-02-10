@@ -59,7 +59,7 @@ normalize s = s * (1.0 / maxAbs s.samples)
 
 ```aivi
 use aivi.std.signal
-use aivi.std.complex
+use aivi.std.number.complex
 
 audio = { samples: [0.0, 0.5, 1.0, 0.5], rate: 44100.0 }
 spectrum = fft audio

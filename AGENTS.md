@@ -89,8 +89,6 @@ This file applies to all of `specs/`.
 - Prefer **typed values** and **type-driven decoding/validation** at boundaries (e.g. `Source` configuration records, decoders derived from types).
 - Only the decorators enumerated in `specs/02_syntax/14_decorators.md` are allowed in v0.1; unknown decorators should be considered a spec violation.
 
-
-
 ## 4. Rust Implementation Guidelines
 
 When working on the compiler (`crates/`):
@@ -106,6 +104,7 @@ When working on the compiler (`crates/`):
 ## 5. Documentation Maintenance
 
 *   **Specs**: Update `specs/` *before* or *alongside* code changes.
+*   **Specs**: Update indices and make sure links are working.
 *   **Roadmap**: Check `specs/roadmap/README.md` to align work with current phases.
 *   **Guidelines**: Follow `.junie/guidelines.md`.
 *   **AGENTS.md**: Update this file if workflows or structures change significantly.

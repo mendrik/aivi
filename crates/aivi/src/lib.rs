@@ -46,7 +46,7 @@ pub use surface::{
     RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeCtor, TypeDecl,
     TypeExpr, TypeSig, UseDecl,
 };
-pub use stdlib::embedded_stdlib_modules;
+pub use stdlib::{embedded_stdlib_modules, embedded_stdlib_source};
 pub use typecheck::{check_types, infer_value_types};
 
 #[derive(Debug)]

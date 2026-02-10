@@ -357,6 +357,7 @@ pub fn parse_modules(path: &Path, content: &str) -> (Vec<Module>, Vec<FileDiagno
     let mut parser = Parser::new(tokens, path);
     let mut modules = parser.parse_modules();
     inject_prelude_imports(&mut modules);
+    expand_domain_exports(&mut modules);
     let mut diagnostics: Vec<FileDiagnostic> = lex_diags
         .into_iter()
         .map(|diag| FileDiagnostic {
@@ -376,6 +377,7 @@ pub fn parse_modules_from_tokens(
     let mut parser = Parser::new(tokens, path);
     let mut modules = parser.parse_modules();
     inject_prelude_imports(&mut modules);
+    expand_domain_exports(&mut modules);
     (modules, parser.diagnostics)
 }
 
@@ -411,6 +413,38 @@ fn inject_prelude_imports(modules: &mut [Module]) {
                 wildcard: true,
             },
         );
+    }
+}
+
+fn expand_domain_exports(modules: &mut [Module]) {
+    use std::collections::HashSet;
+
+    for module in modules {
+        let mut exported: HashSet<String> = module
+            .exports
+            .iter()
+            .map(|name| name.name.clone())
+            .collect();
+        let mut extra_exports = Vec::new();
+        for item in &module.items {
+            let ModuleItem::DomainDecl(domain) = item else {
+                continue;
+            };
+            if !exported.contains(&domain.name.name) {
+                continue;
+            }
+            for domain_item in &domain.items {
+                match domain_item {
+                    DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                        if exported.insert(def.name.name.clone()) {
+                            extra_exports.push(def.name.clone());
+                        }
+                    }
+                    DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
+                }
+            }
+        }
+        module.exports.extend(extra_exports);
     }
 }
 
@@ -623,7 +657,15 @@ impl Parser {
         if self.consume_symbol("(") {
             wildcard = false;
             while !self.check_symbol(")") && self.pos < self.tokens.len() {
-                if let Some(name) = self.consume_ident() {
+                if self.match_keyword("domain") {
+                    if let Some(name) = self.consume_ident() {
+                        items.push(name);
+                    } else {
+                        let span = self.peek_span().unwrap_or_else(|| self.previous_span());
+                        self.emit_diag("E1500", "expected domain name after 'domain'", span);
+                        break;
+                    }
+                } else if let Some(name) = self.consume_ident() {
                     items.push(name);
                 }
                 if !self.consume_symbol(",") {

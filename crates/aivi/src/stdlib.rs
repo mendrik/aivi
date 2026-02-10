@@ -12,6 +12,145 @@ module aivi.std.core = {
 }
 "#;
 
+const NUMBER_FACADE_SOURCE: &str = r#"
+@no_prelude
+module aivi.std.number = {
+  export BigInt, Rational, Complex, i
+  export fromInt, toInt, absInt, gcdInt, normalize
+
+  use aivi.std.number.bigint (BigInt, fromInt, toInt, absInt)
+  use aivi.std.number.rational (Rational, gcdInt, normalize)
+  use aivi.std.number.complex (Complex, i)
+}
+"#;
+
+const BIGINT_SOURCE: &str = r#"
+@no_prelude
+module aivi.std.number.bigint = {
+  export BigInt, fromInt, toInt, absInt
+  export domain BigInt
+
+  use aivi.std.core
+
+  BigInt = { sign: Int, limbs: List Int }
+
+  absInt : Int -> Int
+  absInt n = if n < 0 then -n else n
+
+  toInt : BigInt -> Int
+  toInt b = b.limbs ?
+    | [] => 0
+    | [x, ..._] => b.sign * x
+
+  fromInt : Int -> BigInt
+  fromInt n = {
+    sign: if n < 0 then -1 else 1
+    limbs: [absInt n]
+  }
+
+  domain BigInt over BigInt = {
+    (+) : BigInt -> BigInt -> BigInt
+    (+) a b = fromInt (toInt a + toInt b)
+
+    (-) : BigInt -> BigInt -> BigInt
+    (-) a b = fromInt (toInt a - toInt b)
+
+    (*) : BigInt -> BigInt -> BigInt
+    (*) a b = fromInt (toInt a * toInt b)
+
+    1n = fromInt 1
+  }
+}
+"#;
+
+const RATIONAL_SOURCE: &str = r#"
+@no_prelude
+module aivi.std.number.rational = {
+  export Rational, gcdInt, normalize
+  export domain Rational
+
+  use aivi.std.core
+  use aivi.std.number.bigint (BigInt, fromInt, toInt, absInt)
+
+  BigInt = { sign: Int, limbs: List Int }
+  Rational = { num: BigInt, den: BigInt }
+
+  gcdInt : Int -> Int -> Int
+  gcdInt a b = if b == 0 then a else gcdInt b (a % b)
+
+  normalize : Rational -> Rational
+  normalize r = {
+    num = toInt r.num
+    den = toInt r.den
+    sign = if den < 0 then -1 else 1
+    absDen = absInt den
+    d = gcdInt (absInt num) absDen
+    {
+      num: fromInt ((num / d) * sign)
+      den: fromInt (absDen / d)
+    }
+  }
+
+  domain Rational over Rational = {
+    (+) : Rational -> Rational -> Rational
+    (+) a b = normalize {
+      num: fromInt (toInt a.num * toInt b.den + toInt b.num * toInt a.den)
+      den: fromInt (toInt a.den * toInt b.den)
+    }
+
+    (-) : Rational -> Rational -> Rational
+    (-) a b = normalize {
+      num: fromInt (toInt a.num * toInt b.den - toInt b.num * toInt a.den)
+      den: fromInt (toInt a.den * toInt b.den)
+    }
+
+    (*) : Rational -> Rational -> Rational
+    (*) a b = normalize {
+      num: fromInt (toInt a.num * toInt b.num)
+      den: fromInt (toInt a.den * toInt b.den)
+    }
+
+    (/) : Rational -> Rational -> Rational
+    (/) a b = normalize {
+      num: fromInt (toInt a.num * toInt b.den)
+      den: fromInt (toInt a.den * toInt b.num)
+    }
+  }
+}
+"#;
+
+const COMPLEX_SOURCE: &str = r#"
+@no_prelude
+module aivi.std.number.complex = {
+  export Complex, i
+  export domain Complex
+
+  use aivi.std.core
+
+  Complex = { re: Float, im: Float }
+
+  i : Complex
+  i = { re: 0.0, im: 1.0 }
+
+  domain Complex over Complex = {
+    (+) : Complex -> Complex -> Complex
+    (+) a b = { re: a.re + b.re, im: a.im + b.im }
+
+    (-) : Complex -> Complex -> Complex
+    (-) a b = { re: a.re - b.re, im: a.im - b.im }
+
+    (*) : Complex -> Complex -> Complex
+    (*) a b = {
+      re: a.re * b.re - a.im * b.im
+      im: a.re * b.im + a.im * b.re
+    }
+
+    (/) : Complex -> Float -> Complex
+    (/) z s = { re: z.re / s, im: z.im / s }
+  }
+}
+"#;
+
 const PRELUDE_SOURCE: &str = r#"
 @no_prelude
 module aivi.prelude = {
@@ -72,8 +211,24 @@ module aivi.prelude = {
 pub fn embedded_stdlib_modules() -> Vec<Module> {
     let mut modules = Vec::new();
     modules.extend(parse_embedded("aivi.std.core", CORE_SOURCE));
+    modules.extend(parse_embedded("aivi.std.number.bigint", BIGINT_SOURCE));
+    modules.extend(parse_embedded("aivi.std.number.rational", RATIONAL_SOURCE));
+    modules.extend(parse_embedded("aivi.std.number.complex", COMPLEX_SOURCE));
+    modules.extend(parse_embedded("aivi.std.number", NUMBER_FACADE_SOURCE));
     modules.extend(parse_embedded("aivi.prelude", PRELUDE_SOURCE));
     modules
+}
+
+pub fn embedded_stdlib_source(module_name: &str) -> Option<&'static str> {
+    match module_name {
+        "aivi.std.core" => Some(CORE_SOURCE),
+        "aivi.std.number" => Some(NUMBER_FACADE_SOURCE),
+        "aivi.std.number.bigint" => Some(BIGINT_SOURCE),
+        "aivi.std.number.rational" => Some(RATIONAL_SOURCE),
+        "aivi.std.number.complex" => Some(COMPLEX_SOURCE),
+        "aivi.prelude" => Some(PRELUDE_SOURCE),
+        _ => None,
+    }
 }
 
 fn parse_embedded(name: &str, source: &str) -> Vec<Module> {

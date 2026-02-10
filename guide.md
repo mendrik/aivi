@@ -79,6 +79,9 @@ aivi install path:../some-local-crate
 
 # Offline / no network
 aivi install serde@latest --no-fetch
+
+# Install embedded stdlib modules into src/
+aivi install aivi.std.number
 ```
 
 ## Editor support (LSP)

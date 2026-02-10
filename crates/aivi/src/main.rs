@@ -1,8 +1,8 @@
 use aivi::{
-    check_modules, check_types, collect_mcp_manifest, compile_rust, desugar_target, format_target,
-    kernel_target, load_module_diagnostics, load_modules, parse_target, render_diagnostics,
-    run_native, rust_ir_target, serve_mcp_stdio_with_policy, write_scaffold, AiviError,
-    CargoDepSpec, McpPolicy, ProjectKind,
+    check_modules, check_types, collect_mcp_manifest, compile_rust, desugar_target,
+    embedded_stdlib_source, format_target, kernel_target, load_module_diagnostics, load_modules,
+    parse_target, render_diagnostics, run_native, rust_ir_target, serve_mcp_stdio_with_policy,
+    write_scaffold, AiviError, CargoDepSpec, McpPolicy, ProjectKind,
 };
 use sha2::{Digest, Sha256};
 use std::env;
@@ -521,6 +521,10 @@ fn cmd_install(args: &[String]) -> Result<(), AiviError> {
         ));
     }
 
+    if install_stdlib_module(&root, &spec)? {
+        return Ok(());
+    }
+
     let dep =
         CargoDepSpec::parse(&spec).map_err(|err| AiviError::InvalidCommand(err.to_string()))?;
 
@@ -548,6 +552,31 @@ fn cmd_install(args: &[String]) -> Result<(), AiviError> {
     }
 
     Ok(())
+}
+
+fn install_stdlib_module(root: &Path, spec: &str) -> Result<bool, AiviError> {
+    let module_name = if spec.starts_with("aivi.") {
+        spec.to_string()
+    } else if spec.starts_with("std.") {
+        format!("aivi.{spec}")
+    } else {
+        return Ok(false);
+    };
+
+    let Some(source) = embedded_stdlib_source(&module_name) else {
+        return Ok(false);
+    };
+
+    let rel_path = module_name.replace('.', "/") + ".aivi";
+    let out_path = root.join("src").join(rel_path);
+    if out_path.exists() {
+        return Ok(true);
+    }
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(out_path, source)?;
+    Ok(true)
 }
 
 fn should_use_project_pipeline(args: &[String]) -> bool {
