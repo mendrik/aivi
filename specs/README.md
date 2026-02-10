@@ -74,31 +74,29 @@ A high-integrity functional language targeting WebAssembly.
 #### Math & Science
 46. [Vector](05_stdlib/01_math/05_vector.md)
 47. [Matrix](05_stdlib/01_math/09_matrix.md)
-48. [Complex](05_stdlib/01_math/10_complex.md)
-49. [Quaternion](05_stdlib/01_math/11_quaternion.md)
-50. [Rational & BigInt](05_stdlib/01_math/12_rational_bigint.md)
-51. [Probability](05_stdlib/01_math/13_probability.md)
-52. [FFT & Signal](05_stdlib/01_math/14_signal.md)
-53. [Geometry](05_stdlib/01_math/15_geometry.md)
-54. [Graph](05_stdlib/01_math/17_graph.md)
-55. [Linear Algebra](05_stdlib/01_math/18_linear_algebra.md)
+48. [Number (BigInt, Rational, Complex, Quaternion)](05_stdlib/01_math/10_number.md)
+49. [Probability](05_stdlib/01_math/13_probability.md)
+50. [FFT & Signal](05_stdlib/01_math/14_signal.md)
+51. [Geometry](05_stdlib/01_math/15_geometry.md)
+52. [Graph](05_stdlib/01_math/17_graph.md)
+53. [Linear Algebra](05_stdlib/01_math/18_linear_algebra.md)
 
 #### Chronos (Time)
-56. [Calendar](05_stdlib/02_chronos/02_calendar.md)
-57. [Duration](05_stdlib/02_chronos/03_duration.md)
+54. [Calendar](05_stdlib/02_chronos/02_calendar.md)
+55. [Duration](05_stdlib/02_chronos/03_duration.md)
 
 #### System & IO
-58. [File](05_stdlib/03_system/20_file.md)
-59. [Console](05_stdlib/03_system/21_console.md)
-60. [HTTP](05_stdlib/03_system/19_http.md)
-61. [Database](05_stdlib/03_system/23_database.md)
-62. [URL](05_stdlib/03_system/25_url.md)
-63. [Crypto](05_stdlib/03_system/22_crypto.md)
-64. [System](05_stdlib/03_system/25_system.md)
-65. [Log](05_stdlib/03_system/26_log.md)
+56. [File](05_stdlib/03_system/20_file.md)
+57. [Console](05_stdlib/03_system/21_console.md)
+58. [HTTP](05_stdlib/03_system/19_http.md)
+59. [Database](05_stdlib/03_system/23_database.md)
+60. [URL](05_stdlib/03_system/25_url.md)
+61. [Crypto](05_stdlib/03_system/22_crypto.md)
+62. [System](05_stdlib/03_system/25_system.md)
+63. [Log](05_stdlib/03_system/26_log.md)
 
 #### UI
-66. [Color](05_stdlib/04_ui/04_color.md)
+64. [Color](05_stdlib/04_ui/04_color.md)
 
 
 ## Building the Specification
@@ -115,4 +113,3 @@ Build static site:
 ```bash
 npm run docs:build
 ```
-

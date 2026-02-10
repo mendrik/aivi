@@ -80,30 +80,29 @@ A high-integrity functional language with a Rust-first compilation pipeline.
 #### Math & Science
 46. [Vector Domain](05_stdlib/01_math/05_vector)
 47. [Matrix Domain](05_stdlib/01_math/09_matrix)
-48. [Number Domains (BigInt, Rational, Complex)](05_stdlib/01_math/10_number)
-49. [Quaternion Domain](05_stdlib/01_math/11_quaternion)
-50. [Probability](05_stdlib/01_math/13_probability)
-51. [FFT & Signal](05_stdlib/01_math/14_signal)
-52. [Geometry Domain](05_stdlib/01_math/15_geometry)
-53. [Graph Domain](05_stdlib/01_math/17_graph)
-54. [Linear Algebra](05_stdlib/01_math/18_linear_algebra)
+48. [Number Domains (BigInt, Rational, Complex, Quaternion)](05_stdlib/01_math/10_number)
+49. [Probability](05_stdlib/01_math/13_probability)
+50. [FFT & Signal](05_stdlib/01_math/14_signal)
+51. [Geometry Domain](05_stdlib/01_math/15_geometry)
+52. [Graph Domain](05_stdlib/01_math/17_graph)
+53. [Linear Algebra](05_stdlib/01_math/18_linear_algebra)
 
 #### Chronos (Time)
-55. [Calendar Domain](05_stdlib/02_chronos/02_calendar)
-56. [Duration Domain](05_stdlib/02_chronos/03_duration)
+54. [Calendar Domain](05_stdlib/02_chronos/02_calendar)
+55. [Duration Domain](05_stdlib/02_chronos/03_duration)
 
 #### System & IO
-57. [File Domain](05_stdlib/03_system/20_file)
-58. [Console Domain](05_stdlib/03_system/21_console)
-59. [HTTP Domain](05_stdlib/03_system/19_http)
-60. [Database Domain](05_stdlib/03_system/23_database)
-62. [URL Domain](05_stdlib/03_system/25_url)
-63. [Crypto Domain](05_stdlib/03_system/22_crypto)
-64. [System Domain](05_stdlib/03_system/25_system)
-65. [Log Domain](05_stdlib/03_system/26_log)
+56. [File Domain](05_stdlib/03_system/20_file)
+57. [Console Domain](05_stdlib/03_system/21_console)
+58. [HTTP Domain](05_stdlib/03_system/19_http)
+59. [Database Domain](05_stdlib/03_system/23_database)
+60. [URL Domain](05_stdlib/03_system/25_url)
+61. [Crypto Domain](05_stdlib/03_system/22_crypto)
+62. [System Domain](05_stdlib/03_system/25_system)
+63. [Log Domain](05_stdlib/03_system/26_log)
 
 #### UI
-66. [Color Domain](05_stdlib/04_ui/04_color)
+64. [Color Domain](05_stdlib/04_ui/04_color)
 
 ### Execution & Concurrency
 

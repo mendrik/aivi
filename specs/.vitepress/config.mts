@@ -131,8 +131,7 @@ export default defineConfig({
             items: [
                 { text: 'Vector', link: '/05_stdlib/01_math/05_vector' },
                 { text: 'Matrix', link: '/05_stdlib/01_math/09_matrix' },
-                { text: 'Number (BigInt, Rational, Complex)', link: '/05_stdlib/01_math/10_number' },
-                { text: 'Quaternion', link: '/05_stdlib/01_math/11_quaternion' },
+                { text: 'Number (BigInt, Rational, Complex, Quaternion)', link: '/05_stdlib/01_math/10_number' },
                 { text: 'Probability', link: '/05_stdlib/01_math/13_probability' },
                 { text: 'FFT & Signal', link: '/05_stdlib/01_math/14_signal' },
                 { text: 'Geometry', link: '/05_stdlib/01_math/15_geometry' },
