@@ -1852,7 +1852,7 @@ fn build_http_server_record() -> Value {
             let effect = EffectValue::Thunk {
                 func: Arc::new(move |_| {
                     socket
-                        .send(ws_message.clone())
+                        .send(ws_message)
                         .map_err(|err| RuntimeError::Error(ws_error_value(err.message)))?;
                     Ok(Value::Unit)
                 }),

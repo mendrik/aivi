@@ -293,6 +293,11 @@ module aivi.std.network.http_server = {
 }
 "#;
 
+const NETWORK_FACADE_SOURCE: &str = r#"
+@no_prelude
+module aivi.std.network = { }
+"#;
+
 const PRELUDE_SOURCE: &str = r#"
 @no_prelude
 module aivi.prelude = {
@@ -363,6 +368,7 @@ pub fn embedded_stdlib_modules() -> Vec<Module> {
     modules.extend(parse_embedded("aivi.std.number.rational", RATIONAL_SOURCE));
     modules.extend(parse_embedded("aivi.std.number.complex", COMPLEX_SOURCE));
     modules.extend(parse_embedded("aivi.std.number", NUMBER_FACADE_SOURCE));
+    modules.extend(parse_embedded("aivi.std.network", NETWORK_FACADE_SOURCE));
     modules.extend(parse_embedded(
         "aivi.std.network.http_server",
         NETWORK_HTTP_SERVER_SOURCE,
@@ -385,6 +391,7 @@ pub fn embedded_stdlib_source(module_name: &str) -> Option<&'static str> {
         "aivi.std.number.rational" => Some(RATIONAL_SOURCE),
         "aivi.std.number.complex" => Some(COMPLEX_SOURCE),
         "aivi.prelude" => Some(PRELUDE_SOURCE),
+        "aivi.std.network" => Some(NETWORK_FACADE_SOURCE),
         "aivi.std.network.http_server" => Some(NETWORK_HTTP_SERVER_SOURCE),
         _ => None,
     }
