@@ -34,7 +34,7 @@ fn write_json_if_changed(path: &Path, contents: String) -> Result<(), Box<dyn st
 }
 
 fn keyword_regex(keywords: &[&str]) -> String {
-    format!("\\\\b({})\\\\b", keywords.join("|"))
+    format!(r"\b({})\b", keywords.join("|"))
 }
 
 fn regex_escape(text: &str) -> String {
@@ -181,32 +181,32 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
-        "comment": {
-          "patterns": [
-            {
-              "name": "comment.line.double-slash.aivi",
-              "match": "//.*$"
-            },
-            {
-              "name": "comment.block.aivi",
-              "begin": "/\\\\*",
-              "end": "\\\\*/"
-            }
-          ]
-        },
-        "string": {
-          "patterns": [
-            {
-              "name": "string.quoted.double.aivi",
-              "begin": "\"",
-              "end": "\"",
-              "patterns": [
-                {
-                  "name": "constant.character.escape.aivi",
-                  "match": "\\\\([\\\\\\\\\\\"nrt]|u\\\\{[0-9a-fA-F]+\\\\})"
-                }
-              ]
-            },
+	        "comment": {
+	          "patterns": [
+	            {
+	              "name": "comment.line.double-slash.aivi",
+	              "match": "//.*$"
+	            },
+	            {
+	              "name": "comment.block.aivi",
+	              "begin": r"/\*",
+	              "end": r"\*/"
+	            }
+	          ]
+	        },
+	        "string": {
+	          "patterns": [
+	            {
+	              "name": "string.quoted.double.aivi",
+	              "begin": "\"",
+	              "end": "\"",
+	              "patterns": [
+	                {
+	                  "name": "constant.character.escape.aivi",
+	                  "match": r#"\\([\\\"nrt]|u\{[0-9a-fA-F]+\})"#
+	                }
+	              ]
+	            },
             {
               "name": "string.quoted.other.backtick.aivi",
               "begin": "`",
@@ -225,22 +225,22 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
-        "number": {
-          "patterns": [
-            {
-              "name": "constant.numeric.aivi",
-              "match": "\\\\b\\\\d+(?:\\\\.\\\\d+)?\\\\b"
-            }
-          ]
-        },
-        "decorator": {
-          "patterns": [
-            {
-              "name": "meta.annotation.decorator.aivi",
-              "match": "@[a-z][A-Za-z0-9_]*\\\\b"
-            }
-          ]
-        },
+	        "number": {
+	          "patterns": [
+	            {
+	              "name": "constant.numeric.aivi",
+	              "match": r"\b\d+(?:\.\d+)?\b"
+	            }
+	          ]
+	        },
+	        "decorator": {
+	          "patterns": [
+	            {
+	              "name": "meta.annotation.decorator.aivi",
+	              "match": r"@[a-z][A-Za-z0-9_]*\b"
+	            }
+	          ]
+	        },
         "boolean": {
           "patterns": [
             {
@@ -269,14 +269,14 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
-        "type": {
-          "patterns": [
-            {
-              "name": "entity.name.type.aivi",
-              "match": "\\\\b[A-Z][A-Za-z0-9_]*\\\\b"
-            }
-          ]
-        },
+	        "type": {
+	          "patterns": [
+	            {
+	              "name": "entity.name.type.aivi",
+	              "match": r"\b[A-Z][A-Za-z0-9_]*\b"
+	            }
+	          ]
+	        },
         "operator": {
           "patterns": [
             {
@@ -300,8 +300,8 @@ fn ebnf_tmlanguage() -> serde_json::Value {
         },
         {
           "name": "comment.block.ebnf",
-          "begin": "/\\\\*",
-          "end": "\\\\*/"
+          "begin": r"/\*",
+          "end": r"\*/"
         },
         {
           "name": "string.quoted.single.ebnf",
@@ -331,7 +331,7 @@ fn ebnf_tmlanguage() -> serde_json::Value {
         },
         {
           "name": "keyword.operator.choice.ebnf",
-          "match": "\\\\|"
+          "match": r"\|"
         },
         {
           "name": "keyword.operator.quantifier.ebnf",
@@ -339,21 +339,20 @@ fn ebnf_tmlanguage() -> serde_json::Value {
         },
         {
           "name": "punctuation.section.group.begin.ebnf",
-          "match": "[\\\\[\\\\(\\\\{]"
+          "match": r"[\[\(\{]"
         },
         {
           "name": "punctuation.section.group.end.ebnf",
-          "match": "[\\\\]\\\\)\\\\}]"
+          "match": r"[\]\)\}]"
         },
         {
           "name": "constant.numeric.ebnf",
-          "match": "\\\\b\\\\d+\\\\b"
+          "match": r"\b\d+\b"
         },
         {
           "name": "entity.name.nonterminal.ebnf",
-          "match": "\\\\b[A-Z][A-Za-z0-9_]*\\\\b"
+          "match": r"\b[A-Z][A-Za-z0-9_]*\b"
         }
       ]
     })
 }
-

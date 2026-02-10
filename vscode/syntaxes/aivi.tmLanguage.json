@@ -37,7 +37,7 @@
     "boolean": {
       "patterns": [
         {
-          "match": "\\\\b(True|False)\\\\b",
+          "match": "\\b(True|False)\\b",
           "name": "constant.language.boolean.aivi"
         }
       ]
@@ -49,8 +49,8 @@
           "name": "comment.line.double-slash.aivi"
         },
         {
-          "begin": "/\\\\*",
-          "end": "\\\\*/",
+          "begin": "/\\*",
+          "end": "\\*/",
           "name": "comment.block.aivi"
         }
       ]
@@ -58,7 +58,7 @@
     "constructor": {
       "patterns": [
         {
-          "match": "\\\\b(None|Some|Ok|Err)\\\\b",
+          "match": "\\b(None|Some|Ok|Err)\\b",
           "name": "support.constant.aivi"
         }
       ]
@@ -66,7 +66,7 @@
     "decorator": {
       "patterns": [
         {
-          "match": "@[a-z][A-Za-z0-9_]*\\\\b",
+          "match": "@[a-z][A-Za-z0-9_]*\\b",
           "name": "meta.annotation.decorator.aivi"
         }
       ]
@@ -74,11 +74,11 @@
     "keyword": {
       "patterns": [
         {
-          "match": "\\\\b(do|effect|generate|resource|if|then|else|when|yield|loop|recurse)\\\\b",
+          "match": "\\b(do|effect|generate|resource|if|then|else|when|yield|loop|recurse)\\b",
           "name": "keyword.control.aivi"
         },
         {
-          "match": "\\\\b(module|export|use|as|hiding|domain|class|instance|type|over)\\\\b",
+          "match": "\\b(module|export|use|as|hiding|domain|class|instance|type|over)\\b",
           "name": "keyword.other.aivi"
         }
       ]
@@ -86,7 +86,7 @@
     "number": {
       "patterns": [
         {
-          "match": "\\\\b\\\\d+(?:\\\\.\\\\d+)?\\\\b",
+          "match": "\\b\\d+(?:\\.\\d+)?\\b",
           "name": "constant.numeric.aivi"
         }
       ]
@@ -231,7 +231,7 @@
           "name": "string.quoted.double.aivi",
           "patterns": [
             {
-              "match": "\\\\([\\\\\\\\\\\"nrt]|u\\\\{[0-9a-fA-F]+\\\\})",
+              "match": "\\\\([\\\\\\\"nrt]|u\\{[0-9a-fA-F]+\\})",
               "name": "constant.character.escape.aivi"
             }
           ]
@@ -257,7 +257,7 @@
     "type": {
       "patterns": [
         {
-          "match": "\\\\b[A-Z][A-Za-z0-9_]*\\\\b",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
           "name": "entity.name.type.aivi"
         }
       ]

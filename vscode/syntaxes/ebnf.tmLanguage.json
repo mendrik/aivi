@@ -6,8 +6,8 @@
       "name": "comment.line.double-slash.ebnf"
     },
     {
-      "begin": "/\\\\*",
-      "end": "\\\\*/",
+      "begin": "/\\*",
+      "end": "\\*/",
       "name": "comment.block.ebnf"
     },
     {
@@ -37,7 +37,7 @@
       "name": "keyword.operator.definition.ebnf"
     },
     {
-      "match": "\\\\|",
+      "match": "\\|",
       "name": "keyword.operator.choice.ebnf"
     },
     {
@@ -45,19 +45,19 @@
       "name": "keyword.operator.quantifier.ebnf"
     },
     {
-      "match": "[\\\\[\\\\(\\\\{]",
+      "match": "[\\[\\(\\{]",
       "name": "punctuation.section.group.begin.ebnf"
     },
     {
-      "match": "[\\\\]\\\\)\\\\}]",
+      "match": "[\\]\\)\\}]",
       "name": "punctuation.section.group.end.ebnf"
     },
     {
-      "match": "\\\\b\\\\d+\\\\b",
+      "match": "\\b\\d+\\b",
       "name": "constant.numeric.ebnf"
     },
     {
-      "match": "\\\\b[A-Z][A-Za-z0-9_]*\\\\b",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
       "name": "entity.name.nonterminal.ebnf"
     }
   ],
