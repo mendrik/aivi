@@ -95,8 +95,11 @@ fn aivi_tmlanguage() -> serde_json::Value {
       "scopeName": "source.aivi",
       "patterns": [
         { "include": "#comment" },
+        { "include": "#type_signature" },
         { "include": "#sigil" },
         { "include": "#string" },
+        { "include": "#color" },
+        { "include": "#unit" },
         { "include": "#number" },
         { "include": "#decorator" },
         { "include": "#placeholder" },
@@ -108,14 +111,44 @@ fn aivi_tmlanguage() -> serde_json::Value {
         { "include": "#arrow" },
         { "include": "#cmp" },
         { "include": "#question" },
+        { "include": "#bracket" },
         { "include": "#operator" }
       ],
       "repository": {
+        "type_signature": {
+          "patterns": [
+            {
+              "name": "meta.type.signature.aivi",
+              "begin": "^\\s*[a-z][A-Za-z0-9_]*\\s+:\\s+",
+              "end": "$"
+            }
+          ]
+        },
         "placeholder": {
           "patterns": [
             {
               "name": "variable.language.placeholder.aivi",
               "match": "\\b_\\b"
+            }
+          ]
+        },
+        "color": {
+          "patterns": [
+            {
+              "name": "constant.other.color.aivi",
+              "match": "#[0-9a-fA-F]{6}\\b"
+            }
+          ]
+        },
+        "unit": {
+          "patterns": [
+            {
+              "name": "meta.number.unit.aivi",
+              "match": "\\b(\\d+(?:\\.\\d+)?)([a-z][A-Za-z0-9_]*)\\b",
+              "captures": {
+                "1": { "name": "constant.numeric.aivi" },
+                "2": { "name": "constant.other.unit.aivi" }
+              }
             }
           ]
         },
@@ -148,6 +181,14 @@ fn aivi_tmlanguage() -> serde_json::Value {
             {
               "name": "keyword.operator.comparison.aivi",
               "match": r"(==|!=|<=|>=|=|<|>)"
+            }
+          ]
+        },
+        "bracket": {
+          "patterns": [
+            {
+              "name": "punctuation.section.bracket.aivi",
+              "match": r"[\[\]\(\)\{\}]"
             }
           ]
         },
@@ -268,6 +309,8 @@ fn aivi_tmlanguage() -> serde_json::Value {
                     { "include": "#comment" },
                     { "include": "#sigil" },
                     { "include": "#string" },
+                    { "include": "#color" },
+                    { "include": "#unit" },
                     { "include": "#number" },
                     { "include": "#decorator" },
                     { "include": "#placeholder" },
@@ -279,6 +322,7 @@ fn aivi_tmlanguage() -> serde_json::Value {
                     { "include": "#arrow" },
                     { "include": "#cmp" },
                     { "include": "#question" },
+                    { "include": "#bracket" },
                     { "include": "#operator" }
                   ]
                 }

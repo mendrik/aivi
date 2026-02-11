@@ -1,6 +1,6 @@
 use aivi::{lex_cst, syntax, CstToken};
 use tower_lsp::lsp_types::{
-    SemanticToken, SemanticTokenType, SemanticTokens, SemanticTokensLegend,
+    SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens, SemanticTokensLegend,
 };
 
 use crate::backend::Backend;
@@ -18,6 +18,13 @@ impl Backend {
     pub(super) const SEM_TOKEN_COMMENT: u32 = 6;
     pub(super) const SEM_TOKEN_OPERATOR: u32 = 7;
     pub(super) const SEM_TOKEN_DECORATOR: u32 = 8;
+    pub(super) const SEM_TOKEN_ARROW: u32 = 9;
+    pub(super) const SEM_TOKEN_PIPE: u32 = 10;
+    pub(super) const SEM_TOKEN_BRACKET: u32 = 11;
+    pub(super) const SEM_TOKEN_UNIT: u32 = 12;
+    pub(super) const SEM_TOKEN_SIGIL: u32 = 13;
+
+    pub(super) const SEM_MOD_SIGNATURE: u32 = 0;
 
     pub(super) fn semantic_tokens_legend() -> SemanticTokensLegend {
         SemanticTokensLegend {
@@ -31,9 +38,26 @@ impl Backend {
                 SemanticTokenType::COMMENT,
                 SemanticTokenType::OPERATOR,
                 SemanticTokenType::DECORATOR,
+                SemanticTokenType::new("aivi.arrow"),
+                SemanticTokenType::new("aivi.pipe"),
+                SemanticTokenType::new("aivi.bracket"),
+                SemanticTokenType::new("aivi.unit"),
+                SemanticTokenType::new("aivi.sigil"),
             ],
-            token_modifiers: Vec::new(),
+            token_modifiers: vec![SemanticTokenModifier::new("signature")],
         }
+    }
+
+    fn is_arrow_symbol(symbol: &str) -> bool {
+        matches!(symbol, "=>" | "<-" | "->")
+    }
+
+    fn is_pipe_symbol(symbol: &str) -> bool {
+        matches!(symbol, "|>" | "<|" | "|")
+    }
+
+    fn is_bracket_symbol(symbol: &str) -> bool {
+        matches!(symbol, "(" | ")" | "[" | "]" | "{" | "}")
     }
 
     fn is_operator_symbol(symbol: &str) -> bool {
@@ -60,6 +84,7 @@ impl Backend {
                 | "=>"
                 | "|>"
                 | "<|"
+                | "|"
                 | "::"
                 | ".."
                 | "..."
@@ -76,11 +101,17 @@ impl Backend {
         match token.kind.as_str() {
             "comment" => Some(Self::SEM_TOKEN_COMMENT),
             "string" => Some(Self::SEM_TOKEN_STRING),
-            "sigil" => Some(Self::SEM_TOKEN_STRING),
+            "sigil" => Some(Self::SEM_TOKEN_SIGIL),
             "number" => Some(Self::SEM_TOKEN_NUMBER),
             "symbol" => {
                 if token.text == "@" {
                     Some(Self::SEM_TOKEN_DECORATOR)
+                } else if Self::is_arrow_symbol(&token.text) {
+                    Some(Self::SEM_TOKEN_ARROW)
+                } else if Self::is_pipe_symbol(&token.text) {
+                    Some(Self::SEM_TOKEN_PIPE)
+                } else if Self::is_bracket_symbol(&token.text) {
+                    Some(Self::SEM_TOKEN_BRACKET)
                 } else if Self::is_operator_symbol(&token.text) {
                     Some(Self::SEM_TOKEN_OPERATOR)
                 } else {
@@ -88,6 +119,9 @@ impl Backend {
                 }
             }
             "ident" => {
+                if prev.is_some_and(|prev| Self::is_unit_suffix(prev, token)) {
+                    return Some(Self::SEM_TOKEN_UNIT);
+                }
                 if token.text == "_" {
                     return Some(Self::SEM_TOKEN_KEYWORD);
                 }
@@ -118,6 +152,50 @@ impl Backend {
         }
     }
 
+    fn is_unit_suffix(prev: &CstToken, token: &CstToken) -> bool {
+        if prev.kind != "number" || token.kind != "ident" {
+            return false;
+        }
+        if prev.span.end.line != token.span.start.line {
+            return false;
+        }
+        prev.span.end.column.saturating_add(1) == token.span.start.column
+    }
+
+    fn signature_lines(tokens: &[CstToken]) -> std::collections::HashSet<u32> {
+        let mut lines = std::collections::HashSet::new();
+        let mut index = 0;
+        while index < tokens.len() {
+            let line = tokens[index].span.start.line;
+            let mut sig_tokens: Vec<usize> = Vec::new();
+            while index < tokens.len() && tokens[index].span.start.line == line {
+                if tokens[index].kind != "whitespace" {
+                    sig_tokens.push(index);
+                }
+                index += 1;
+            }
+            if sig_tokens.len() < 2 {
+                continue;
+            }
+            let first = &tokens[sig_tokens[0]];
+            let second = &tokens[sig_tokens[1]];
+            if first.kind != "ident" || second.kind != "symbol" || second.text != ":" {
+                continue;
+            }
+            let Some(first_ch) = first.text.chars().next() else {
+                continue;
+            };
+            if !first_ch.is_ascii_lowercase() {
+                continue;
+            }
+            if first.span.end.column.saturating_add(1) == second.span.start.column {
+                continue;
+            }
+            lines.insert(line.saturating_sub(1) as u32);
+        }
+        lines
+    }
+
     fn push_semantic_token(
         data: &mut Vec<SemanticToken>,
         last_line: &mut u32,
@@ -126,6 +204,7 @@ impl Backend {
         start: u32,
         len: u32,
         token_type: u32,
+        token_modifiers_bitset: u32,
     ) {
         if len == 0 {
             return;
@@ -143,7 +222,7 @@ impl Backend {
             delta_start,
             length: len,
             token_type,
-            token_modifiers_bitset: 0,
+            token_modifiers_bitset,
         });
 
         *last_line = line;
@@ -155,6 +234,7 @@ impl Backend {
         data: &mut Vec<SemanticToken>,
         last_line: &mut u32,
         last_start: &mut u32,
+        signature_lines: &std::collections::HashSet<u32>,
     ) -> bool {
         if token.kind != "string" {
             return false;
@@ -235,6 +315,11 @@ impl Backend {
             any = true;
 
             if interp_open > last_text_start {
+                let modifiers = if signature_lines.contains(&line0) {
+                    1u32 << Self::SEM_MOD_SIGNATURE
+                } else {
+                    0
+                };
                 Self::push_semantic_token(
                     data,
                     last_line,
@@ -243,9 +328,15 @@ impl Backend {
                     col0 + last_text_start as u32,
                     (interp_open - last_text_start) as u32,
                     Self::SEM_TOKEN_STRING,
+                    modifiers,
                 );
             }
 
+            let modifiers = if signature_lines.contains(&line0) {
+                1u32 << Self::SEM_MOD_SIGNATURE
+            } else {
+                0
+            };
             Self::push_semantic_token(
                 data,
                 last_line,
@@ -254,6 +345,7 @@ impl Backend {
                 col0 + interp_open as u32,
                 1,
                 Self::SEM_TOKEN_OPERATOR,
+                modifiers,
             );
 
             let expr_start = interp_open + 1;
@@ -291,13 +383,24 @@ impl Backend {
                         .column
                         .saturating_sub(expr_token.span.start.column)
                         .saturating_add(1) as u32;
+                    let modifiers = if signature_lines.contains(&line) {
+                        1u32 << Self::SEM_MOD_SIGNATURE
+                    } else {
+                        0
+                    };
 
                     Self::push_semantic_token(
                         data, last_line, last_start, line, start, len, token_type,
+                        modifiers,
                     );
                 }
             }
 
+            let modifiers = if signature_lines.contains(&line0) {
+                1u32 << Self::SEM_MOD_SIGNATURE
+            } else {
+                0
+            };
             Self::push_semantic_token(
                 data,
                 last_line,
@@ -306,6 +409,7 @@ impl Backend {
                 col0 + interp_close as u32,
                 1,
                 Self::SEM_TOKEN_OPERATOR,
+                modifiers,
             );
 
             last_text_start = j;
@@ -313,6 +417,11 @@ impl Backend {
         }
 
         if any && last_text_start < chars.len() {
+            let modifiers = if signature_lines.contains(&line0) {
+                1u32 << Self::SEM_MOD_SIGNATURE
+            } else {
+                0
+            };
             Self::push_semantic_token(
                 data,
                 last_line,
@@ -321,6 +430,7 @@ impl Backend {
                 col0 + last_text_start as u32,
                 (chars.len() - last_text_start) as u32,
                 Self::SEM_TOKEN_STRING,
+                modifiers,
             );
         }
 
@@ -339,6 +449,7 @@ impl Backend {
         let mut data = Vec::new();
         let mut last_line = 0u32;
         let mut last_start = 0u32;
+        let signature_lines = Self::signature_lines(&tokens);
 
         for (position, token_index) in significant.iter().copied().enumerate() {
             let token = &tokens[token_index];
@@ -353,6 +464,7 @@ impl Backend {
                 &mut data,
                 &mut last_line,
                 &mut last_start,
+                &signature_lines,
             ) {
                 continue;
             }
@@ -369,6 +481,11 @@ impl Backend {
                 .column
                 .saturating_sub(token.span.start.column)
                 .saturating_add(1) as u32;
+            let modifiers = if signature_lines.contains(&line) {
+                1u32 << Self::SEM_MOD_SIGNATURE
+            } else {
+                0
+            };
             Self::push_semantic_token(
                 &mut data,
                 &mut last_line,
@@ -377,6 +494,7 @@ impl Backend {
                 start,
                 len,
                 token_type,
+                modifiers,
             );
         }
 

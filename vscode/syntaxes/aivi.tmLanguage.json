@@ -6,10 +6,19 @@
       "include": "#comment"
     },
     {
+      "include": "#type_signature"
+    },
+    {
       "include": "#sigil"
     },
     {
       "include": "#string"
+    },
+    {
+      "include": "#color"
+    },
+    {
+      "include": "#unit"
     },
     {
       "include": "#number"
@@ -45,6 +54,9 @@
       "include": "#question"
     },
     {
+      "include": "#bracket"
+    },
+    {
       "include": "#operator"
     }
   ],
@@ -65,11 +77,27 @@
         }
       ]
     },
+    "bracket": {
+      "patterns": [
+        {
+          "match": "[\\[\\]\\(\\)\\{\\}]",
+          "name": "punctuation.section.bracket.aivi"
+        }
+      ]
+    },
     "cmp": {
       "patterns": [
         {
           "match": "(==|!=|<=|>=|=|<|>)",
           "name": "keyword.operator.comparison.aivi"
+        }
+      ]
+    },
+    "color": {
+      "patterns": [
+        {
+          "match": "#[0-9a-fA-F]{6}\\b",
+          "name": "constant.other.color.aivi"
         }
       ]
     },
@@ -314,6 +342,12 @@
                   "include": "#string"
                 },
                 {
+                  "include": "#color"
+                },
+                {
+                  "include": "#unit"
+                },
+                {
                   "include": "#number"
                 },
                 {
@@ -347,6 +381,9 @@
                   "include": "#question"
                 },
                 {
+                  "include": "#bracket"
+                },
+                {
                   "include": "#operator"
                 }
               ]
@@ -376,6 +413,31 @@
         {
           "match": "\\b[A-Z][A-Za-z0-9_]*\\b",
           "name": "entity.name.type.aivi"
+        }
+      ]
+    },
+    "type_signature": {
+      "patterns": [
+        {
+          "begin": "^\\s*[a-z][A-Za-z0-9_]*\\s+:\\s+",
+          "end": "$",
+          "name": "meta.type.signature.aivi"
+        }
+      ]
+    },
+    "unit": {
+      "patterns": [
+        {
+          "captures": {
+            "1": {
+              "name": "constant.numeric.aivi"
+            },
+            "2": {
+              "name": "constant.other.unit.aivi"
+            }
+          },
+          "match": "\\b(\\d+(?:\\.\\d+)?)([a-z][A-Za-z0-9_]*)\\b",
+          "name": "meta.number.unit.aivi"
         }
       ]
     }
