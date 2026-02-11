@@ -19,10 +19,9 @@ class Setoid A = {
 ### Ord
 An `Ord` must be a `Setoid` and have a [total](https://en.wikipedia.org/wiki/Total_order) ordering.
 ```aivi
-class Ord A = 
-  Setoid A & {
-    lte: A -> A -> Bool
-  }
+class Ord A = {
+  lte: A -> A -> Bool
+}
 ```
 
 ## 2. Monoids and Semigroups
@@ -38,19 +37,17 @@ class Semigroup A = {
 ### Monoid
 A `Monoid` must be a `Semigroup` and have an `empty` value.
 ```aivi
-class Monoid A = 
-  Semigroup A & {
-    empty: A
-  }
+class Monoid A = {
+  empty: A
+}
 ```
 
 ### Group
 A `Group` must be a `Monoid` and have an `invert` operation.
 ```aivi
-class Group A = 
-  Monoid A & {
-    invert: A -> A
-  }
+class Group A = {
+  invert: A -> A
+}
 ```
 
 ## 3. Categories
@@ -64,10 +61,9 @@ class Semigroupoid (F * *) = {
 
 ### Category
 ```aivi
-class Category (F * *) = 
-  Semigroupoid F & {
-    id: F A A
-  }
+class Category (F * *) = {
+  id: F A A
+}
 ```
 
 ## 4. Functional Mappings
@@ -81,32 +77,31 @@ class Functor (F *) = {
 
 ### Apply
 ```aivi
-class Apply (F *) = 
-  Functor F & {
-    ap: F (A -> B) -> F A -> F B
-  }
+class Apply (F *) = {
+  ap: F (A -> B) -> F A -> F B
+}
 ```
 
 ### Applicative
 ```aivi
-class Applicative (F *) = 
-  Apply F & {
-    of: A -> F A
-  }
+class Applicative (F *) = {
+  of: A -> F A
+}
 ```
 
 ### Chain
 ```aivi
 class Chain (F *) = 
-  Apply F & {
+  {
     chain: (A -> F B) -> F A -> F B
   }
 ```
 
 ### Monad
 ```aivi
-class Monad (M *) = 
-  Applicative M & Chain M
+class Monad (M *) = {
+  __monad: Unit
+}
 ```
 
 ## 5. Folds and Traversals
@@ -120,10 +115,9 @@ class Foldable (F *) = {
 
 ### Traversable
 ```aivi
-class Traversable (T *) = 
-  Functor T & Foldable T & {
-    traverse: (Applicative F) => (A -> F B) -> T A -> F (T B)
-  }
+class Traversable (T *) = {
+  traverse: (A -> F B) -> T A -> F (T B)
+}
 ```
 
 ## 6. Higher-Order Mappings

@@ -42,6 +42,6 @@ store2 = store <| {
 }
 
 store3 = store2 <| {
-  items[price > 15].price: _ - 2
+  items[price > 15].price: _ -2
   items[price > 15].active: True
 }

@@ -377,20 +377,10 @@ pub fn format_text(content: &str) -> String {
         let first = first_code_index(&lines[i].tokens);
         if let Some(first_idx) = first {
             if lines[i].top_context == Some(ContextKind::Effect) {
-                // Effect bind alignment groups: consecutive `ident <- ...` lines, unbroken.
-                let (is_bind, lhs_len) = {
-                    let t0 = lines[i].tokens.get(first_idx);
-                    let t1 = lines[i].tokens.get(first_idx + 1);
-                    let ok = matches!((t0, t1), (Some(a), Some(b)) if a.kind == "ident" && (a.text == "_" || a.kind == "ident") && b.text == "<-");
-                    if ok {
-                        (true, lines[i].tokens[first_idx].text.len())
-                    } else {
-                        (false, 0)
-                    }
-                };
-                if is_bind {
+                // Effect bind alignment groups: consecutive `<-` lines, unbroken.
+                if find_top_level_token(&lines[i].tokens, "<-", first_idx).is_some() {
                     let mut j = i;
-                    let mut max_lhs = lhs_len;
+                    let mut max_lhs = 0usize;
                     while j < lines.len() {
                         if lines[j].tokens.is_empty() || lines[j].degraded {
                             break;
@@ -402,13 +392,14 @@ pub fn format_text(content: &str) -> String {
                             Some(v) => v,
                             None => break,
                         };
-                        let t0 = lines[j].tokens.get(first_idx_j);
-                        let t1 = lines[j].tokens.get(first_idx_j + 1);
-                        let ok = matches!((t0, t1), (Some(a), Some(b)) if a.kind == "ident" && (a.text == "_" || a.kind == "ident") && b.text == "<-");
-                        if !ok {
+                        let Some(arrow_idx) =
+                            find_top_level_token(&lines[j].tokens, "<-", first_idx_j)
+                        else {
                             break;
-                        }
-                        max_lhs = max_lhs.max(lines[j].tokens[first_idx_j].text.len());
+                        };
+                        let lhs_tokens = &lines[j].tokens[first_idx_j..arrow_idx];
+                        let lhs_str = format_tokens_simple(lhs_tokens).trim().to_string();
+                        max_lhs = max_lhs.max(lhs_str.len());
                         j += 1;
                     }
                     if j - i >= 2 {
@@ -528,20 +519,23 @@ pub fn format_text(content: &str) -> String {
         };
 
         if let Some(max_lhs) = state.effect_align_lhs {
-            // `x <- expr` alignment
-            let lhs = state.tokens[first_idx].text.as_str();
-            let rhs_tokens = &state.tokens[first_idx + 2..];
-            let rhs = format_tokens_simple(rhs_tokens).trim().to_string();
-            let spaces = (max_lhs.saturating_sub(lhs.len())) + 1;
-            out.push_str(&indent);
-            out.push_str(lhs);
-            out.push_str(&" ".repeat(spaces));
-            out.push_str("<-");
-            if !rhs.is_empty() {
-                out.push(' ');
-                out.push_str(&rhs);
+            if let Some(arrow_idx) = find_top_level_token(&state.tokens, "<-", first_idx) {
+                // `<-` alignment across consecutive effect lines.
+                let lhs_tokens = &state.tokens[first_idx..arrow_idx];
+                let rhs_tokens = &state.tokens[arrow_idx + 1..];
+                let lhs = format_tokens_simple(lhs_tokens).trim().to_string();
+                let rhs = format_tokens_simple(rhs_tokens).trim().to_string();
+                let spaces = (max_lhs.saturating_sub(lhs.len())) + 1;
+                out.push_str(&indent);
+                out.push_str(&lhs);
+                out.push_str(&" ".repeat(spaces));
+                out.push_str("<-");
+                if !rhs.is_empty() {
+                    out.push(' ');
+                    out.push_str(&rhs);
+                }
+                continue;
             }
-            continue;
         }
 
         if let Some(max_pat) = state.arm_align_pat {
