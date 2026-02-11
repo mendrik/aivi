@@ -170,3 +170,90 @@ fn concurrent_par_observes_parent_cancellation() {
         .expect("par returned");
     assert!(matches!(result, Err(RuntimeError::Cancelled)));
 }
+
+#[test]
+fn text_bytes_roundtrip() {
+    let globals = Env::new(None);
+    register_builtins(&globals);
+    let ctx = Arc::new(RuntimeContext { globals });
+    let cancel = CancelToken::root();
+    let mut runtime = Runtime::new(ctx, cancel);
+
+    let text_record = runtime.ctx.globals.get("text").expect("text record");
+    let Value::Record(fields) = text_record else {
+        panic!("text record missing");
+    };
+
+    let length = fields.get("length").expect("length").clone();
+    let len_value = runtime
+        .apply(length, Value::Text("hello".to_string()))
+        .unwrap_or_else(|_| panic!("length applied"));
+    assert!(matches!(len_value, Value::Int(5)));
+
+    let to_bytes = fields.get("toBytes").expect("toBytes").clone();
+    let utf8 = Value::Constructor {
+        name: "Utf8".to_string(),
+        args: Vec::new(),
+    };
+    let to_bytes = runtime
+        .apply(to_bytes, utf8)
+        .unwrap_or_else(|_| panic!("toBytes arg1"));
+    let bytes = runtime
+        .apply(to_bytes, Value::Text("ping".to_string()))
+        .unwrap_or_else(|_| panic!("toBytes arg2"));
+    let Value::Bytes(bytes) = bytes else {
+        panic!("expected Bytes");
+    };
+    assert_eq!(bytes.as_ref(), b"ping");
+
+    let from_bytes = fields.get("fromBytes").expect("fromBytes").clone();
+    let utf8 = Value::Constructor {
+        name: "Utf8".to_string(),
+        args: Vec::new(),
+    };
+    let from_bytes = runtime
+        .apply(from_bytes, utf8)
+        .unwrap_or_else(|_| panic!("fromBytes arg1"));
+    let decoded = runtime
+        .apply(from_bytes, Value::Bytes(bytes))
+        .unwrap_or_else(|_| panic!("fromBytes arg2"));
+    let Value::Constructor { name, args } = decoded else {
+        panic!("expected Result constructor");
+    };
+    assert_eq!(name, "Ok");
+    assert_eq!(args.len(), 1);
+    assert!(matches!(args[0], Value::Text(ref value) if value == "ping"));
+}
+
+#[test]
+fn regex_compile_and_match() {
+    let globals = Env::new(None);
+    register_builtins(&globals);
+    let ctx = Arc::new(RuntimeContext { globals });
+    let cancel = CancelToken::root();
+    let mut runtime = Runtime::new(ctx, cancel);
+
+    let regex_record = runtime.ctx.globals.get("regex").expect("regex record");
+    let Value::Record(fields) = regex_record else {
+        panic!("regex record missing");
+    };
+
+    let compile = fields.get("compile").expect("compile").clone();
+    let compiled = runtime
+        .apply(compile, Value::Text("[a-z]+".to_string()))
+        .unwrap_or_else(|_| panic!("compile applied"));
+    let Value::Constructor { name, args } = compiled else {
+        panic!("expected Result");
+    };
+    assert_eq!(name, "Ok");
+    let regex = args[0].clone();
+
+    let test = fields.get("test").expect("test").clone();
+    let test = runtime
+        .apply(test, regex)
+        .unwrap_or_else(|_| panic!("test applied"));
+    let verdict = runtime
+        .apply(test, Value::Text("caa".to_string()))
+        .unwrap_or_else(|_| panic!("test value"));
+    assert!(matches!(verdict, Value::Bool(true)));
+}

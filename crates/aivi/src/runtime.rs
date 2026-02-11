@@ -3,6 +3,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use chrono::{Datelike, NaiveDate};
+use regex::RegexBuilder;
+use url::Url;
+
 use rudo_gc::GcMutex;
 
 use crate::hir::{
@@ -210,6 +214,7 @@ impl Runtime {
         if let Some(value) = cached.clone() {
             return Ok(value);
         }
+        drop(cached);
         if thunk.in_progress.swap(true, Ordering::SeqCst) {
             return Err(RuntimeError::Message(
                 "recursive definition detected".to_string(),
@@ -263,11 +268,58 @@ impl Runtime {
             HirExpr::LitSigil {
                 tag, body, flags, ..
             } => {
-                let mut map = HashMap::new();
-                map.insert("tag".to_string(), Value::Text(tag.clone()));
-                map.insert("body".to_string(), Value::Text(body.clone()));
-                map.insert("flags".to_string(), Value::Text(flags.clone()));
-                Ok(Value::Record(Arc::new(map)))
+                match tag.as_str() {
+                    "r" => {
+                        let mut builder = RegexBuilder::new(body);
+                        for flag in flags.chars() {
+                            match flag {
+                                'i' => {
+                                    builder.case_insensitive(true);
+                                }
+                                'm' => {
+                                    builder.multi_line(true);
+                                }
+                                's' => {
+                                    builder.dot_matches_new_line(true);
+                                }
+                                'x' => {
+                                    builder.ignore_whitespace(true);
+                                }
+                                _ => {}
+                            }
+                        }
+                        let regex = builder.build().map_err(|err| {
+                            RuntimeError::Message(format!("invalid regex literal: {err}"))
+                        })?;
+                        Ok(Value::Regex(Arc::new(regex)))
+                    }
+                    "u" => {
+                        let parsed = Url::parse(body).map_err(|err| {
+                            RuntimeError::Message(format!("invalid url literal: {err}"))
+                        })?;
+                        Ok(Value::Record(Arc::new(url_to_record(&parsed))))
+                    }
+                    "d" => {
+                        let date = NaiveDate::parse_from_str(body, "%Y-%m-%d")
+                            .map_err(|err| {
+                                RuntimeError::Message(format!("invalid date literal: {err}"))
+                            })?;
+                        Ok(Value::Record(Arc::new(date_to_record(date))))
+                    }
+                    "t" | "dt" => {
+                        let _ = chrono::DateTime::parse_from_rfc3339(body).map_err(|err| {
+                            RuntimeError::Message(format!("invalid datetime literal: {err}"))
+                        })?;
+                        Ok(Value::DateTime(body.clone()))
+                    }
+                    _ => {
+                        let mut map = HashMap::new();
+                        map.insert("tag".to_string(), Value::Text(tag.clone()));
+                        map.insert("body".to_string(), Value::Text(body.clone()));
+                        map.insert("flags".to_string(), Value::Text(flags.clone()));
+                        Ok(Value::Record(Arc::new(map)))
+                    }
+                }
             }
             HirExpr::LitBool { value, .. } => Ok(Value::Bool(*value)),
             HirExpr::LitDateTime { text, .. } => Ok(Value::DateTime(text.clone())),
@@ -1019,12 +1071,20 @@ fn eval_binary_builtin(op: &str, left: &Value, right: &Value) -> Option<Value> {
         ("-", Value::Int(a), Value::Int(b)) => Some(Value::Int(a - b)),
         ("*", Value::Int(a), Value::Int(b)) => Some(Value::Int(a * b)),
         ("/", Value::Int(a), Value::Int(b)) => Some(Value::Int(a / b)),
+        ("+", Value::Float(a), Value::Float(b)) => Some(Value::Float(a + b)),
+        ("-", Value::Float(a), Value::Float(b)) => Some(Value::Float(a - b)),
+        ("*", Value::Float(a), Value::Float(b)) => Some(Value::Float(a * b)),
+        ("/", Value::Float(a), Value::Float(b)) => Some(Value::Float(a / b)),
         ("==", a, b) => Some(Value::Bool(values_equal(a, b))),
         ("!=", a, b) => Some(Value::Bool(!values_equal(a, b))),
         ("<", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a < b)),
         ("<=", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a <= b)),
         (">", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a > b)),
         (">=", Value::Int(a), Value::Int(b)) => Some(Value::Bool(a >= b)),
+        ("<", Value::Float(a), Value::Float(b)) => Some(Value::Bool(a < b)),
+        ("<=", Value::Float(a), Value::Float(b)) => Some(Value::Bool(a <= b)),
+        (">", Value::Float(a), Value::Float(b)) => Some(Value::Bool(a > b)),
+        (">=", Value::Float(a), Value::Float(b)) => Some(Value::Bool(a >= b)),
         ("&&", Value::Bool(a), Value::Bool(b)) => Some(Value::Bool(*a && *b)),
         ("||", Value::Bool(a), Value::Bool(b)) => Some(Value::Bool(*a || *b)),
         _ => None,
@@ -1039,6 +1099,11 @@ fn values_equal(left: &Value, right: &Value) -> bool {
         (Value::Float(a), Value::Float(b)) => a == b,
         (Value::Text(a), Value::Text(b)) => a == b,
         (Value::DateTime(a), Value::DateTime(b)) => a == b,
+        (Value::Bytes(a), Value::Bytes(b)) => a == b,
+        (Value::Regex(a), Value::Regex(b)) => a.as_str() == b.as_str(),
+        (Value::BigInt(a), Value::BigInt(b)) => a == b,
+        (Value::Rational(a), Value::Rational(b)) => a == b,
+        (Value::Decimal(a), Value::Decimal(b)) => a == b,
         (Value::Constructor { name: a, args: aa }, Value::Constructor { name: b, args: bb }) => {
             a == b && aa.iter().zip(bb.iter()).all(|(x, y)| values_equal(x, y))
         }
@@ -1098,6 +1163,11 @@ fn format_value(value: &Value) -> String {
         Value::Float(value) => value.to_string(),
         Value::Text(value) => value.clone(),
         Value::DateTime(value) => value.clone(),
+        Value::Bytes(bytes) => format!("<bytes:{}>", bytes.len()),
+        Value::Regex(regex) => format!("<regex:{}>", regex.as_str()),
+        Value::BigInt(value) => value.to_string(),
+        Value::Rational(value) => value.to_string(),
+        Value::Decimal(value) => value.to_string(),
         Value::List(items) => format!(
             "[{}]",
             items
@@ -1138,4 +1208,53 @@ fn format_value(value: &Value) -> String {
         Value::HttpServer(_) => "<http-server>".to_string(),
         Value::WebSocket(_) => "<websocket>".to_string(),
     }
+}
+
+fn date_to_record(date: NaiveDate) -> HashMap<String, Value> {
+    let mut map = HashMap::new();
+    map.insert("year".to_string(), Value::Int(date.year() as i64));
+    map.insert("month".to_string(), Value::Int(date.month() as i64));
+    map.insert("day".to_string(), Value::Int(date.day() as i64));
+    map
+}
+
+fn url_to_record(url: &Url) -> HashMap<String, Value> {
+    let mut map = HashMap::new();
+    map.insert("protocol".to_string(), Value::Text(url.scheme().to_string()));
+    map.insert(
+        "host".to_string(),
+        Value::Text(url.host_str().unwrap_or("").to_string()),
+    );
+    let port = match url.port() {
+        Some(port) => Value::Constructor {
+            name: "Some".to_string(),
+            args: vec![Value::Int(port as i64)],
+        },
+        None => Value::Constructor {
+            name: "None".to_string(),
+            args: Vec::new(),
+        },
+    };
+    map.insert("port".to_string(), port);
+    map.insert("path".to_string(), Value::Text(url.path().to_string()));
+    let mut query_items = Vec::new();
+    for (key, value) in url.query_pairs() {
+        query_items.push(Value::Tuple(vec![
+            Value::Text(key.to_string()),
+            Value::Text(value.to_string()),
+        ]));
+    }
+    map.insert("query".to_string(), Value::List(Arc::new(query_items)));
+    let hash = match url.fragment() {
+        Some(fragment) => Value::Constructor {
+            name: "Some".to_string(),
+            args: vec![Value::Text(fragment.to_string())],
+        },
+        None => Value::Constructor {
+            name: "None".to_string(),
+            args: Vec::new(),
+        },
+    };
+    map.insert("hash".to_string(), hash);
+    map
 }

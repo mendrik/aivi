@@ -2,7 +2,11 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::{mpsc, Arc, Mutex};
 
+use num_bigint::BigInt;
+use num_rational::BigRational;
+use regex::Regex;
 use rudo_gc::{GcMutex, Trace, Visitor};
+use rust_decimal::Decimal;
 
 use crate::hir::{HirBlockItem, HirExpr};
 use aivi_http_server::{ServerHandle, WebSocketHandle};
@@ -22,6 +26,11 @@ pub(super) enum Value {
     Float(f64),
     Text(String),
     DateTime(String),
+    Bytes(Arc<Vec<u8>>),
+    Regex(Arc<Regex>),
+    BigInt(Arc<BigInt>),
+    Rational(Arc<BigRational>),
+    Decimal(Decimal),
     List(Arc<Vec<Value>>),
     Tuple(Vec<Value>),
     Record(Arc<HashMap<String, Value>>),
@@ -111,6 +120,11 @@ unsafe impl Trace for Value {
             | Value::Float(_)
             | Value::Text(_)
             | Value::DateTime(_)
+            | Value::Bytes(_)
+            | Value::Regex(_)
+            | Value::BigInt(_)
+            | Value::Rational(_)
+            | Value::Decimal(_)
             | Value::ChannelSend(_)
             | Value::ChannelRecv(_)
             | Value::FileHandle(_)

@@ -1,6 +1,8 @@
 module examples.runtime_effects_core_ops = {
   export main
 
+  use aivi.console (print)
+
   main : Effect Text Unit
   main = effect {
     n <- pure 41

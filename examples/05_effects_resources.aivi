@@ -1,6 +1,8 @@
 module examples.compiler.effects = {
   export program, readConfig, withFile, managedFile, loadOrDefault, program2
 
+  use aivi.console (print)
+
   program : Effect Text Unit
   program = effect {
     _ <- print "boot"

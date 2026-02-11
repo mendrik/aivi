@@ -502,6 +502,7 @@ fn is_builtin_name(name: &str) -> bool {
     matches!(
         name,
         "print"
+            | "println"
             | "attempt"
             | "load"
             | "file"
@@ -509,8 +510,11 @@ fn is_builtin_name(name: &str) -> bool {
             | "fail"
             | "Unit"
             | "Text"
+            | "Char"
             | "Int"
+            | "Float"
             | "Bool"
+            | "Bytes"
             | "List"
             | "Effect"
             | "Some"
@@ -519,6 +523,21 @@ fn is_builtin_name(name: &str) -> bool {
             | "Err"
             | "True"
             | "False"
+            | "text"
+            | "regex"
+            | "math"
+            | "calendar"
+            | "color"
+            | "bigint"
+            | "rational"
+            | "decimal"
+            | "url"
+            | "console"
+            | "clock"
+            | "random"
+            | "channel"
+            | "concurrent"
+            | "httpServer"
     )
 }
 

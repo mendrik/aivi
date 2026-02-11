@@ -11,6 +11,8 @@ impl TypeChecker {
             "Int",
             "Float",
             "Text",
+            "Char",
+            "Bytes",
             "List",
             "Option",
             "Result",
@@ -19,6 +21,10 @@ impl TypeChecker {
             "Generator",
             "Html",
             "DateTime",
+            "Regex",
+            "BigInt",
+            "Rational",
+            "Decimal",
             "FileHandle",
             "FileStats",
             "Send",
@@ -134,6 +140,13 @@ impl TypeChecker {
 
         env.insert(
             "print".to_string(),
+            Scheme::mono(Type::Func(
+                Box::new(Type::con("Text")),
+                Box::new(Type::con("Effect").app(vec![Type::con("Text"), Type::con("Unit")])),
+            )),
+        );
+        env.insert(
+            "println".to_string(),
             Scheme::mono(Type::Func(
                 Box::new(Type::con("Text")),
                 Box::new(Type::con("Effect").app(vec![Type::con("Text"), Type::con("Unit")])),
@@ -506,6 +519,468 @@ impl TypeChecker {
             open: true,
         };
         env.insert("html".to_string(), Scheme::mono(html_record));
+
+        let text_ty = Type::con("Text");
+        let char_ty = Type::con("Char");
+        let int_ty = Type::con("Int");
+        let float_ty = Type::con("Float");
+        let bool_ty = Type::con("Bool");
+        let bytes_ty = Type::con("Bytes");
+        let encoding_ty = Type::con("Encoding");
+        let text_error_ty = Type::con("TextError");
+        let option_int_ty = Type::con("Option").app(vec![int_ty.clone()]);
+        let option_float_ty = Type::con("Option").app(vec![float_ty.clone()]);
+        let result_text_error_text_ty =
+            Type::con("Result").app(vec![text_error_ty.clone(), text_ty.clone()]);
+        let list_text_ty = Type::con("List").app(vec![text_ty.clone()]);
+
+        let text_record = Type::Record {
+            fields: vec![
+                ("length".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(int_ty.clone()))),
+                ("isEmpty".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isDigit".to_string(), Type::Func(Box::new(char_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isAlpha".to_string(), Type::Func(Box::new(char_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isAlnum".to_string(), Type::Func(Box::new(char_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isSpace".to_string(), Type::Func(Box::new(char_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isUpper".to_string(), Type::Func(Box::new(char_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isLower".to_string(), Type::Func(Box::new(char_ty.clone()), Box::new(bool_ty.clone()))),
+                (
+                    "contains".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(bool_ty.clone())))),
+                ),
+                (
+                    "startsWith".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(bool_ty.clone())))),
+                ),
+                (
+                    "endsWith".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(bool_ty.clone())))),
+                ),
+                (
+                    "indexOf".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(option_int_ty.clone())))),
+                ),
+                (
+                    "lastIndexOf".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(option_int_ty.clone())))),
+                ),
+                (
+                    "count".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(int_ty.clone())))),
+                ),
+                (
+                    "compare".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(int_ty.clone())))),
+                ),
+                (
+                    "slice".to_string(),
+                    Type::Func(
+                        Box::new(int_ty.clone()),
+                        Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))))),
+                    ),
+                ),
+                (
+                    "split".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(list_text_ty.clone())))),
+                ),
+                (
+                    "splitLines".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(list_text_ty.clone())),
+                ),
+                (
+                    "chunk".to_string(),
+                    Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(list_text_ty.clone())))),
+                ),
+                ("trim".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("trimStart".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("trimEnd".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                (
+                    "padStart".to_string(),
+                    Type::Func(
+                        Box::new(int_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(text_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(text_ty.clone()),
+                                Box::new(text_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                (
+                    "padEnd".to_string(),
+                    Type::Func(
+                        Box::new(int_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(text_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(text_ty.clone()),
+                                Box::new(text_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                (
+                    "replace".to_string(),
+                    Type::Func(
+                        Box::new(text_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(text_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(text_ty.clone()),
+                                Box::new(text_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                (
+                    "replaceAll".to_string(),
+                    Type::Func(
+                        Box::new(text_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(text_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(text_ty.clone()),
+                                Box::new(text_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                (
+                    "remove".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone())))),
+                ),
+                (
+                    "repeat".to_string(),
+                    Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone())))),
+                ),
+                ("reverse".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("concat".to_string(), Type::Func(Box::new(list_text_ty.clone()), Box::new(text_ty.clone()))),
+                ("toLower".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("toUpper".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("capitalize".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("titleCase".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("caseFold".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("normalizeNFC".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("normalizeNFD".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("normalizeNFKC".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                ("normalizeNFKD".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(text_ty.clone()))),
+                (
+                    "toBytes".to_string(),
+                    Type::Func(Box::new(encoding_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(bytes_ty.clone())))),
+                ),
+                (
+                    "fromBytes".to_string(),
+                    Type::Func(Box::new(encoding_ty.clone()), Box::new(Type::Func(Box::new(bytes_ty.clone()), Box::new(result_text_error_text_ty.clone())))),
+                ),
+                (
+                    "toText".to_string(),
+                    Type::Func(Box::new(Type::Var(self.fresh_var_id())), Box::new(text_ty.clone())),
+                ),
+                ("parseInt".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(option_int_ty.clone()))),
+                ("parseFloat".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(option_float_ty.clone()))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("text".to_string(), Scheme::mono(text_record));
+
+        let regex_ty = Type::con("Regex");
+        let regex_error_ty = Type::con("RegexError");
+        let match_ty = Type::con("Match");
+        let option_match_ty = Type::con("Option").app(vec![match_ty.clone()]);
+        let list_match_ty = Type::con("List").app(vec![match_ty.clone()]);
+        let tuple_int_int_ty = Type::Tuple(vec![int_ty.clone(), int_ty.clone()]);
+        let option_tuple_int_int_ty = Type::con("Option").app(vec![tuple_int_int_ty.clone()]);
+        let list_tuple_int_int_ty = Type::con("List").app(vec![tuple_int_int_ty.clone()]);
+
+        let regex_record = Type::Record {
+            fields: vec![
+                (
+                    "compile".to_string(),
+                    Type::Func(
+                        Box::new(text_ty.clone()),
+                        Box::new(Type::con("Result").app(vec![regex_error_ty.clone(), regex_ty.clone()])),
+                    ),
+                ),
+                (
+                    "test".to_string(),
+                    Type::Func(Box::new(regex_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(bool_ty.clone())))),
+                ),
+                (
+                    "match".to_string(),
+                    Type::Func(Box::new(regex_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(option_match_ty.clone())))),
+                ),
+                (
+                    "matches".to_string(),
+                    Type::Func(Box::new(regex_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(list_match_ty.clone())))),
+                ),
+                (
+                    "find".to_string(),
+                    Type::Func(Box::new(regex_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(option_tuple_int_int_ty.clone())))),
+                ),
+                (
+                    "findAll".to_string(),
+                    Type::Func(Box::new(regex_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(list_tuple_int_int_ty.clone())))),
+                ),
+                (
+                    "split".to_string(),
+                    Type::Func(Box::new(regex_ty.clone()), Box::new(Type::Func(Box::new(text_ty.clone()), Box::new(list_text_ty.clone())))),
+                ),
+                (
+                    "replace".to_string(),
+                    Type::Func(
+                        Box::new(regex_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(text_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(text_ty.clone()),
+                                Box::new(text_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                (
+                    "replaceAll".to_string(),
+                    Type::Func(
+                        Box::new(regex_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(text_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(text_ty.clone()),
+                                Box::new(text_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("regex".to_string(), Scheme::mono(regex_record));
+
+        let angle_ty = Type::con("Angle");
+        let bigint_ty = Type::con("BigInt");
+        let abs_var = self.fresh_var_id();
+        let math_record = Type::Record {
+            fields: vec![
+                ("pi".to_string(), float_ty.clone()),
+                ("tau".to_string(), float_ty.clone()),
+                ("e".to_string(), float_ty.clone()),
+                ("inf".to_string(), float_ty.clone()),
+                ("nan".to_string(), float_ty.clone()),
+                ("phi".to_string(), float_ty.clone()),
+                ("sqrt2".to_string(), float_ty.clone()),
+                ("ln2".to_string(), float_ty.clone()),
+                ("ln10".to_string(), float_ty.clone()),
+                ("abs".to_string(), Type::Func(Box::new(Type::Var(abs_var)), Box::new(Type::Var(abs_var)))),
+                ("sign".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("copysign".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("min".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("max".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("minAll".to_string(), Type::Func(Box::new(Type::con("List").app(vec![float_ty.clone()])), Box::new(option_float_ty.clone()))),
+                ("maxAll".to_string(), Type::Func(Box::new(Type::con("List").app(vec![float_ty.clone()])), Box::new(option_float_ty.clone()))),
+                (
+                    "clamp".to_string(),
+                    Type::Func(
+                        Box::new(float_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(float_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(float_ty.clone()),
+                                Box::new(float_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                ("sum".to_string(), Type::Func(Box::new(Type::con("List").app(vec![float_ty.clone()])), Box::new(float_ty.clone()))),
+                ("sumInt".to_string(), Type::Func(Box::new(Type::con("List").app(vec![int_ty.clone()])), Box::new(int_ty.clone()))),
+                ("floor".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("ceil".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("trunc".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("round".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("fract".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("modf".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Tuple(vec![float_ty.clone(), float_ty.clone()])))),
+                ("frexp".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Tuple(vec![float_ty.clone(), int_ty.clone()])))),
+                ("ldexp".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(float_ty.clone()))))),
+                ("pow".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("sqrt".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("cbrt".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("hypot".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("exp".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("exp2".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("expm1".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("log".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("log10".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("log2".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("log1p".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("sin".to_string(), Type::Func(Box::new(angle_ty.clone()), Box::new(float_ty.clone()))),
+                ("cos".to_string(), Type::Func(Box::new(angle_ty.clone()), Box::new(float_ty.clone()))),
+                ("tan".to_string(), Type::Func(Box::new(angle_ty.clone()), Box::new(float_ty.clone()))),
+                ("asin".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(angle_ty.clone()))),
+                ("acos".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(angle_ty.clone()))),
+                ("atan".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(angle_ty.clone()))),
+                ("atan2".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(angle_ty.clone()))))),
+                ("sinh".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("cosh".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("tanh".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("asinh".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("acosh".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("atanh".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("gcd".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(int_ty.clone()))))),
+                ("lcm".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(int_ty.clone()))))),
+                ("gcdAll".to_string(), Type::Func(Box::new(Type::con("List").app(vec![int_ty.clone()])), Box::new(Type::con("Option").app(vec![int_ty.clone()])))),
+                ("lcmAll".to_string(), Type::Func(Box::new(Type::con("List").app(vec![int_ty.clone()])), Box::new(Type::con("Option").app(vec![int_ty.clone()])))),
+                ("factorial".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(bigint_ty.clone()))),
+                ("comb".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(bigint_ty.clone()))))),
+                ("perm".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(bigint_ty.clone()))))),
+                ("divmod".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(Type::Tuple(vec![int_ty.clone(), int_ty.clone()])))))),
+                (
+                    "modPow".to_string(),
+                    Type::Func(
+                        Box::new(int_ty.clone()),
+                        Box::new(Type::Func(
+                            Box::new(int_ty.clone()),
+                            Box::new(Type::Func(
+                                Box::new(int_ty.clone()),
+                                Box::new(int_ty.clone()),
+                            )),
+                        )),
+                    ),
+                ),
+                ("isFinite".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isInf".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(bool_ty.clone()))),
+                ("isNaN".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(bool_ty.clone()))),
+                ("nextAfter".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("ulp".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))),
+                ("fmod".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+                ("remainder".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(Type::Func(Box::new(float_ty.clone()), Box::new(float_ty.clone()))))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("math".to_string(), Scheme::mono(math_record));
+
+        let date_ty = Type::con("Date");
+        let calendar_record = Type::Record {
+            fields: vec![
+                ("isLeapYear".to_string(), Type::Func(Box::new(date_ty.clone()), Box::new(bool_ty.clone()))),
+                ("daysInMonth".to_string(), Type::Func(Box::new(date_ty.clone()), Box::new(int_ty.clone()))),
+                ("endOfMonth".to_string(), Type::Func(Box::new(date_ty.clone()), Box::new(date_ty.clone()))),
+                ("addDays".to_string(), Type::Func(Box::new(date_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(date_ty.clone()))))),
+                ("addMonths".to_string(), Type::Func(Box::new(date_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(date_ty.clone()))))),
+                ("addYears".to_string(), Type::Func(Box::new(date_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(date_ty.clone()))))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("calendar".to_string(), Scheme::mono(calendar_record));
+
+        let rgb_ty = Type::con("Rgb");
+        let hsl_ty = Type::con("Hsl");
+        let hex_ty = Type::con("Hex");
+        let color_record = Type::Record {
+            fields: vec![
+                ("adjustLightness".to_string(), Type::Func(Box::new(rgb_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(rgb_ty.clone()))))),
+                ("adjustSaturation".to_string(), Type::Func(Box::new(rgb_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(rgb_ty.clone()))))),
+                ("adjustHue".to_string(), Type::Func(Box::new(rgb_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(rgb_ty.clone()))))),
+                ("toRgb".to_string(), Type::Func(Box::new(hsl_ty.clone()), Box::new(rgb_ty.clone()))),
+                ("toHsl".to_string(), Type::Func(Box::new(rgb_ty.clone()), Box::new(hsl_ty.clone()))),
+                ("toHex".to_string(), Type::Func(Box::new(rgb_ty.clone()), Box::new(hex_ty.clone()))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("color".to_string(), Scheme::mono(color_record));
+
+        let bigint_record = Type::Record {
+            fields: vec![
+                ("fromInt".to_string(), Type::Func(Box::new(int_ty.clone()), Box::new(bigint_ty.clone()))),
+                ("toInt".to_string(), Type::Func(Box::new(bigint_ty.clone()), Box::new(int_ty.clone()))),
+                ("add".to_string(), Type::Func(Box::new(bigint_ty.clone()), Box::new(Type::Func(Box::new(bigint_ty.clone()), Box::new(bigint_ty.clone()))))),
+                ("sub".to_string(), Type::Func(Box::new(bigint_ty.clone()), Box::new(Type::Func(Box::new(bigint_ty.clone()), Box::new(bigint_ty.clone()))))),
+                ("mul".to_string(), Type::Func(Box::new(bigint_ty.clone()), Box::new(Type::Func(Box::new(bigint_ty.clone()), Box::new(bigint_ty.clone()))))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("bigint".to_string(), Scheme::mono(bigint_record));
+
+        let rational_ty = Type::con("Rational");
+        let rational_record = Type::Record {
+            fields: vec![
+                ("fromBigInts".to_string(), Type::Func(Box::new(bigint_ty.clone()), Box::new(Type::Func(Box::new(bigint_ty.clone()), Box::new(rational_ty.clone()))))),
+                ("normalize".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(rational_ty.clone()))),
+                ("numerator".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(bigint_ty.clone()))),
+                ("denominator".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(bigint_ty.clone()))),
+                ("add".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(Type::Func(Box::new(rational_ty.clone()), Box::new(rational_ty.clone()))))),
+                ("sub".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(Type::Func(Box::new(rational_ty.clone()), Box::new(rational_ty.clone()))))),
+                ("mul".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(Type::Func(Box::new(rational_ty.clone()), Box::new(rational_ty.clone()))))),
+                ("div".to_string(), Type::Func(Box::new(rational_ty.clone()), Box::new(Type::Func(Box::new(rational_ty.clone()), Box::new(rational_ty.clone()))))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("rational".to_string(), Scheme::mono(rational_record));
+
+        let decimal_ty = Type::con("Decimal");
+        let decimal_record = Type::Record {
+            fields: vec![
+                ("fromFloat".to_string(), Type::Func(Box::new(float_ty.clone()), Box::new(decimal_ty.clone()))),
+                ("toFloat".to_string(), Type::Func(Box::new(decimal_ty.clone()), Box::new(float_ty.clone()))),
+                ("round".to_string(), Type::Func(Box::new(decimal_ty.clone()), Box::new(Type::Func(Box::new(int_ty.clone()), Box::new(decimal_ty.clone()))))),
+                ("add".to_string(), Type::Func(Box::new(decimal_ty.clone()), Box::new(Type::Func(Box::new(decimal_ty.clone()), Box::new(decimal_ty.clone()))))),
+                ("sub".to_string(), Type::Func(Box::new(decimal_ty.clone()), Box::new(Type::Func(Box::new(decimal_ty.clone()), Box::new(decimal_ty.clone()))))),
+                ("mul".to_string(), Type::Func(Box::new(decimal_ty.clone()), Box::new(Type::Func(Box::new(decimal_ty.clone()), Box::new(decimal_ty.clone()))))),
+                ("div".to_string(), Type::Func(Box::new(decimal_ty.clone()), Box::new(Type::Func(Box::new(decimal_ty.clone()), Box::new(decimal_ty.clone()))))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("decimal".to_string(), Scheme::mono(decimal_record));
+
+        let url_ty = Type::con("Url");
+        let url_record = Type::Record {
+            fields: vec![
+                (
+                    "parse".to_string(),
+                    Type::Func(Box::new(text_ty.clone()), Box::new(Type::con("Result").app(vec![text_ty.clone(), url_ty.clone()])))
+                ),
+                ("toString".to_string(), Type::Func(Box::new(url_ty.clone()), Box::new(text_ty.clone()))),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("url".to_string(), Scheme::mono(url_record));
+
+        let console_record = Type::Record {
+            fields: vec![
+                ("log".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(Type::con("Effect").app(vec![text_ty.clone(), Type::con("Unit")])))),
+                ("println".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(Type::con("Effect").app(vec![text_ty.clone(), Type::con("Unit")])))),
+                ("print".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(Type::con("Effect").app(vec![text_ty.clone(), Type::con("Unit")])))),
+                ("error".to_string(), Type::Func(Box::new(text_ty.clone()), Box::new(Type::con("Effect").app(vec![text_ty.clone(), Type::con("Unit")])))),
+                (
+                    "readLine".to_string(),
+                    Type::Func(
+                        Box::new(Type::con("Unit")),
+                        Box::new(Type::con("Effect").app(vec![text_ty.clone(), Type::con("Result").app(vec![text_ty.clone(), text_ty.clone()])])),
+                    ),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            open: true,
+        };
+        env.insert("console".to_string(), Scheme::mono(console_record));
 
         self.builtins = env;
     }
