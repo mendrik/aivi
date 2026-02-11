@@ -7,15 +7,13 @@ fn mcp_manifest_collects_decorated_bindings_from_parsed_modules() {
     fs::write(
         &path,
         r#"@no_prelude
-module Example.Mod = {
-  @mcp_tool
-  search : Int -> Int
-  search x = x
+module Example.Mod
+@mcp_tool
+search : Int -> Int
+search x = x
 
-  @mcp_resource
-  config = "ok"
-}
-"#,
+@mcp_resource
+config = "ok""#,
     )
     .expect("write module");
 
@@ -46,12 +44,10 @@ fn mcp_manifest_generates_input_schema_from_type_sigs() {
     fs::write(
         &path,
         r#"@no_prelude
-module Example.Schema = {
-  @mcp_tool
-  search : Int -> List Text -> Effect Http Text
-  search n terms = "ok"
-}
-"#,
+module Example.Schema
+@mcp_tool
+search : Int -> List Text -> Effect Http Text
+search n terms = "ok""#,
     )
     .expect("write module");
 
@@ -80,16 +76,14 @@ fn mcp_manifest_marks_effectful_tools() {
     fs::write(
         &path,
         r#"@no_prelude
-module Example.Effects = {
-  @mcp_tool
-  pureTool : Int -> Int
-  pureTool x = x
+module Example.Effects
+@mcp_tool
+pureTool : Int -> Int
+pureTool x = x
 
-  @mcp_tool
-  effectTool : Int -> Effect Text Int
-  effectTool x = effect { pure x }
-}
-"#,
+@mcp_tool
+effectTool : Int -> Effect Text Int
+effectTool x = effect { pure x }"#,
     )
     .expect("write module");
 

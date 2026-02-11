@@ -2,25 +2,23 @@ pub const MODULE_NAME: &str = "aivi.net.https";
 
 pub const SOURCE: &str = r#"
 @no_prelude
-module aivi.net.https = {
-  export Header, Request, Response, Error
-  export get, post, fetch
+module aivi.net.https
+export Header, Request, Response, Error
+export get, post, fetch
 
-  use aivi
-  use aivi.url (Url)
+use aivi
+use aivi.url (Url)
 
-  Header = { name: Text, value: Text }
-  Request = { method: Text, url: Url, headers: List Header, body: Option Text }
-  Response = { status: Int, headers: List Header, body: Text }
-  Error = { message: Text }
+Header = { name: Text, value: Text }
+Request = { method: Text, url: Url, headers: List Header, body: Option Text }
+Response = { status: Int, headers: List Header, body: Text }
+Error = { message: Text }
 
-  get : Url -> Effect Error (Result Error Response)
-  get url = https.get url
+get : Url -> Effect Error (Result Error Response)
+get url = https.get url
 
-  post : Url -> Text -> Effect Error (Result Error Response)
-  post url body = https.post url body
+post : Url -> Text -> Effect Error (Result Error Response)
+post url body = https.post url body
 
-  fetch : Request -> Effect Error (Result Error Response)
-  fetch request = https.fetch request
-}
-"#;
+fetch : Request -> Effect Error (Result Error Response)
+fetch request = https.fetch request"#;

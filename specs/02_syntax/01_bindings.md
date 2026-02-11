@@ -30,18 +30,17 @@ This introduces a new binding; no mutation exists. This is common in functional 
 
 ## 1.2.1 Recursion (module level)
 
-Within a `module ... = { ... }` body, top-level value bindings are **recursive**: a binding may refer to itself and to bindings that appear later in the same module body.
+Within a module body (flat or braced), top-level value bindings are **recursive**: a binding may refer to itself and to bindings that appear later in the same module body.
 
 This supports ordinary recursive functions:
 
 ```aivi
-module demo.recursion = {
-  export sum
+module demo.recursion
+export sum
 
-  sum =
-    | []        => 0
-    | [h, ...t] => h + sum t
-}
+sum =
+  | []        => 0
+  | [h, ...t] => h + sum t
 ```
 
 Local recursion inside `do { ... }` / `effect { ... }` blocks is a future surface feature; in v0.1, prefer defining recursive helpers at module scope.

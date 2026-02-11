@@ -179,15 +179,55 @@ impl Parser {
     fn parse_module(&mut self, annotations: Vec<SpannedName>) -> Option<Module> {
         let module_kw = self.previous_span();
         let name = self.parse_dotted_name()?;
-        self.expect_symbol("=", "expected '=' after module name");
-        self.expect_symbol("{", "expected '{' to start module body");
+        self.consume_newlines();
+        let mut explicit_body = false;
+        if self.consume_symbol("=") {
+            self.expect_symbol("{", "expected '{' to start module body");
+            explicit_body = true;
+        } else if self.consume_symbol("{") {
+            self.emit_diag(
+                "E1509",
+                "expected '=' before '{' to start module body",
+                self.previous_span(),
+            );
+            explicit_body = true;
+        }
         let mut exports = Vec::new();
         let mut uses = Vec::new();
         let mut items = Vec::new();
-        while !self.check_symbol("}") && self.pos < self.tokens.len() {
+        loop {
+            if self.pos >= self.tokens.len() {
+                break;
+            }
+            if explicit_body && self.check_symbol("}") {
+                break;
+            }
             self.consume_newlines();
+            if explicit_body && self.check_symbol("}") {
+                break;
+            }
+            if !explicit_body && self.peek_keyword("module") {
+                let span = self.peek_span().unwrap_or_else(|| self.previous_span());
+                self.emit_diag(
+                    "E1508",
+                    "implicit module bodies must be the last top-level item in a file",
+                    span,
+                );
+                self.pos += 1;
+                continue;
+            }
             let decorators = self.consume_annotations();
             self.validate_item_decorators(&decorators);
+            if !explicit_body && self.peek_keyword("module") {
+                let span = self.peek_span().unwrap_or_else(|| self.previous_span());
+                self.emit_diag(
+                    "E1508",
+                    "implicit module bodies must be the last top-level item in a file",
+                    span,
+                );
+                self.pos += 1;
+                continue;
+            }
             if self.match_keyword("export") {
                 for decorator in decorators {
                     self.emit_diag(
@@ -259,8 +299,14 @@ impl Parser {
 
             self.recover_to_item();
         }
-        let end_span = self.expect_symbol("}", "expected '}' to close module body");
-        let span = merge_span(module_kw.clone(), end_span.unwrap_or(module_kw));
+        let end_span = if explicit_body {
+            self.expect_symbol("}", "expected '}' to close module body")
+                .unwrap_or_else(|| module_kw.clone())
+        } else {
+            self.pos = self.tokens.len();
+            self.previous_span()
+        };
+        let span = merge_span(module_kw.clone(), end_span);
         for annotation in &annotations {
             if annotation.name != "no_prelude" {
                 self.emit_diag(

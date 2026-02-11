@@ -2,17 +2,15 @@ pub const MODULE_NAME: &str = "aivi.system";
 
 pub const SOURCE: &str = r#"
 @no_prelude
-module aivi.system = {
-  export env, args, exit
+module aivi.system
+export env, args, exit
 
-  use aivi
+use aivi
 
-  env = system.env
+env = system.env
 
-  args : Effect Text (List Text)
-  args = system.args Unit
+args : Effect Text (List Text)
+args = system.args Unit
 
-  exit : Int -> Effect Text Unit
-  exit code = system.exit code
-}
-"#;
+exit : Int -> Effect Text Unit
+exit code = system.exit code"#;

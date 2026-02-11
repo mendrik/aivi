@@ -7,11 +7,10 @@ A URL isn't just text; it's a structured address with protocols, hosts, and quer
 ## Module
 
 ```aivi
-module aivi.url = {
-  export domain Url
-  export Url
-  export parse, toString
-}
+module aivi.url
+export domain Url
+export Url
+export parse, toString
 ```
 
 ## Types

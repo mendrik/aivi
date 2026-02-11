@@ -27,7 +27,7 @@ This roadmap tracks the incremental development of the AIVI language, compiler, 
 
 ## Phase M2: Modules + Name Resolution (Complete)
 
-- [x] `module ... = { export ... }` and `use` imports.
+- [x] `module ...` (flat or braced) and `use` imports.
 - [x] Symbol tables and module graph.
 - [x] `aivi check` resolving identifiers across workspace.
 - [x] LSP: `textDocument/definition` (in-file).

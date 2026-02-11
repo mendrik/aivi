@@ -1,20 +1,18 @@
-module examples.stdlib_crypto = {
-  export main
+module examples.stdlib_crypto
+export main
 
-  use aivi.console (print)
-  use aivi.crypto
+use aivi.console (print)
+use aivi.crypto
 
-  main : Effect Text Unit
-  main = effect {
-    hash = sha256 "aivi"
-    _ <- print "sha256: {hash}"
+main : Effect Text Unit
+main = effect {
+  hash = sha256 "aivi"
+  _ <- print "sha256: {hash}"
 
-    uuid <- randomUuid
-    _ <- print "uuid: {uuid}"
+  uuid <- randomUuid
+  _ <- print "uuid: {uuid}"
 
-    bytes <- randomBytes 16
-    _ <- print "bytes: {bytes}"
+  bytes <- randomBytes 16
+  _ <- print "bytes: {bytes}"
 
-    pure Unit
-  }
-}
+  pure Unit

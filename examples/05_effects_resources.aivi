@@ -1,15 +1,14 @@
-module examples.compiler.effects = {
-  export program, readConfig, withFile, managedFile, loadOrDefault, program2
+module examples.compiler.effects
+export program, readConfig, withFile, managedFile, loadOrDefault, program2
 
-  use aivi.console (print)
+use aivi.console (print)
 
-  program : Effect Text Unit
-  program = effect {
-    _ <- print "boot"
-    cfg <- readConfig "config.json"
-    _ <- print cfg
-    pure Unit
-  }
+program : Effect Text Unit
+program = effect {
+  _ <- print "boot"
+  cfg <- readConfig "config.json"
+  _ <- print cfg
+  pure Unit
 
   readConfig : Text -> Effect Text Text
   readConfig path = effect {
@@ -47,4 +46,3 @@ module examples.compiler.effects = {
     _ <- print cfg
     pure Unit
   }
-}

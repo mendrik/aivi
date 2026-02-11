@@ -4,6 +4,25 @@
 
 Modules are the primary unit of code organization, encapsulation, and reuse in AIVI. They define a closed scope and explicitly export symbols for public use.
 
+Modules can be written in a **flat** form that keeps file indentation shallow. The module body runs until end-of-file:
+
+```aivi
+module my.utility.math
+export add, subtract
+export pi
+
+pi = 3.14159
+add = a b => a + b
+subtract = a b => a - b
+
+// Internal helper, not exported
+abs = n => if n < 0 then -n else n
+```
+
+When using the flat form, the `module` declaration must be the last top-level item in the file and its body extends to EOF.
+
+The explicit braced form is still supported (and required for multiple modules in one file):
+
 ```aivi
 module my.utility.math = {
   export add, subtract

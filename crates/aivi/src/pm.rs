@@ -135,21 +135,19 @@ fn aivi_path_dependency() -> String {
 }
 
 fn starter_bin_source() -> &'static str {
-    r#"module app.main = {
-  main : Effect Text Unit
-  main = effect {
-    _ <- print "Hello from AIVI!"
-    pure Unit
-  }
+    r#"module app.main
+main : Effect Text Unit
+main = effect {
+  _ <- print "Hello from AIVI!"
+  pure Unit
 }
 "#
 }
 
 fn starter_lib_source() -> &'static str {
-    r#"module app.lib = {
-  hello : Text
-  hello = "Hello from AIVI!"
-}
+    r#"module app.lib
+hello : Text
+hello = "Hello from AIVI!"
 "#
 }
 

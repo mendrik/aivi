@@ -1,28 +1,26 @@
-module examples.compiler.literals = {
-  export ints, floats, texts, suffixes, instant, tuple, records, nested, palette
+module examples.compiler.literals
+export ints, floats, texts, suffixes, instant, tuple, records, nested, palette
 
-  ints = [0, 1, 42, -7]
-  floats = [0.0, 3.14, -2.5]
-  texts = ["plain", "Count: {1 + 2}", "user: { { name: \"A\" }.name }"]
+ints = [0, 1, 42, -7]
+floats = [0.0, 3.14, -2.5]
+texts = ["plain", "Count: {1 + 2}", "user: { { name: \"A\" }.name }"]
 
-  suffixes = [10px, 100%, 30s, 1min, 3.14dec, 42n]
-  instant = 2024-05-21T12:00:00Z
+suffixes = [10px, 100%, 30s, 1min, 3.14dec, 42n]
+instant = 2024-05-21T12:00:00Z
 
-  tuple = (1, "ok", True)
+tuple = (1, "ok", True)
 
-  records = [
-    { id: 1, label: "alpha", meta: { score: 9.5, active: True } }
-    { id: 2, label: "beta", meta: { score: 7.0, active: False } }
-  ]
+records = [
+  { id: 1, label: "alpha", meta: { score: 9.5, active: True } }
+  { id: 2, label: "beta", meta: { score: 7.0, active: False } }
+]
 
-  nested = {
-    title: "Report"
-    stats: { count: 3, avg: 1.5 }
-    tags: ["a", "b", "c"]
-  }
+nested = {
+  title: "Report"
+  stats: { count: 3, avg: 1.5 }
+  tags: ["a", "b", "c"]
 
   palette = [
     { name: "ink", rgb: (12, 15, 20) }
     { name: "sand", rgb: (242, 233, 210) }
   ]
-}

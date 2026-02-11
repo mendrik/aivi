@@ -116,7 +116,7 @@ This roadmap tracks the incremental development of the AIVI language, compiler, 
 
 ## Phase M2: Modules + Name Resolution (Complete)
 
-- [x] `module ... = { export ... }` and `use` imports.
+- [x] `module ...` (flat or braced) and `use` imports.
 - [x] Symbol tables and module graph.
 - [x] `aivi check` resolving identifiers across workspace.
 - [x] LSP: `textDocument/definition` (in-file).
@@ -259,18 +259,17 @@ This introduces a new binding; no mutation exists. This is common in functional 
 
 ## 1.2.1 Recursion (module level)
 
-Within a `module ... = { ... }` body, top-level value bindings are **recursive**: a binding may refer to itself and to bindings that appear later in the same module body.
+Within a module body (flat or braced), top-level value bindings are **recursive**: a binding may refer to itself and to bindings that appear later in the same module body.
 
 This supports ordinary recursive functions:
 
 ```aivi
-module demo.recursion = {
-  export sum
+module demo.recursion
+export sum
 
-  sum =
-    | []        => 0
-    | [h, ...t] => h + sum t
-}
+sum =
+  | []        => 0
+  | [h, ...t] => h + sum t
 ```
 
 Local recursion inside `do { ... }` / `effect { ... }` blocks is a future surface feature; in v0.1, prefer defining recursive helpers at module scope.
@@ -1624,18 +1623,37 @@ validatedUser = effect {
 
 Modules are the primary unit of code organization, encapsulation, and reuse in AIVI. They define a closed scope and explicitly export symbols for public use.
 
+Modules can be written in a flat form that keeps file indentation shallow. The module body runs until end-of-file:
+
 ```aivi
 module my.utility.math = {
   export add, subtract
   export pi
-  
+
   pi = 3.14159
   add = a b => a + b
   subtract = a b => a - b
-  
+
   // Internal helper, not exported
   abs = n => if n < 0 then -n else n
 }
+```
+
+When using the flat form, the `module` declaration must be the last top-level item in the file and its body extends to EOF.
+
+The explicit braced form is still supported (and required for multiple modules in one file):
+
+```aivi
+module my.utility.math
+export add, subtract
+export pi
+
+pi = 3.14159
+add = a b => a + b
+subtract = a b => a - b
+
+// Internal helper, not exported
+abs = n => if n < 0 then -n else n
 ```
 
 
@@ -1681,16 +1699,15 @@ Compiler checks:
 Modules are the primary vehicle for delivering **Domains**. Exporting a domain automatically exports its carrier type, delta types, and operators.
 
 ```aivi
-module geo.vector = {
-  export domain Vector
-  export Vec2
-  
-  Vec2 = { x: Float, y: Float }
-  
-  domain Vector over Vec2 = {
-    (+) : Vec2 -> Vec2 -> Vec2
-    (+) a b = { x: a.x + b.x, y: a.y + b.y }
-  }
+module geo.vector
+export domain Vector
+export Vec2
+
+Vec2 = { x: Float, y: Float }
+
+domain Vector over Vec2 = {
+  (+) : Vec2 -> Vec2 -> Vec2
+  (+) a b = { x: a.x + b.x, y: a.y + b.y }
 }
 ```
 
@@ -1703,24 +1720,22 @@ Modules are statically resolved but behave like first-class records within the c
 
 ### Nested Modules
 ```aivi
-module aivi = {
-  module calendar = { ... }
-  module number = { ... }
-}
+module aivi
+module calendar = { ... }
+module number = { ... }
 ```
 
 ### Module Re-exports
 A module can aggregate other modules, acting as a facade.
 
 ```aivi
-module aivi.prelude = {
-  export domain Calendar, Color
-  export List, Result, Ok, Err
-  
-  use aivi.calendar (domain Calendar)
-  use aivi.color (domain Color)
-  use aivi (List, Result, Ok, Err)
-}
+module aivi.prelude
+export domain Calendar, Color
+export List, Result, Ok, Err
+
+use aivi.calendar (domain Calendar)
+use aivi.color (domain Color)
+use aivi (List, Result, Ok, Err)
 ```
 
 
@@ -1732,9 +1747,8 @@ To opt-out of this behavior (mandatory for the core stdlib itself):
 
 ```aivi
 @no_prelude
-module aivi.bootstrap = {
-  // Pure bootstrap logic
-}
+module aivi.bootstrap
+// Pure bootstrap logic
 ```
 
 
@@ -1748,27 +1762,25 @@ Modules allow for building clean, layered architectures where complex internal i
 ### Clean App Facade
 ```aivi
 // Aggregate multiple sub-modules into a single clean API
-module my.app.api = {
-  export login, fetchDashboard, updateProfile
-  
-  use my.app.auth (login)
-  use my.app.data (fetchDashboard)
-  use my.app.user (updateProfile)
-}
+module my.app.api
+export login, fetchDashboard, updateProfile
+
+use my.app.auth (login)
+use my.app.data (fetchDashboard)
+use my.app.user (updateProfile)
 ```
 
 ### Domain Extension Pattern
 ```aivi
 // Enhance an existing domain with local helpers
-module my.geo.utils = {
-  export domain Vector
-  export distanceToOrigin, isZero
-  
-  use geo.vector (domain Vector, Vec2)
-  
-  distanceToOrigin = v => sqrt (v.x * v.x + v.y * v.y)
-  isZero = v => v.x == 0 && v.y == 0
-}
+module my.geo.utils
+export domain Vector
+export distanceToOrigin, isZero
+
+use geo.vector (domain Vector, Vec2)
+
+distanceToOrigin = v => sqrt (v.x * v.x + v.y * v.y)
+isZero = v => v.x == 0 && v.y == 0
 ```
 
 ### Context-Specific Environments (Static Injection)
@@ -2117,7 +2129,7 @@ Decorators appear before the binding they annotate.
 ### Pragmas (Module-level)
 | Decorator | Usage | Meaning |
 | :--- | :--- | :--- |
-| `@no_prelude` | `@no_prelude module M = ...` | Skip implicit prelude import |
+| `@no_prelude` | `@no_prelude module M` | Skip implicit prelude import |
 ## 14.3 Decorator Desugaring
 
 Decorators desugar to compile-time metadata:
@@ -2320,11 +2332,13 @@ TypeRhs        := Type
                | [ Sep? "|" ] ConDef { Sep? "|" ConDef } ;
 ConDef         := UpperIdent { TypeAtom } ;
 
-ModuleDef      := "module" ModulePath "=" ModuleBody Sep ;
+ModuleDef      := "module" ModulePath ( "=" ModuleBody Sep | Sep ModuleBodyImplicit ) ;
 ModulePath     := ModuleSeg { "." ModuleSeg } ;
 ModuleSeg      := lowerIdent | UpperIdent ;
 ModuleBody     := "{" { ModuleItem } "}" ;
 ModuleItem     := ExportStmt | UseStmt | Definition | ModuleDef ;
+ModuleBodyImplicit := { ModuleItem } EOF ;
+(* ModuleBodyImplicit must be the last top-level item in the file. *)
 ExportStmt     := "export" ( "*" | ExportList ) Sep ;
 ExportList     := ExportItem { "," ExportItem } ;
 ExportItem     := lowerIdent | UpperIdent | ("domain" UpperIdent) ;
@@ -2571,35 +2585,33 @@ RecordPatKey   := lowerIdent { "." lowerIdent } ;
 The **Prelude** is your default toolkit. It acts as the "standard library of the standard library," automatically using the core types and domains you use in almost every program (like `Int`, `List`, `Text`, and `Result`). It ensures you don't have to write fifty `use` lines just to add two numbers or print "Hello World".
 
 ```aivi
-module aivi.prelude = {
-  // Core types
-  export Int, Float, Bool, Text, Char, Bytes
-  export List, Option, Result, Tuple
-  
-  // Standard domains
-  export domain Calendar
-  export domain Duration
-  export domain Color
-  export domain Vector
-  
-  // Re-exports
-  use aivi
-  use aivi.text
-  use aivi.calendar
-  use aivi.duration
-  use aivi.color
-  use aivi.vector
-}
+module aivi.prelude
+// Core types
+export Int, Float, Bool, Text, Char, Bytes
+export List, Option, Result, Tuple
+
+// Standard domains
+export domain Calendar
+export domain Duration
+export domain Color
+export domain Vector
+
+// Re-exports
+use aivi
+use aivi.text
+use aivi.calendar
+use aivi.duration
+use aivi.color
+use aivi.vector
 ```
 
 ## Opting Out
 
 ```aivi
 @no_prelude
-module my.custom.module = {
-  // Nothing used automatically
-  use aivi (Int, Bool)
-}
+module my.custom.module
+// Nothing used automatically
+use aivi (Int, Bool)
 ```
 
 ## Rationale
@@ -4509,11 +4521,10 @@ A URL isn't just text; it's a structured address with protocols, hosts, and quer
 ## Module
 
 ```aivi
-module aivi.url = {
-  export domain Url
-  export Url
-  export parse, toString
-}
+module aivi.url
+export domain Url
+export Url
+export parse, toString
 ```
 
 ## Types
@@ -5762,328 +5773,314 @@ The first operation to succeed is chosen; all other pending operations in the bl
 <!-- EXAMPLE: 00_literals.aivi -->
 
 ```aivi
-module examples.compiler.literals = {
-  export ints, floats, texts, suffixes, instant, tuple, records, nested, palette
+module examples.compiler.literals
+export ints, floats, texts, suffixes, instant, tuple, records, nested, palette
 
-  ints = [0, 1, 42, -7]
-  floats = [0.0, 3.14, -2.5]
-  texts = ["plain", "Count: {1 + 2}", "user: { { name: \"A\" }.name }"]
+ints = [0, 1, 42, -7]
+floats = [0.0, 3.14, -2.5]
+texts = ["plain", "Count: {1 + 2}", "user: { { name: \"A\" }.name }"]
 
-  suffixes = [10px, 100%, 30s, 1min, 3.14dec, 42n]
-  instant = 2024-05-21T12:00:00Z
+suffixes = [10px, 100%, 30s, 1min, 3.14dec, 42n]
+instant = 2024-05-21T12:00:00Z
 
-  tuple = (1, "ok", True)
+tuple = (1, "ok", True)
 
-  records = [
-    { id: 1, label: "alpha", meta: { score: 9.5, active: True } }
-    { id: 2, label: "beta", meta: { score: 7.0, active: False } }
-  ]
+records = [
+  { id: 1, label: "alpha", meta: { score: 9.5, active: True } }
+  { id: 2, label: "beta", meta: { score: 7.0, active: False } }
+]
 
-  nested = {
-    title: "Report"
-    stats: { count: 3, avg: 1.5 }
-    tags: ["a", "b", "c"]
-  }
-
-  palette = [
-    { name: "ink", rgb: (12, 15, 20) }
-    { name: "sand", rgb: (242, 233, 210) }
-  ]
+nested = {
+  title: "Report"
+  stats: { count: 3, avg: 1.5 }
+  tags: ["a", "b", "c"]
 }
 
+palette = [
+  { name: "ink", rgb: (12, 15, 20) }
+  { name: "sand", rgb: (242, 233, 210) }
+]
 ```
 
 
 <!-- EXAMPLE: 01_patterns.aivi -->
 
 ```aivi
-module examples.compiler.patterns = {
-  export head, classify, deepName, unwrap, take, zip, depth, flatten, evalExpr
+module examples.compiler.patterns
+export head, classify, deepName, unwrap, take, zip, depth, flatten, evalExpr
 
-  Option A = None | Some A
-  Result E A = Err E | Ok A
-  Tree A = Leaf A | Node (Tree A) (Tree A)
-  Expr = Num Int | Add Expr Expr | Mul Expr Expr
+Option A = None | Some A
+Result E A = Err E | Ok A
+Tree A = Leaf A | Node (Tree A) (Tree A)
+Expr = Num Int | Add Expr Expr | Mul Expr Expr
 
-  head =
-    | [] => None
-    | [x, ...] => Some x
+head =
+  | [] => None
+  | [x, ...] => Some x
 
-  classify = n => n ?
-    | 0 => "zero"
-    | n when n < 0 => "negative"
-    | _ => "positive"
+classify = n => n ?
+  | 0 => "zero"
+  | n when n < 0 => "negative"
+  | _ => "positive"
 
-  deepName = response =>
-    response ?
-      | { data.user.profile@{ name } } => name
-      | _ => "unknown"
+deepName = response =>
+  response ?
+    | { data.user.profile@{ name } } => name
+    | _ => "unknown"
 
-  unwrap =
-    | Ok x => x
-    | Err _ => 0
+unwrap =
+  | Ok x => x
+  | Err _ => 0
 
-  take = (n, xs) => (n, xs) ?
-    | (n, _) when n <= 0 => []
-    | (_, []) => []
-    | (n, [x, ...rest]) => [x, ...take (n - 1, rest)]
+take = (n, xs) => (n, xs) ?
+  | (n, _) when n <= 0 => []
+  | (_, []) => []
+  | (n, [x, ...rest]) => [x, ...take (n - 1, rest)]
 
-  zip = (xs, ys) => (xs, ys) ?
-    | ([], _) => []
-    | (_, []) => []
-    | ([x, ...xs], [y, ...ys]) => [(x, y), ...zip (xs, ys)]
+zip = (xs, ys) => (xs, ys) ?
+  | ([], _) => []
+  | (_, []) => []
+  | ([x, ...xs], [y, ...ys]) => [(x, y), ...zip (xs, ys)]
 
-  append = xs ys => xs ?
-    | [] => ys
-    | [h, ...t] => [h, ...append t ys]
+append = xs ys => xs ?
+  | [] => ys
+  | [h, ...t] => [h, ...append t ys]
 
-  depth =
-    | Leaf _ => 1
-    | Node left right => 1 + max (depth left) (depth right)
+depth =
+  | Leaf _ => 1
+  | Node left right => 1 + max (depth left) (depth right)
 
-  flatten =
-    | Leaf x => [x]
-    | Node left right => append (flatten left) (flatten right)
+flatten =
+  | Leaf x => [x]
+  | Node left right => append (flatten left) (flatten right)
 
-  evalExpr =
-    | Num n => n
-    | Add a b => evalExpr a + evalExpr b
-    | Mul a b => evalExpr a * evalExpr b
-}
-
+evalExpr =
+  | Num n => n
+  | Add a b => evalExpr a + evalExpr b
+  | Mul a b => evalExpr a * evalExpr b
 ```
 
 
 <!-- EXAMPLE: 02_functions.aivi -->
 
 ```aivi
-module examples.compiler.functions = {
-  export inc, add, compose, pipeline, getName, pairSum, twice, map, filter, sum, processed
+module examples.compiler.functions
+export inc, add, compose, pipeline, getName, pairSum, twice, map, filter, sum, processed
 
-  inc = _ + 1
-  add = x y => x + y
-  compose = f g => x => f (g x)
+inc = _ + 1
+add = x y => x + y
+compose = f g => x => f (g x)
 
-  pipeline = x => x |> inc |> (_ * 2)
-  getName = .name
-  pairSum = (a, b) => a + b
+pipeline = x => x |> inc |> (_ * 2)
+getName = .name
+pairSum = (a, b) => a + b
 
-  twice = f => x => f (f x)
+twice = f => x => f (f x)
 
-  map = f xs => xs ?
-    | [] => []
-    | [h, ...t] => [f h, ...map f t]
+map = f xs => xs ?
+  | [] => []
+  | [h, ...t] => [f h, ...map f t]
 
-  filter = p xs => xs ?
-    | [] => []
-    | [h, ...t] when p h => [h, ...filter p t]
-    | [_, ...t] => filter p t
+filter = p xs => xs ?
+  | [] => []
+  | [h, ...t] when p h => [h, ...filter p t]
+  | [_, ...t] => filter p t
 
-  sum = xs => xs ?
-    | [] => 0
-    | [h, ...t] => h + sum t
+sum = xs => xs ?
+  | [] => 0
+  | [h, ...t] => h + sum t
 
-  processed =
-    [1, 2, 3, 4, 5]
-      |> map (add 10)
-      |> filter (_ % 2 == 0)
-      |> sum
-}
-
+processed =
+  [1, 2, 3, 4, 5]
+    |> map (add 10)
+    |> filter (_ % 2 == 0)
+    |> sum
 ```
 
 
 <!-- EXAMPLE: 03_records_patching.aivi -->
 
 ```aivi
-module examples.compiler.records_patching = {
-  export User, user1, user2, user3, store2, store3, promote
+module examples.compiler.records_patching
+export User, user1, user2, user3, store2, store3, promote
 
-  User = { name: Text, age: Int, tags: List Text }
+User = { name: Text, age: Int, tags: List Text }
 
-  append = xs ys => xs ?
-    | [] => ys
-    | [h, ...t] => [h, ...append t ys]
+append = xs ys => xs ?
+  | [] => ys
+  | [h, ...t] => [h, ...append t ys]
 
-  user1 : User
-  user1 = { name: "Ada", age: 36, tags: ["dev"] }
+user1 : User
+user1 = { name: "Ada", age: 36, tags: ["dev"] }
 
-  user2 = user1 <| {
-    age: _ + 1
-    tags: append _ ["vip"]
-  }
-
-  promote = user => user <| {
-    tags: append _ ["core"]
-  }
-
-  bumpName = name => "{name}+"
-
-  user3 = user2 <| {
-    name: bumpName
-    age: _ + 2
-  }
-
-  Item = { price: Int, active: Bool }
-  Store = { items: List Item }
-
-  store = { items: [
-    { price: 10, active: True }
-    { price: 20, active: False }
-    { price: 30, active: True }
-  ] }
-
-  store2 = store <| {
-    items[active].price: _ + 5
-  }
-
-  store3 = store2 <| {
-    items[price > 15].price: _ - 2
-    items[price > 15].active: True
-  }
+user2 = user1 <| {
+  age: _ + 1
+  tags: append _ ["vip"]
 }
 
+promote = user => user <| {
+  tags: append _ ["core"]
+}
+
+bumpName = name => "{name}+"
+
+user3 = user2 <| {
+  name: bumpName
+  age: _ + 2
+}
+
+Item = { price: Int, active: Bool }
+Store = { items: List Item }
+
+store = { items: [
+  { price: 10, active: True }
+  { price: 20, active: False }
+  { price: 30, active: True }
+] }
+
+store2 = store <| {
+  items[active].price: _ + 5
+}
+
+store3 = store2 <| {
+  items[price > 15].price: _ - 2
+  items[price > 15].active: True
+}
 ```
 
 
 <!-- EXAMPLE: 04_generators.aivi -->
 
 ```aivi
-module examples.compiler.generators = {
-  export gen, evens, grid, fibs, pairs, squares
+module examples.compiler.generators
+export gen, evens, grid, fibs, pairs, squares
 
-  gen = generate {
-    yield 1
-    yield 2
-    yield 3
-  }
-
-  evens = generate {
-    x <- [1..10]
-    x -> _ % 2 == 0
-    yield x
-  }
-
-  grid = generate {
-    x <- [0..2]
-    y <- [0..3]
-    yield (x, y)
-  }
-
-  pairs = generate {
-    x <- [1..5]
-    y <- [1..5]
-    y -> y > x
-    yield { left: x, right: y, sum: x + y }
-  }
-
-  squares = generate {
-    x <- [1..8]
-    sq = x * x
-    sq -> _ % 2 == 0
-    yield sq
-  }
-
-  fibs = generate {
-    loop (a, b) = (0, 1) => {
-      yield a
-      recurse (b, a + b)
-    }
-  }
+gen = generate {
+  yield 1
+  yield 2
+  yield 3
 }
 
+evens = generate {
+  x <- [1..10]
+  x -> _ % 2 == 0
+  yield x
+}
+
+grid = generate {
+  x <- [0..2]
+  y <- [0..3]
+  yield (x, y)
+}
+
+pairs = generate {
+  x <- [1..5]
+  y <- [1..5]
+  y -> y > x
+  yield { left: x, right: y, sum: x + y }
+}
+
+squares = generate {
+  x <- [1..8]
+  sq = x * x
+  sq -> _ % 2 == 0
+  yield sq
+}
+
+fibs = generate {
+  loop (a, b) = (0, 1) => {
+    yield a
+    recurse (b, a + b)
+  }
+}
 ```
 
 
 <!-- EXAMPLE: 05_effects_resources.aivi -->
 
 ```aivi
-module examples.compiler.effects = {
-  export program, readConfig, withFile, managedFile, loadOrDefault, program2
+module examples.compiler.effects
+export program, readConfig, withFile, managedFile, loadOrDefault, program2
 
-  use aivi.console (print)
+use aivi.console (print)
 
-  program : Effect Text Unit
-  program = effect {
-    _ <- print "boot"
-    cfg <- readConfig "config.json"
-    _ <- print cfg
-    pure Unit
-  }
-
-  readConfig : Text -> Effect Text Text
-  readConfig path = effect {
-    res <- attempt (load (file.read path))
-    res ?
-      | Ok txt => pure txt
-      | Err _  => fail "missing"
-  }
-
-  managedFile : Text -> Resource Text
-  managedFile path = resource {
-    handle <- file.open path
-    yield handle
-    _ <- file.close handle
-  }
-
-  withFile : Text -> Effect Text Unit
-  withFile path = effect {
-    f <- managedFile path
-    _ <- file.readAll f
-    pure Unit
-  }
-
-  loadOrDefault : Text -> Text -> Effect Text Text
-  loadOrDefault path fallback = effect {
-    res <- attempt (load (file.read path))
-    res ?
-      | Ok txt => pure txt
-      | Err _  => pure fallback
-  }
-
-  program2 : Effect Text Unit
-  program2 = effect {
-    cfg <- loadOrDefault "config.json" "{ \"mode\": \"dev\" }"
-    _ <- print cfg
-    pure Unit
-  }
+program : Effect Text Unit
+program = effect {
+  _ <- print "boot"
+  cfg <- readConfig "config.json"
+  _ <- print cfg
+  pure Unit
 }
 
+readConfig : Text -> Effect Text Text
+readConfig path = effect {
+  res <- attempt (load (file.read path))
+  res ?
+    | Ok txt => pure txt
+    | Err _  => fail "missing"
+}
+
+managedFile : Text -> Resource Text
+managedFile path = resource {
+  handle <- file.open path
+  yield handle
+  _ <- file.close handle
+}
+
+withFile : Text -> Effect Text Unit
+withFile path = effect {
+  f <- managedFile path
+  _ <- file.readAll f
+  pure Unit
+}
+
+loadOrDefault : Text -> Text -> Effect Text Text
+loadOrDefault path fallback = effect {
+  res <- attempt (load (file.read path))
+  res ?
+    | Ok txt => pure txt
+    | Err _  => pure fallback
+}
+
+program2 : Effect Text Unit
+program2 = effect {
+  cfg <- loadOrDefault "config.json" "{ \"mode\": \"dev\" }"
+  _ <- print cfg
+  pure Unit
+}
 ```
 
 
 <!-- EXAMPLE: 06_domains.aivi -->
 
 ```aivi
-module examples.compiler.domains = {
-  export Date, Calendar, addWeek, addTwoWeeks, shiftBy
+module examples.compiler.domains
+export Date, Calendar, addWeek, addTwoWeeks, shiftBy
 
-  Date = { year: Int, month: Int, day: Int }
+Date = { year: Int, month: Int, day: Int }
 
-  domain Calendar over Date = {
-    type Delta = Day Int | Week Int
+domain Calendar over Date = {
+  type Delta = Day Int | Week Int
 
-    (+) : Date -> Delta -> Date
-    (+) d (Day n) = addDays d n
-    (+) d (Week n) = addDays d (n * 7)
+  (+) : Date -> Delta -> Date
+  (+) d (Day n) = addDays d n
+  (+) d (Week n) = addDays d (n * 7)
 
-    1d = Day 1
-    1w = Week 1
-  }
-
-  addDays : Date -> Int -> Date
-  addDays d n = d <| { day: _ + n }
-
-  addWeek : Date -> Date
-  addWeek d = d + 1w
-
-  addTwoWeeks : Date -> Date
-  addTwoWeeks d = d + 1w + 1w
-
-  shiftBy : Date -> Delta -> Date
-  shiftBy d delta = d + delta
+  1d = Day 1
+  1w = Week 1
 }
 
+addDays : Date -> Int -> Date
+addDays d n = d <| { day: _ + n }
+
+addWeek : Date -> Date
+addWeek d = d + 1w
+
+addTwoWeeks : Date -> Date
+addTwoWeeks d = d + 1w + 1w
+
+shiftBy : Date -> Delta -> Date
+shiftBy d delta = d + delta
 ```
 
 
@@ -6129,354 +6126,333 @@ module examples.compiler.app = {
     |> mean
     |> add (square 2)
 }
-
 ```
 
 
 <!-- EXAMPLE: 08_effects_core_ops.aivi -->
 
 ```aivi
-module examples.runtime_effects_core_ops = {
-  export main
+module examples.runtime_effects_core_ops
+export main
 
-  use aivi.console (print)
+use aivi.console (print)
 
-  main : Effect Text Unit
-  main = effect {
-    n <- pure 41
-    m <- (pure n |> bind) (x => pure (x + 1))
+main : Effect Text Unit
+main = effect {
+  n <- pure 41
+  m <- (pure n |> bind) (x => pure (x + 1))
 
-    res <- attempt (
-      if m == 42 then fail "boom" else pure m
-    )
+  res <- attempt (
+    if m == 42 then fail "boom" else pure m
+  )
 
-    verdict <- res ?
-      | Ok _  => pure "ok"
-      | Err _ => pure "err"
+  verdict <- res ?
+    | Ok _  => pure "ok"
+    | Err _ => pure "err"
 
-    _ <- print verdict
+  _ <- print verdict
 
-    _ <- if m > 40 then effect {
-      _ <- print "branch"
-      pure Unit
-    } else pure Unit
-
+  _ <- if m > 40 then effect {
+    _ <- print "branch"
     pure Unit
-  }
-}
+  } else pure Unit
 
+  pure Unit
+}
 ```
 
 
 <!-- EXAMPLE: 09_classes.aivi -->
 
 ```aivi
-module examples.compiler.classes = {
-  export Eq, Functor, Option, isNone
+module examples.compiler.classes
+export Eq, Functor, Option, isNone
 
-  class Eq A = {
-    eq: A -> A -> Bool
-  }
-
-  instance Eq Bool = {
-    eq: x y => x == y
-  }
-
-  Option A = None | Some A
-
-  class Functor (F *) = {
-    map: F A -> (A -> B) -> F B
-  }
-
-  instance Functor (Option *) = {
-    map: opt f => opt ?
-      | None => None
-      | Some x => Some (f x)
-  }
-
-  instance Eq (Option Bool) = {
-    eq: a b => (a, b) ?
-      | (None, None) => True
-      | (Some x, Some y) => x == y
-      | _ => False
-  }
-
-  isNone = opt => opt ?
-    | None => True
-    | Some _ => False
+class Eq A = {
+  eq: A -> A -> Bool
 }
 
+instance Eq Bool = {
+  eq: x y => x == y
+}
+
+Option A = None | Some A
+
+class Functor (F *) = {
+  map: F A -> (A -> B) -> F B
+}
+
+instance Functor (Option *) = {
+  map: opt f => opt ?
+    | None => None
+    | Some x => Some (f x)
+}
+
+instance Eq (Option Bool) = {
+  eq: a b => (a, b) ?
+    | (None, None) => True
+    | (Some x, Some y) => x == y
+    | _ => False
+}
+
+isNone = opt => opt ?
+  | None => True
+  | Some _ => False
 ```
 
 
 <!-- EXAMPLE: 11_concurrency.aivi -->
 
 ```aivi
-module examples.runtime = {
-  export main
+module examples.runtime
+export main
 
-  use aivi.console (print)
+use aivi.console (print)
 
-  main : Effect Text Unit
-  main = effect {
-    _ <- concurrent.par (print "left\n") (print "right\n")
-    (tx, rx) <- channel.make Unit
-    prefix = "ping"
-    _ <- channel.send tx "{prefix}\n"
-    res <- channel.recv rx
-    msg <- res ?
-      | Ok text => pure text
-      | Err Closed => pure "closed\n"
-    _ <- print msg
-    pure Unit
-  }
+main : Effect Text Unit
+main = effect {
+  _ <- concurrent.par (print "left\n") (print "right\n")
+  (tx, rx) <- channel.make Unit
+  prefix = "ping"
+  _ <- channel.send tx "{prefix}\n"
+  res <- channel.recv rx
+  msg <- res ?
+    | Ok text => pure text
+    | Err Closed => pure "closed\n"
+  _ <- print msg
+  pure Unit
 }
-
 ```
 
 
 <!-- EXAMPLE: 12_text_regex.aivi -->
 
 ```aivi
-module examples.stdlib_text_regex = {
-  export main
+module examples.stdlib_text_regex
+export main
 
-  use aivi.console (print)
-  use aivi.text
-  use aivi.regex
+use aivi.console (print)
+use aivi.text
+use aivi.regex
 
-  main : Effect Text Unit
-  main = effect {
-    msg = "  Hello World  "
-    slug = msg |> trim |> toLower |> replaceAll " " "-"
-    _ <- print slug
+main : Effect Text Unit
+main = effect {
+  msg = "  Hello World  "
+  slug = msg |> trim |> toLower |> replaceAll " " "-"
+  _ <- print slug
 
-    compiled = compile "[a-z]+"
-    verdict = compiled ?
-      | Ok r => if test r "caa" then "match" else "no"
-      | Err _ => "bad"
+  compiled = compile "[a-z]+"
+  verdict = compiled ?
+    | Ok r => if test r "caa" then "match" else "no"
+    | Err _ => "bad"
 
-    _ <- print verdict
+  _ <- print verdict
 
-    bytes = toBytes Utf8 "ping"
-    decoded = fromBytes Utf8 bytes
-    decoded ?
-      | Ok value => print value
-      | Err _ => print "decode failed"
+  bytes = toBytes Utf8 "ping"
+  decoded = fromBytes Utf8 bytes
+  decoded ?
+    | Ok value => print value
+    | Err _ => print "decode failed"
 
-    pure Unit
-  }
+  pure Unit
 }
-
 ```
 
 
 <!-- EXAMPLE: 13_calendar_color.aivi -->
 
 ```aivi
-module examples.stdlib_calendar_color = {
-  export main
+module examples.stdlib_calendar_color
+export main
 
-  use aivi.console (print)
-  use aivi.calendar
-  use aivi.duration
-  use aivi.color
-  use aivi.vector
+use aivi.console (print)
+use aivi.calendar
+use aivi.duration
+use aivi.color
+use aivi.vector
 
-  main : Effect Text Unit
-  main = effect {
-    today = { year: 2025, month: 2, day: 8 }
-    next = today + Day 1
-    _ <- print "{next.year}-{next.month}-{next.day}"
+main : Effect Text Unit
+main = effect {
+  today = { year: 2025, month: 2, day: 8 }
+  next = today + Day 1
+  _ <- print "{next.year}-{next.month}-{next.day}"
 
-    timeout = { millis: 0 } + Second 1
-    _ <- print "timeout: {timeout.millis}"
+  timeout = { millis: 0 } + Second 1
+  _ <- print "timeout: {timeout.millis}"
 
-    primary = { r: 10, g: 20, b: 30 }
-    lighter = primary + Lightness 10
-    _ <- print (toHex lighter)
+  primary = { r: 10, g: 20, b: 30 }
+  lighter = primary + Lightness 10
+  _ <- print (toHex lighter)
 
-    v1 = { x: 1.0, y: 2.0 }
-    v2 = { x: 3.0, y: 4.0 }
-    v3 = v1 + v2
-    _ <- print "{v3.x},{v3.y}"
+  v1 = { x: 1.0, y: 2.0 }
+  v2 = { x: 3.0, y: 4.0 }
+  v3 = v1 + v2
+  _ <- print "{v3.x},{v3.y}"
 
-    pure Unit
-  }
+  pure Unit
 }
-
 ```
 
 
 <!-- EXAMPLE: 14_math_number.aivi -->
 
 ```aivi
-module examples.stdlib_math_number = {
-  export main
+module examples.stdlib_math_number
+export main
 
-  use aivi.console (print)
-  use aivi.math
-  use aivi.number.bigint (fromInt)
-  use aivi.number.decimal (fromFloat)
+use aivi.console (print)
+use aivi.math
+use aivi.number.bigint (fromInt)
+use aivi.number.decimal (fromFloat)
 
-  main : Effect Text Unit
-  main = effect {
-    g = gcd 54 24
-    _ <- print "gcd: {g}"
+main : Effect Text Unit
+main = effect {
+  g = gcd 54 24
+  _ <- print "gcd: {g}"
 
-    fact = factorial 10
-    _ <- print "10! = {fact}"
+  fact = factorial 10
+  _ <- print "10! = {fact}"
 
-    price = fromFloat 19.99
-    total = price + fromFloat 0.01
-    _ <- print "total: {total}"
+  price = fromFloat 19.99
+  total = price + fromFloat 0.01
+  _ <- print "total: {total}"
 
-    unit = sin (degrees 90.0)
-    _ <- print "sin: {unit}"
+  unit = sin (degrees 90.0)
+  _ <- print "sin: {unit}"
 
-    pure Unit
-  }
+  pure Unit
 }
-
 ```
 
 
 <!-- EXAMPLE: 15_http_client.aivi -->
 
 ```aivi
-module examples.httpClient = {
-  export main
+module examples.httpClient
+export main
 
-  use aivi.console (println)
-  use aivi.net.https (get)
+use aivi.console (println)
+use aivi.net.https (get)
 
-  main : Effect Text Unit
-  main = effect {
-    result <- get ~u(https://example.com)
-    message = result ?
-      | Ok response => "Status {response.status}"
-      | Err err => "Error {err.message}"
-    _ <- println message
-    pure Unit
-  }
+main : Effect Text Unit
+main = effect {
+  result <- get ~u(https://example.com)
+  message = result ?
+    | Ok response => "Status {response.status}"
+    | Err err => "Error {err.message}"
+  _ <- println message
+  pure Unit
 }
-
 ```
 
 
 <!-- EXAMPLE: 16_collections.aivi -->
 
 ```aivi
-module examples.stdlib_collections = {
-  export main
+module examples.stdlib_collections
+export main
 
-  use aivi.console (print)
-  use aivi (Map, Set, Queue, Deque, Heap)
+use aivi.console (print)
+use aivi (Map, Set, Queue, Deque, Heap)
 
-  main : Effect Text Unit
-  main = effect {
-    base = ~map{
-      "a" => 1
-      "b" => 2
-    }
-    more = ~map{
-      "b" => 3
-      "c" => 4
-    }
-    merged = Map.union base more
-    _ <- print "merged: {merged}"
-
-    tags = ~set["hot", "new", ...Set.fromList ["fresh"]]
-    _ <- print "tags: {tags}"
-
-    q1 = Queue.enqueue "first" Queue.empty
-    q2 = Queue.enqueue "second" q1
-    popped = Queue.dequeue q2
-    popped ?
-      | Some (value, _) => print "queue: {value}"
-      | None => print "queue empty"
-
-    d1 = Deque.pushFront 1 Deque.empty
-    d2 = Deque.pushBack 2 d1
-    d3 = Deque.pushBack 3 d2
-    front = Deque.popFront d3
-    front ?
-      | Some (value, _) => print "deque: {value}"
-      | None => print "deque empty"
-
-    h1 = Heap.push 3 Heap.empty
-    h2 = Heap.push 1 h1
-    h3 = Heap.push 2 h2
-    smallest = Heap.popMin h3
-    smallest ?
-      | Some (value, _) => print "heap: {value}"
-      | None => print "heap empty"
-
-    pure Unit
+main : Effect Text Unit
+main = effect {
+  base = ~map{
+    "a" => 1
+    "b" => 2
   }
-}
+  more = ~map{
+    "b" => 3
+    "c" => 4
+  }
+  merged = Map.union base more
+  _ <- print "merged: {merged}"
 
+  tags = ~set["hot", "new", ...Set.fromList ["fresh"]]
+  _ <- print "tags: {tags}"
+
+  q1 = Queue.enqueue "first" Queue.empty
+  q2 = Queue.enqueue "second" q1
+  popped = Queue.dequeue q2
+  popped ?
+    | Some (value, _) => print "queue: {value}"
+    | None => print "queue empty"
+
+  d1 = Deque.pushFront 1 Deque.empty
+  d2 = Deque.pushBack 2 d1
+  d3 = Deque.pushBack 3 d2
+  front = Deque.popFront d3
+  front ?
+    | Some (value, _) => print "deque: {value}"
+    | None => print "deque empty"
+
+  h1 = Heap.push 3 Heap.empty
+  h2 = Heap.push 1 h1
+  h3 = Heap.push 2 h2
+  smallest = Heap.popMin h3
+  smallest ?
+    | Some (value, _) => print "heap: {value}"
+    | None => print "heap empty"
+
+  pure Unit
+}
 ```
 
 
 <!-- EXAMPLE: 17_linear_signal_graph.aivi -->
 
 ```aivi
-module examples.stdlib_linear_signal_graph = {
-  export main
+module examples.stdlib_linear_signal_graph
+export main
 
-  use aivi.console (print)
-  use aivi.linear_algebra
-  use aivi.signal
-  use aivi.graph
+use aivi.console (print)
+use aivi.linear_algebra
+use aivi.signal
+use aivi.graph
 
-  main : Effect Text Unit
-  main = effect {
-    v1 = { size: 3, data: [1.0, 2.0, 3.0] }
-    v2 = { size: 3, data: [2.0, 0.0, 1.0] }
-    d = dot v1 v2
-    _ <- print "dot: {d}"
+main : Effect Text Unit
+main = effect {
+  v1 = { size: 3, data: [1.0, 2.0, 3.0] }
+  v2 = { size: 3, data: [2.0, 0.0, 1.0] }
+  d = dot v1 v2
+  _ <- print "dot: {d}"
 
-    m1 = { rows: 2, cols: 2, data: [1.0, 2.0, 3.0, 4.0] }
-    m2 = { rows: 2, cols: 2, data: [2.0, 0.0, 1.0, 2.0] }
-    m3 = matMul m1 m2
-    _ <- print "matMul: {m3}"
+  m1 = { rows: 2, cols: 2, data: [1.0, 2.0, 3.0, 4.0] }
+  m2 = { rows: 2, cols: 2, data: [2.0, 0.0, 1.0, 2.0] }
+  m3 = matMul m1 m2
+  _ <- print "matMul: {m3}"
 
-    sig = { samples: [0.0, 1.0, 0.0, -1.0], rate: 4.0 }
-    windowed = windowHann sig
-    _ <- print "windowed: {windowed.samples}"
+  sig = { samples: [0.0, 1.0, 0.0, -1.0], rate: 4.0 }
+  windowed = windowHann sig
+  _ <- print "windowed: {windowed.samples}"
 
-    g0 = {
-      nodes: [1, 2, 3],
-      edges: [
-        { from: 1, to: 2, weight: 1.0 },
-        { from: 2, to: 3, weight: 1.0 },
-        { from: 1, to: 3, weight: 5.0 }
-      ]
-    }
-    path = shortestPath g0 1 3
-    _ <- print "path: {path}"
-
-    pure Unit
+  g0 = {
+    nodes: [1, 2, 3],
+    edges: [
+      { from: 1, to: 2, weight: 1.0 },
+      { from: 2, to: 3, weight: 1.0 },
+      { from: 1, to: 3, weight: 5.0 }
+    ]
   }
-}
+  path = shortestPath g0 1 3
+  _ <- print "path: {path}"
 
+  pure Unit
+}
 ```
 
 
 <!-- EXAMPLE: hello.aivi -->
 
 ```aivi
-module examples.hello = {
-  export main
+module examples.hello
+export main
 
-  use aivi.console (print)
+use aivi.console (print)
 
-  main : Effect Text Unit
-  main = effect {
-    _ <- print "Hello, world!"
-    pure Unit
-  }
+main : Effect Text Unit
+main = effect {
+  _ <- print "Hello, world!"
+  pure Unit
 }
-
 ```

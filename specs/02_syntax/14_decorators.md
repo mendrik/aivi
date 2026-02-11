@@ -48,7 +48,7 @@ Decorators appear before the binding they annotate.
 ### Pragmas (Module-level)
 | Decorator | Usage | Meaning |
 | :--- | :--- | :--- |
-| `@no_prelude` | `@no_prelude module M = ...` | Skip implicit prelude import |
+| `@no_prelude` | `@no_prelude module M` | Skip implicit prelude import |
 ## 14.3 Decorator Desugaring
 
 Decorators desugar to compile-time metadata:

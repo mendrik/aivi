@@ -3,20 +3,16 @@ use aivi::format_text;
 #[test]
 fn test_fmt_basic_indentation() {
     let input = r#"
-module Test = {
+module Test
 def main = {
-    let x = 1
-    x
-}
-}
-"#;
-    let expected = r#"module Test = {
-  def main = {
-    let x = 1
-    x
-  }
-}
-"#;
+  let x = 1
+  x
+}"#;
+    let expected = r#"module Test
+def main = {
+  let x = 1
+  x
+}"#;
     assert_eq!(format_text(input), expected);
 }
 

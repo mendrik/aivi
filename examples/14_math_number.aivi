@@ -1,26 +1,24 @@
-module examples.stdlib_math_number = {
-  export main
+module examples.stdlib_math_number
+export main
 
-  use aivi.console (print)
-  use aivi.math
-  use aivi.number.bigint (fromInt)
-  use aivi.number.decimal (fromFloat)
+use aivi.console (print)
+use aivi.math
+use aivi.number.bigint (fromInt)
+use aivi.number.decimal (fromFloat)
 
-  main : Effect Text Unit
-  main = effect {
-    g = gcd 54 24
-    _ <- print "gcd: {g}"
+main : Effect Text Unit
+main = effect {
+  g = gcd 54 24
+  _ <- print "gcd: {g}"
 
-    fact = factorial 10
-    _ <- print "10! = {fact}"
+  fact = factorial 10
+  _ <- print "10! = {fact}"
 
-    price = fromFloat 19.99
-    total = price + fromFloat 0.01
-    _ <- print "total: {total}"
+  price = fromFloat 19.99
+  total = price + fromFloat 0.01
+  _ <- print "total: {total}"
 
-    unit = sin (degrees 90.0)
-    _ <- print "sin: {unit}"
+  unit = sin (degrees 90.0)
+  _ <- print "sin: {unit}"
 
-    pure Unit
-  }
-}
+  pure Unit

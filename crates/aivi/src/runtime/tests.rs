@@ -39,12 +39,11 @@ fn cleanups_run_even_when_cancelled() {
 #[test]
 fn text_interpolation_evaluates() {
     let source = r#"
-module test.interpolation = {
-  s = "Count: {1 + 2}"
-  n = -1
-  t = "negative{n}"
-  u = "brace \{x\}"
-}
+module test.interpolation
+s = "Count: {1 + 2}"
+n = -1
+t = "negative{n}"
+u = "brace \{x\}"
 "#;
 
     let (modules, diags) = crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);

@@ -1,28 +1,26 @@
-module examples.runtime_effects_core_ops = {
-  export main
+module examples.runtime_effects_core_ops
+export main
 
-  use aivi.console (print)
+use aivi.console (print)
 
-  main : Effect Text Unit
-  main = effect {
-    n <- pure 41
-    m <- (pure n |> bind) (x => pure (x + 1))
+main : Effect Text Unit
+main = effect {
+  n <- pure 41
+  m <- (pure n |> bind) (x => pure (x + 1))
 
-    res <- attempt (
-      if m == 42 then fail "boom" else pure m
-    )
+  res <- attempt (
+    if m == 42 then fail "boom" else pure m
+  )
 
-    verdict <- res ?
-      | Ok _  => pure "ok"
-      | Err _ => pure "err"
+  verdict <- res ?
+    | Ok _  => pure "ok"
+    | Err _ => pure "err"
 
-    _ <- print verdict
+  _ <- print verdict
 
-    _ <- if m > 40 then effect {
-      _ <- print "branch"
-      pure Unit
-    } else pure Unit
-
+  _ <- if m > 40 then effect {
+    _ <- print "branch"
     pure Unit
-  }
-}
+  } else pure Unit
+
+  pure Unit

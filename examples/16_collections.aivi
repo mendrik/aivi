@@ -1,15 +1,14 @@
-module examples.stdlib_collections = {
-  export main
+module examples.stdlib_collections
+export main
 
-  use aivi.console (print)
-  use aivi (Map, Set, Queue, Deque, Heap)
+use aivi.console (print)
+use aivi (Map, Set, Queue, Deque, Heap)
 
-  main : Effect Text Unit
-  main = effect {
-    base = ~map{
-      "a" => 1
-      "b" => 2
-    }
+main : Effect Text Unit
+main = effect {
+  base = ~map{
+    "a" => 1
+    "b" => 2
     more = ~map{
       "b" => 3
       "c" => 4
@@ -45,4 +44,3 @@ module examples.stdlib_collections = {
 
     pure Unit
   }
-}

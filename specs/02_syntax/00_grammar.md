@@ -104,11 +104,13 @@ TypeRhs        := Type
                | [ Sep? "|" ] ConDef { Sep? "|" ConDef } ;
 ConDef         := UpperIdent { TypeAtom } ;
 
-ModuleDef      := "module" ModulePath "=" ModuleBody Sep ;
+ModuleDef      := "module" ModulePath ( "=" ModuleBody Sep | Sep ModuleBodyImplicit ) ;
 ModulePath     := ModuleSeg { "." ModuleSeg } ;
 ModuleSeg      := lowerIdent | UpperIdent ;
 ModuleBody     := "{" { ModuleItem } "}" ;
 ModuleItem     := ExportStmt | UseStmt | Definition | ModuleDef ;
+ModuleBodyImplicit := { ModuleItem } EOF ;
+(* ModuleBodyImplicit must be the last top-level item in the file. *)
 ExportStmt     := "export" ( "*" | ExportList ) Sep ;
 ExportList     := ExportItem { "," ExportItem } ;
 ExportItem     := lowerIdent | UpperIdent | ("domain" UpperIdent) ;

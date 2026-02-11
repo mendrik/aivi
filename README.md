@@ -15,9 +15,8 @@ AIVI is a high-integrity functional language aimed at WebAssembly. This repo pri
 The snippets below are written in AIVI syntax; GitHub highlighting is approximate.
 
 ```haskell
-module demo.counter = {
-  export Model, Msg, init, update, view
-}
+module demo.counter
+export Model, Msg, init, update, view
 
 Model = { count: Int, step: Int }
 Msg = Inc | Dec | SetStep Int

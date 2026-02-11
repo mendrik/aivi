@@ -1,30 +1,28 @@
-module examples.stdlib_calendar_color = {
-  export main
+module examples.stdlib_calendar_color
+export main
 
-  use aivi.console (print)
-  use aivi.calendar
-  use aivi.duration
-  use aivi.color
-  use aivi.vector
+use aivi.console (print)
+use aivi.calendar
+use aivi.duration
+use aivi.color
+use aivi.vector
 
-  main : Effect Text Unit
-  main = effect {
-    today = { year: 2025, month: 2, day: 8 }
-    next = today + Day 1
-    _ <- print "{next.year}-{next.month}-{next.day}"
+main : Effect Text Unit
+main = effect {
+  today = { year: 2025, month: 2, day: 8 }
+  next = today + Day 1
+  _ <- print "{next.year}-{next.month}-{next.day}"
 
-    timeout = { millis: 0 } + Second 1
-    _ <- print "timeout: {timeout.millis}"
+  timeout = { millis: 0 } + Second 1
+  _ <- print "timeout: {timeout.millis}"
 
-    primary = { r: 10, g: 20, b: 30 }
-    lighter = primary + Lightness 10
-    _ <- print (toHex lighter)
+  primary = { r: 10, g: 20, b: 30 }
+  lighter = primary + Lightness 10
+  _ <- print (toHex lighter)
 
-    v1 = { x: 1.0, y: 2.0 }
-    v2 = { x: 3.0, y: 4.0 }
-    v3 = v1 + v2
-    _ <- print "{v3.x},{v3.y}"
+  v1 = { x: 1.0, y: 2.0 }
+  v2 = { x: 3.0, y: 4.0 }
+  v3 = v1 + v2
+  _ <- print "{v3.x},{v3.y}"
 
-    pure Unit
-  }
-}
+  pure Unit

@@ -113,18 +113,14 @@ fn build_definition_resolves_def() {
 #[test]
 fn build_definition_resolves_def_across_files_via_use() {
     let math_text = r#"@no_prelude
-module examples.compiler.math = {
-  export add
-  add = x y => x + y
-}
-"#;
+module examples.compiler.math
+export add
+add = x y => x + y"#;
     let app_text = r#"@no_prelude
-module examples.compiler.app = {
-  export run
-  use examples.compiler.math (add)
-  run = add 1 2
-}
-"#;
+module examples.compiler.app
+export run
+use examples.compiler.math (add)
+run = add 1 2"#;
 
     let math_uri = Url::parse("file:///math.aivi").expect("valid uri");
     let app_uri = Url::parse("file:///app.aivi").expect("valid uri");
@@ -169,19 +165,15 @@ fn build_hover_reports_type_signature() {
 #[test]
 fn build_hover_reports_type_signature_across_files_via_use() {
     let math_text = r#"@no_prelude
-module examples.compiler.math = {
-  export add
-  add : Number -> Number -> Number
-  add = x y => x + y
-}
-"#;
+module examples.compiler.math
+export add
+add : Number -> Number -> Number
+add = x y => x + y"#;
     let app_text = r#"@no_prelude
-module examples.compiler.app = {
-  export run
-  use examples.compiler.math (add)
-  run = add 1 2
-}
-"#;
+module examples.compiler.app
+export run
+use examples.compiler.math (add)
+run = add 1 2"#;
 
     let math_uri = Url::parse("file:///math.aivi").expect("valid uri");
     let app_uri = Url::parse("file:///app.aivi").expect("valid uri");
@@ -212,13 +204,11 @@ module examples.compiler.app = {
 #[test]
 fn build_hover_includes_docs_and_inferred_types() {
     let text = r#"@no_prelude
-module examples.docs = {
-  // Identity function.
-  id = x => x
+module examples.docs
+// Identity function.
+id = x => x
 
-  run = id 1
-}
-"#;
+run = id 1"#;
     let uri = sample_uri();
     let position = position_for(text, "id 1");
     let hover = Backend::build_hover(text, &uri, position).expect("hover found");
@@ -247,19 +237,15 @@ fn build_references_finds_symbol_mentions() {
 #[test]
 fn build_signature_help_resolves_imported_type_sig() {
     let math_text = r#"@no_prelude
-module examples.compiler.math = {
-  export add
-  add : Number -> Number -> Number
-  add = x y => x + y
-}
-"#;
+module examples.compiler.math
+export add
+add : Number -> Number -> Number
+add = x y => x + y"#;
     let app_text = r#"@no_prelude
-module examples.compiler.app = {
-  export run
-  use examples.compiler.math (add)
-  run = add 1 2
-}
-"#;
+module examples.compiler.app
+export run
+use examples.compiler.math (add)
+run = add 1 2"#;
 
     let math_uri = Url::parse("file:///math.aivi").expect("valid uri");
     let app_uri = Url::parse("file:///app.aivi").expect("valid uri");
@@ -292,19 +278,15 @@ module examples.compiler.app = {
 #[test]
 fn build_references_searches_across_modules() {
     let math_text = r#"@no_prelude
-module examples.compiler.math = {
-  export add
-  add : Number -> Number -> Number
-  add = x y => x + y
-}
-"#;
+module examples.compiler.math
+export add
+add : Number -> Number -> Number
+add = x y => x + y"#;
     let app_text = r#"@no_prelude
-module examples.compiler.app = {
-  export run
-  use examples.compiler.math (add)
-  run = add 1 2
-}
-"#;
+module examples.compiler.app
+export run
+use examples.compiler.math (add)
+run = add 1 2"#;
 
     let math_uri = Url::parse("file:///math.aivi").expect("valid uri");
     let app_uri = Url::parse("file:///app.aivi").expect("valid uri");
@@ -344,19 +326,15 @@ module examples.compiler.app = {
 #[test]
 fn build_rename_edits_across_modules() {
     let math_text = r#"@no_prelude
-module examples.compiler.math = {
-  export add
-  add : Number -> Number -> Number
-  add = x y => x + y
-}
-"#;
+module examples.compiler.math
+export add
+add : Number -> Number -> Number
+add = x y => x + y"#;
     let app_text = r#"@no_prelude
-module examples.compiler.app = {
-  export run
-  use examples.compiler.math (add)
-  run = add 1 2
-}
-"#;
+module examples.compiler.app
+export run
+use examples.compiler.math (add)
+run = add 1 2"#;
 
     let math_uri = Url::parse("file:///math.aivi").expect("valid uri");
     let app_uri = Url::parse("file:///app.aivi").expect("valid uri");

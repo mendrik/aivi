@@ -113,5 +113,5 @@ aivi rust-ir examples/hello.aivi
 
 ## Notes / current limitations
 
-- `aivi build` / `aivi run` currently expect a **single module** in the program (keep projects to one `module ... = { ... }` for now).
+- `aivi build` / `aivi run` currently expect a **single module** in the program (keep projects to one `module ...` for now).
 - The runtime entrypoint is a definition named `main` and it must evaluate to an `Effect` value.
