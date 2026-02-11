@@ -1,0 +1,34 @@
+module examples.system_log_database = {
+  export main
+
+  use aivi (database)
+  use aivi (log)
+  use aivi.system (env)
+  use aivi.text
+
+  User = { id: Int, name: Text, active: Bool }
+
+  userTable = database.table "users" [
+    { name: "id", type: IntType, constraints: [NotNull], default: None }
+    { name: "name", type: Varchar 64, constraints: [NotNull], default: None }
+    { name: "active", type: BoolType, constraints: [NotNull], default: Some (DefaultBool False) }
+  ]
+
+  main : Effect Text Unit
+  main = effect {
+    envValue <- env.get "APP_ENV"
+
+    table1 <- database.applyDelta userTable (database.ins { id: 1, name: "Ada", active: False })
+    table2 <- database.applyDelta table1 (database.ins { id: 2, name: "Lin", active: True })
+    table3 <- database.applyDelta table2 (database.upd (u => u.active == False) (u => u <| { active: True }))
+
+    rows <- database.load table3
+
+    _ <- log.info "users updated" [
+      ("env", text.toText envValue),
+      ("rows", text.toText rows)
+    ]
+
+    pure Unit
+  }
+}

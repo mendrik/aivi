@@ -7,10 +7,23 @@ It allows you to read **Environment Variables** (like secret queries or API keys
 ## Overview
 
 ```aivi
-use aivi.system (Env)
+use aivi.system (env)
 
 // Read an environment variable
-port = Env.get("PORT") |> Option.default("8080")
+port = env.get("PORT") |> Option.default("8080")
+```
+
+## Values
+
+```aivi
+env : {
+  get: Text -> Effect Text (Option Text)
+  set: Text -> Text -> Effect Text Unit
+  remove: Text -> Effect Text Unit
+}
+
+args : Effect Text (List Text)
+exit : Int -> Effect Text Unit
 ```
 
 ## Goals for v1.0

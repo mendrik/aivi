@@ -10,7 +10,11 @@ use super::math::build_math_record;
 use super::number::{build_bigint_record, build_decimal_record, build_rational_record};
 use super::regex::build_regex_record;
 use super::signal::build_signal_record;
-use super::system::{build_clock_record, build_console_record, build_file_record, build_random_record};
+use super::system::{
+    build_clock_record, build_console_record, build_file_record, build_random_record,
+    build_system_record,
+};
+use super::{database::build_database_record, log::build_log_record};
 use super::text::build_text_record;
 use super::url_http::{build_http_client_record, build_url_record, HttpClientMode};
 use super::util::{builtin, builtin_constructor};
@@ -144,6 +148,7 @@ pub(crate) fn register_builtins(env: &Env) {
     );
 
     env.set("file".to_string(), build_file_record());
+    env.set("system".to_string(), build_system_record());
     env.set("clock".to_string(), build_clock_record());
     env.set("random".to_string(), build_random_record());
     env.set("channel".to_string(), super::concurrency::build_channel_record());
@@ -183,4 +188,6 @@ pub(crate) fn register_builtins(env: &Env) {
     }
     env.set("collections".to_string(), collections);
     env.set("console".to_string(), build_console_record());
+    env.set("log".to_string(), build_log_record());
+    env.set("database".to_string(), build_database_record());
 }

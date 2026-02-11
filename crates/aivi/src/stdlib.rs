@@ -12,7 +12,7 @@ module aivi = {
 
   export text, regex, math, calendar, color
   export bigint, rational, decimal
-  export url, console, file, clock, random, channel, concurrent, httpServer, http, https, collections
+  export url, console, system, log, database, file, clock, random, channel, concurrent, httpServer, http, https, collections
   export linalg, signal, graph
 }
 "#;
@@ -1181,9 +1181,25 @@ module aivi.url = {
 const CONSOLE_SOURCE: &str = r#"
 @no_prelude
 module aivi.console = {
+  export AnsiColor, AnsiStyle
   export log, println, print, error, readLine
+  export color, bgColor, style, strip
 
   use aivi
+
+  type AnsiColor = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White | Default
+  type AnsiStyle = {
+    fg: Option AnsiColor
+    bg: Option AnsiColor
+    bold: Bool
+    dim: Bool
+    italic: Bool
+    underline: Bool
+    blink: Bool
+    inverse: Bool
+    hidden: Bool
+    strike: Bool
+  }
 
   log : Text -> Effect Text Unit
   log value = console.log value
@@ -1199,6 +1215,98 @@ module aivi.console = {
 
   readLine : Effect Text (Result Text Text)
   readLine = console.readLine Unit
+
+  color : AnsiColor -> Text -> Text
+  color tone value = console.color tone value
+
+  bgColor : AnsiColor -> Text -> Text
+  bgColor tone value = console.bgColor tone value
+
+  style : AnsiStyle -> Text -> Text
+  style attrs value = console.style attrs value
+
+  strip : Text -> Text
+  strip value = console.strip value
+}
+"#;
+
+const SYSTEM_SOURCE: &str = r#"
+@no_prelude
+module aivi.system = {
+  export env, args, exit
+
+  use aivi
+
+  env = system.env
+
+  args : Effect Text (List Text)
+  args = system.args Unit
+
+  exit : Int -> Effect Text Unit
+  exit code = system.exit code
+}
+"#;
+
+const DATABASE_SOURCE: &str = r#"
+@no_prelude
+module aivi.database = {
+  export Table, ColumnType, ColumnConstraint, ColumnDefault, Column
+  export Pred, Patch, Delta, DbError
+  export table, load, applyDelta, runMigrations
+  export ins, upd, del
+  export domain Database
+
+  use aivi
+
+  type DbError = Text
+
+  Table A = { name: Text, columns: List Column, rows: List A }
+
+  type ColumnType = IntType | BoolType | TimestampType | Varchar Int
+  type ColumnConstraint = AutoIncrement | NotNull
+  type ColumnDefault = DefaultBool Bool | DefaultInt Int | DefaultText Text | DefaultNow
+  type Column = {
+    name: Text
+    type: ColumnType
+    constraints: List ColumnConstraint
+    default: Option ColumnDefault
+  }
+
+  type Pred A = A -> Bool
+  type Patch A = A -> A
+  type Delta A = Insert A | Update (Pred A) (Patch A) | Delete (Pred A)
+
+  table : Text -> List Column -> Table A
+  table name columns = database.table name columns
+
+  load : Table A -> Effect DbError (List A)
+  load value = database.load value
+
+  applyDelta : Table A -> Delta A -> Effect DbError (Table A)
+  applyDelta table delta = database.applyDelta table delta
+
+  runMigrations : List (Table A) -> Effect DbError Unit
+  runMigrations tables = database.runMigrations tables
+
+  ins : A -> Delta A
+  ins value = Insert value
+
+  upd : Pred A -> Patch A -> Delta A
+  upd pred patch = Update pred patch
+
+  del : Pred A -> Delta A
+  del pred = Delete pred
+
+  domain Database over Table A = {
+    type Delta = Delta A
+
+    (+) : Table A -> Delta A -> Effect DbError (Table A)
+    (+) table delta = applyDelta table delta
+
+    ins = Insert
+    upd = Update
+    del = Delete
+  }
 }
 "#;
 
@@ -1511,6 +1619,8 @@ pub fn embedded_stdlib_modules() -> Vec<Module> {
     modules.extend(parse_embedded("aivi.math", MATH_SOURCE));
     modules.extend(parse_embedded("aivi.url", URL_SOURCE));
     modules.extend(parse_embedded("aivi.console", CONSOLE_SOURCE));
+    modules.extend(parse_embedded("aivi.system", SYSTEM_SOURCE));
+    modules.extend(parse_embedded("aivi.database", DATABASE_SOURCE));
     modules.extend(parse_embedded("aivi.file", FILE_SOURCE));
     modules.extend(parse_embedded("aivi.number.bigint", BIGINT_SOURCE));
     modules.extend(parse_embedded("aivi.number.rational", RATIONAL_SOURCE));
@@ -1550,6 +1660,8 @@ pub fn embedded_stdlib_source(module_name: &str) -> Option<&'static str> {
         "aivi.math" => Some(MATH_SOURCE),
         "aivi.url" => Some(URL_SOURCE),
         "aivi.console" => Some(CONSOLE_SOURCE),
+        "aivi.system" => Some(SYSTEM_SOURCE),
+        "aivi.database" => Some(DATABASE_SOURCE),
         "aivi.file" => Some(FILE_SOURCE),
         "aivi.number.bigint" => Some(BIGINT_SOURCE),
         "aivi.number.rational" => Some(RATIONAL_SOURCE),

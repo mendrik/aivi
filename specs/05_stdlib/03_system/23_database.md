@@ -1,6 +1,6 @@
 # Database Domain
 
-The `Database` domain provides a type-safe, composable way to work with relational data. It treats tables as immutable sequences of records, while compiling predicates and patches into efficient SQL under the hood.
+The `Database` domain provides a type-safe, composable way to work with relational data. It treats tables as immutable records of schema plus rows, while compiling predicates and patches into efficient SQL under the hood.
 
 It builds on existing AIVI features:
 - **Domains** for operator overloading and delta literals
@@ -28,7 +28,7 @@ userTable = db.table "users" [
 
 getActiveUsers : Effect DbError (List User)
 getActiveUsers = effect {
-  users <- load userTable
+  users <- db.load userTable
   pure (users |> filter active |> sortBy .createdAt)
 }
 ```
@@ -39,8 +39,12 @@ list of `Column` values; the row type comes from the table binding's type annota
 ## Types
 
 ```aivi
-// Tables are sequences of rows
-type Table A = List A
+// Tables carry schema metadata and hold rows
+type Table A = {
+  name: Text
+  columns: List Column
+  rows: List A
+}
 
 // Schema definitions are regular AIVI values.
 // The row type is inferred from the table binding (e.g. Table User).
@@ -75,6 +79,9 @@ type Delta A =
   | Insert A
   | Update (Pred A) (Patch A)
   | Delete (Pred A)
+
+// Patch functions apply record updates
+type Patch A = A -> A
 ```
 
 ## Domain Definition
@@ -84,7 +91,7 @@ domain Database over Table A = {
   type Delta = Delta A
 
   (+) : Table A -> Delta A -> Effect DbError (Table A)
-  (+) table delta = applyDeltaToDb table delta
+  (+) table delta = db.applyDelta table delta
 
   ins = Insert
   upd = Update
@@ -103,7 +110,7 @@ createUser newUser = effect {
 
 activateUsers : Effect DbError Unit
 activateUsers = effect {
-  _ <- userTable + upd (!active) { active: True, loginCount: _ + 1 }
+  _ <- userTable + upd (!active) (u => u <| { active: True, loginCount: _ + 1 })
   pure Unit
 }
 
@@ -116,12 +123,12 @@ deleteOldPosts cutoff = effect {
 
 ## Querying
 
-Tables behave like lazy sequences. Operations such as `filter`, `find`, `sortBy`, `groupBy`, and `join` build a query plan. The query executes only when observed (e.g. via `load`, `toList`, or a generator).
+Tables behave like lazy sequences. Operations such as `filter`, `find`, `sortBy`, `groupBy`, and `join` build a query plan. The query executes only when observed (e.g. via `db.load`, `toList`, or a generator).
 
 ```aivi
 getUserById : Int -> Effect DbError (Option User)
 getUserById id = effect {
-  users <- load userTable
+  users <- db.load userTable
   pure (users |> find (_.id == id))
 }
 ```
@@ -133,8 +140,8 @@ UserWithPosts = { user: User, posts: List Post }
 
 getUsersWithPosts : Effect DbError (List UserWithPosts)
 getUsersWithPosts = effect {
-  users <- load userTable
-  posts <- load postTable
+  users <- db.load userTable
+  posts <- db.load postTable
   pure (
     users
     |> join posts on (_.id == _.authorId)
@@ -150,7 +157,7 @@ getUsersWithPosts = effect {
 For eager loading:
 
 ```aivi
-usersWithPosts <- load (userTable |> preload posts on (_.id == _.authorId))
+usersWithPosts <- db.load (userTable |> preload posts on (_.id == _.authorId))
 ```
 
 ## Migrations

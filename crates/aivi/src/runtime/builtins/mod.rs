@@ -1,5 +1,7 @@
 mod util;
 mod system;
+mod log;
+mod database;
 mod concurrency;
 mod text;
 mod regex;

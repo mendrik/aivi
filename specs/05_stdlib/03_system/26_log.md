@@ -7,9 +7,27 @@ The `Log` domain provides **Structured Logging** for modern observability.
 ## Overview
 
 ```aivi
-use aivi.log (info, error)
+use aivi (log)
 
-info("Server started", { port: 8080, env: "prod" })
+log.info "Server started" [("port", "8080"), ("env", "prod")]
+```
+
+## Types
+
+```aivi
+type Level = Trace | Debug | Info | Warn | Error
+type Context = List (Text, Text)
+```
+
+## Record Fields
+
+```aivi
+log.log   : Level -> Text -> Context -> Effect Text Unit
+log.trace : Text -> Context -> Effect Text Unit
+log.debug : Text -> Context -> Effect Text Unit
+log.info  : Text -> Context -> Effect Text Unit
+log.warn  : Text -> Context -> Effect Text Unit
+log.error : Text -> Context -> Effect Text Unit
 ```
 
 ## Goals for v1.0

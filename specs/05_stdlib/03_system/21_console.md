@@ -15,3 +15,26 @@ use aivi.console
 | **print** message<br><pre><code>`String -> Effect Unit`</code></pre> | Prints `message` without a trailing newline. |
 | **error** message<br><pre><code>`String -> Effect Unit`</code></pre> | Prints `message` to standard error. |
 | **readLine** :()<br><pre><code>`Unit -> Effect (Result String Error)`</code></pre> | Reads a line from standard input. |
+| **color** color text<br><pre><code>`AnsiColor -> Text -> Text`</code></pre> | Wraps `text` in ANSI foreground color codes. |
+| **bgColor** color text<br><pre><code>`AnsiColor -> Text -> Text`</code></pre> | Wraps `text` in ANSI background color codes. |
+| **style** style text<br><pre><code>`AnsiStyle -> Text -> Text`</code></pre> | Applies multiple ANSI attributes to `text`. |
+| **strip** text<br><pre><code>`Text -> Text`</code></pre> | Removes ANSI escape sequences from `text`. |
+
+## ANSI Types
+
+```aivi
+type AnsiColor = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White | Default
+
+type AnsiStyle = {
+  fg: Option AnsiColor
+  bg: Option AnsiColor
+  bold: Bool
+  dim: Bool
+  italic: Bool
+  underline: Bool
+  blink: Bool
+  inverse: Bool
+  hidden: Bool
+  strike: Bool
+}
+```

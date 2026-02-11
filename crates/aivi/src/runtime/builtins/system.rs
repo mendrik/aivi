@@ -3,7 +3,7 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use super::util::{builtin, make_err, make_ok};
+use super::util::{builtin, expect_record, expect_text, make_err, make_none, make_ok, make_some};
 use crate::runtime::{format_value, EffectValue, RuntimeError, Value};
 pub(super) fn build_file_record() -> Value {
     let mut fields = HashMap::new();
@@ -337,5 +337,239 @@ pub(super) fn build_console_record() -> Value {
             Ok(Value::Effect(Arc::new(effect)))
         }),
     );
+    fields.insert(
+        "color".to_string(),
+        builtin("console.color", 2, |mut args, _| {
+            let value = expect_text(args.pop().unwrap(), "console.color")?;
+            let color = ansi_color(args.pop().unwrap(), false, "console.color")?;
+            Ok(Value::Text(apply_ansi(&[color], &value)))
+        }),
+    );
+    fields.insert(
+        "bgColor".to_string(),
+        builtin("console.bgColor", 2, |mut args, _| {
+            let value = expect_text(args.pop().unwrap(), "console.bgColor")?;
+            let color = ansi_color(args.pop().unwrap(), true, "console.bgColor")?;
+            Ok(Value::Text(apply_ansi(&[color], &value)))
+        }),
+    );
+    fields.insert(
+        "style".to_string(),
+        builtin("console.style", 2, |mut args, _| {
+            let value = expect_text(args.pop().unwrap(), "console.style")?;
+            let style = args.pop().unwrap();
+            let codes = style_codes(style, "console.style")?;
+            Ok(Value::Text(apply_ansi(&codes, &value)))
+        }),
+    );
+    fields.insert(
+        "strip".to_string(),
+        builtin("console.strip", 1, |mut args, _| {
+            let value = expect_text(args.pop().unwrap(), "console.strip")?;
+            Ok(Value::Text(strip_ansi(&value)))
+        }),
+    );
     Value::Record(Arc::new(fields))
+}
+
+pub(super) fn build_system_record() -> Value {
+    let mut fields = HashMap::new();
+    fields.insert("env".to_string(), build_env_record());
+    fields.insert(
+        "args".to_string(),
+        builtin("system.args", 1, |_, _| {
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| {
+                    let args: Vec<Value> = std::env::args()
+                        .skip(1)
+                        .map(Value::Text)
+                        .collect();
+                    Ok(Value::List(Arc::new(args)))
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    fields.insert(
+        "exit".to_string(),
+        builtin("system.exit", 1, |mut args, _| {
+            let code = match args.pop().unwrap() {
+                Value::Int(value) => value,
+                _ => {
+                    return Err(RuntimeError::Message(
+                        "system.exit expects Int".to_string(),
+                    ))
+                }
+            };
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| std::process::exit(code as i32)),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    Value::Record(Arc::new(fields))
+}
+
+fn build_env_record() -> Value {
+    let mut fields = HashMap::new();
+    fields.insert(
+        "get".to_string(),
+        builtin("system.env.get", 1, |mut args, _| {
+            let key = expect_text(args.pop().unwrap(), "system.env.get")?;
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| match std::env::var(&key) {
+                    Ok(value) => Ok(make_some(Value::Text(value))),
+                    Err(std::env::VarError::NotPresent) => Ok(make_none()),
+                    Err(err) => Err(RuntimeError::Error(Value::Text(err.to_string()))),
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    fields.insert(
+        "set".to_string(),
+        builtin("system.env.set", 2, |mut args, _| {
+            let value = expect_text(args.pop().unwrap(), "system.env.set")?;
+            let key = expect_text(args.pop().unwrap(), "system.env.set")?;
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| {
+                    std::env::set_var(&key, &value);
+                    Ok(Value::Unit)
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    fields.insert(
+        "remove".to_string(),
+        builtin("system.env.remove", 1, |mut args, _| {
+            let key = expect_text(args.pop().unwrap(), "system.env.remove")?;
+            let effect = EffectValue::Thunk {
+                func: Arc::new(move |_| {
+                    std::env::remove_var(&key);
+                    Ok(Value::Unit)
+                }),
+            };
+            Ok(Value::Effect(Arc::new(effect)))
+        }),
+    );
+    Value::Record(Arc::new(fields))
+}
+
+fn ansi_color(value: Value, is_bg: bool, ctx: &str) -> Result<i64, RuntimeError> {
+    let name = match value {
+        Value::Constructor { name, args } if args.is_empty() => name,
+        _ => {
+            return Err(RuntimeError::Message(format!(
+                "{ctx} expects AnsiColor"
+            )))
+        }
+    };
+    let base = if is_bg { 40 } else { 30 };
+    let code = match name.as_str() {
+        "Black" => base,
+        "Red" => base + 1,
+        "Green" => base + 2,
+        "Yellow" => base + 3,
+        "Blue" => base + 4,
+        "Magenta" => base + 5,
+        "Cyan" => base + 6,
+        "White" => base + 7,
+        "Default" => if is_bg { 49 } else { 39 },
+        _ => {
+            return Err(RuntimeError::Message(format!(
+                "{ctx} expects AnsiColor"
+            )))
+        }
+    };
+    Ok(code)
+}
+
+fn style_codes(value: Value, ctx: &str) -> Result<Vec<i64>, RuntimeError> {
+    let fields = expect_record(value, ctx)?;
+    let fg = fields
+        .get("fg")
+        .ok_or_else(|| RuntimeError::Message(format!("{ctx} expects fg")))?;
+    let bg = fields
+        .get("bg")
+        .ok_or_else(|| RuntimeError::Message(format!("{ctx} expects bg")))?;
+    let mut codes = Vec::new();
+    if let Some(code) = option_color(fg.clone(), false, ctx)? {
+        codes.push(code);
+    }
+    if let Some(code) = option_color(bg.clone(), true, ctx)? {
+        codes.push(code);
+    }
+    let flags = [
+        ("bold", 1),
+        ("dim", 2),
+        ("italic", 3),
+        ("underline", 4),
+        ("blink", 5),
+        ("inverse", 7),
+        ("hidden", 8),
+        ("strike", 9),
+    ];
+    for (field, code) in flags {
+        let value = fields
+            .get(field)
+            .ok_or_else(|| RuntimeError::Message(format!("{ctx} expects {field}")))?;
+        if expect_bool(value.clone(), ctx)? {
+            codes.push(code);
+        }
+    }
+    Ok(codes)
+}
+
+fn option_color(value: Value, is_bg: bool, ctx: &str) -> Result<Option<i64>, RuntimeError> {
+    match value {
+        Value::Constructor { name, args } if name == "Some" && args.len() == 1 => {
+            Ok(Some(ansi_color(args[0].clone(), is_bg, ctx)?))
+        }
+        Value::Constructor { name, args } if name == "None" && args.is_empty() => Ok(None),
+        other => Err(RuntimeError::Message(format!(
+            "{ctx} expects Option AnsiColor, got {}",
+            format_value(&other)
+        ))),
+    }
+}
+
+fn expect_bool(value: Value, ctx: &str) -> Result<bool, RuntimeError> {
+    match value {
+        Value::Bool(value) => Ok(value),
+        other => Err(RuntimeError::Message(format!(
+            "{ctx} expects Bool, got {}",
+            format_value(&other)
+        ))),
+    }
+}
+
+fn apply_ansi(codes: &[i64], value: &str) -> String {
+    if codes.is_empty() {
+        return value.to_string();
+    }
+    let joined = codes
+        .iter()
+        .map(|code| code.to_string())
+        .collect::<Vec<_>>()
+        .join(";");
+    format!("\x1b[{joined}m{value}\x1b[0m")
+}
+
+fn strip_ansi(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut chars = value.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' && chars.peek() == Some(&'[') {
+            chars.next();
+            while let Some(code) = chars.next() {
+                if code == 'm' {
+                    break;
+                }
+            }
+            continue;
+        }
+        out.push(ch);
+    }
+    out
 }
