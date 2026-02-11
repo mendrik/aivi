@@ -191,7 +191,7 @@ pub fn start_server(addr: SocketAddr, handler: Handler) -> Result<ServerHandle, 
             }
         };
 
-        let _ = runtime_clone.block_on(server_future);
+        runtime_clone.block_on(server_future);
     });
 
     Ok(ServerHandle {
@@ -261,12 +261,9 @@ async fn handle_request(
                 Ok((response, websocket)) => {
                     let runtime_handle = runtime_handle.clone();
                     tokio::spawn(async move {
-                        match websocket.await {
-                            Ok(ws_stream) => {
-                                let ws_handle = WebSocketHandle::new(runtime_handle, ws_stream);
-                                let _ = ws_handler(ws_handle).await;
-                            }
-                            Err(_) => {}
+                        if let Ok(ws_stream) = websocket.await {
+                            let ws_handle = WebSocketHandle::new(runtime_handle, ws_stream);
+                            let _ = ws_handler(ws_handle).await;
                         }
                     });
                     Ok(response)
