@@ -30,6 +30,9 @@
       "include": "#placeholder"
     },
     {
+      "include": "#field"
+    },
+    {
       "include": "#keyword"
     },
     {
@@ -55,6 +58,9 @@
     },
     {
       "include": "#bracket"
+    },
+    {
+      "include": "#punctuation"
     },
     {
       "include": "#operator"
@@ -130,6 +136,14 @@
         }
       ]
     },
+    "field": {
+      "patterns": [
+        {
+          "match": "\\b[a-z][A-Za-z0-9_]*\\b(?=\\s*:)",
+          "name": "variable.other.property.aivi"
+        }
+      ]
+    },
     "keyword": {
       "patterns": [
         {
@@ -171,6 +185,18 @@
         {
           "match": "\\b_\\b",
           "name": "variable.language.placeholder.aivi"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": ":",
+          "name": "punctuation.separator.key-value.aivi"
+        },
+        {
+          "match": ",",
+          "name": "punctuation.separator.comma.aivi"
         }
       ]
     },
@@ -357,6 +383,9 @@
                   "include": "#placeholder"
                 },
                 {
+                  "include": "#field"
+                },
+                {
                   "include": "#keyword"
                 },
                 {
@@ -382,6 +411,9 @@
                 },
                 {
                   "include": "#bracket"
+                },
+                {
+                  "include": "#punctuation"
                 },
                 {
                   "include": "#operator"

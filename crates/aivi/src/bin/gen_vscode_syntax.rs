@@ -103,6 +103,7 @@ fn aivi_tmlanguage() -> serde_json::Value {
         { "include": "#number" },
         { "include": "#decorator" },
         { "include": "#placeholder" },
+        { "include": "#field" },
         { "include": "#keyword" },
         { "include": "#boolean" },
         { "include": "#constructor" },
@@ -112,6 +113,7 @@ fn aivi_tmlanguage() -> serde_json::Value {
         { "include": "#cmp" },
         { "include": "#question" },
         { "include": "#bracket" },
+        { "include": "#punctuation" },
         { "include": "#operator" }
       ],
       "repository": {
@@ -152,6 +154,14 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
+        "field": {
+          "patterns": [
+            {
+              "name": "variable.other.property.aivi",
+              "match": "\\b[a-z][A-Za-z0-9_]*\\b(?=\\s*:)"
+            }
+          ]
+        },
         "pipe": {
           "patterns": [
             {
@@ -189,6 +199,18 @@ fn aivi_tmlanguage() -> serde_json::Value {
             {
               "name": "punctuation.section.bracket.aivi",
               "match": r"[\[\]\(\)\{\}]"
+            }
+          ]
+        },
+        "punctuation": {
+          "patterns": [
+            {
+              "name": "punctuation.separator.key-value.aivi",
+              "match": ":"
+            },
+            {
+              "name": "punctuation.separator.comma.aivi",
+              "match": ","
             }
           ]
         },
@@ -314,6 +336,7 @@ fn aivi_tmlanguage() -> serde_json::Value {
                     { "include": "#number" },
                     { "include": "#decorator" },
                     { "include": "#placeholder" },
+                    { "include": "#field" },
                     { "include": "#keyword" },
                     { "include": "#boolean" },
                     { "include": "#constructor" },
@@ -323,6 +346,7 @@ fn aivi_tmlanguage() -> serde_json::Value {
                     { "include": "#cmp" },
                     { "include": "#question" },
                     { "include": "#bracket" },
+                    { "include": "#punctuation" },
                     { "include": "#operator" }
                   ]
                 }

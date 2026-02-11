@@ -23,6 +23,7 @@ impl Backend {
     pub(super) const SEM_TOKEN_BRACKET: u32 = 11;
     pub(super) const SEM_TOKEN_UNIT: u32 = 12;
     pub(super) const SEM_TOKEN_SIGIL: u32 = 13;
+    pub(super) const SEM_TOKEN_PROPERTY: u32 = 14;
 
     pub(super) const SEM_MOD_SIGNATURE: u32 = 0;
 
@@ -43,6 +44,7 @@ impl Backend {
                 SemanticTokenType::new("aivi.bracket"),
                 SemanticTokenType::new("aivi.unit"),
                 SemanticTokenType::new("aivi.sigil"),
+                SemanticTokenType::PROPERTY,
             ],
             token_modifiers: vec![SemanticTokenModifier::new("signature")],
         }
@@ -93,6 +95,19 @@ impl Backend {
         )
     }
 
+    fn is_record_label(prev: Option<&CstToken>, next: Option<&CstToken>) -> bool {
+        let Some(next) = next else {
+            return false;
+        };
+        if next.kind != "symbol" || next.text != ":" {
+            return false;
+        }
+        let Some(prev) = prev else {
+            return false;
+        };
+        prev.kind == "symbol" && (prev.text == "{" || prev.text == ",")
+    }
+
     fn classify_semantic_token(
         prev: Option<&CstToken>,
         token: &CstToken,
@@ -130,6 +145,9 @@ impl Backend {
                 }
                 if prev.is_some_and(|prev| prev.kind == "symbol" && prev.text == "@") {
                     return Some(Self::SEM_TOKEN_DECORATOR);
+                }
+                if Self::is_record_label(prev, next) {
+                    return Some(Self::SEM_TOKEN_PROPERTY);
                 }
                 if matches!(
                     next,

@@ -143,9 +143,10 @@
   "semanticTokenColors": {
     "aivi.arrow": "#c53665",
     "aivi.pipe": "#569CD6",
-    "aivi.bracket": "#9D9D9D",
+    "aivi.bracket": "#BFBFBF",
     "aivi.unit": "#D7BA7D",
     "aivi.sigil": "#D18616",
+    "property": "#9CDCFE",
     "*.signature": {
       "foreground": "#6E6E6E"
     }
@@ -224,6 +225,11 @@
       "settings": { "foreground": "#D7BA7D" }
     },
     {
+      "name": "AIVI Properties",
+      "scope": ["variable.other.property.aivi"],
+      "settings": { "foreground": "#9CDCFE" }
+    },
+    {
       "name": "AIVI Types",
       "scope": ["entity.name.type.aivi"],
       "settings": { "foreground": "#4EC9B0" }
@@ -251,7 +257,12 @@
     {
       "name": "AIVI Brackets",
       "scope": ["punctuation.section.bracket.aivi"],
-      "settings": { "foreground": "#9D9D9D" }
+      "settings": { "foreground": "#BFBFBF" }
+    },
+    {
+      "name": "AIVI Punctuation",
+      "scope": ["punctuation.separator.key-value.aivi", "punctuation.separator.comma.aivi"],
+      "settings": { "foreground": "#B0B0B0" }
     },
     {
       "name": "AIVI Operators",
