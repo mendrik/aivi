@@ -1,0 +1,56 @@
+module examples.logic.fantasyland_laws
+export main
+
+use aivi.testing (assertEq)
+
+id = x => x
+
+compose = f g => x => g (f x)
+
+functorIdentity = x =>
+  assertEq (x |> map id) x
+
+functorComposition = x f g =>
+  assertEq
+    (x |> map f |> map g)
+    (x |> map (compose f g))
+
+monadLeftIdentity = a f =>
+  assertEq ((of a) |> chain f) (f a)
+
+monadRightIdentity = m =>
+  assertEq (m |> chain of) m
+
+monadAssociativity = m f g =>
+  assertEq
+    ((m |> chain f) |> chain g)
+    (m |> chain (x => (f x) |> chain g))
+
+main : Effect Text Unit
+main = effect {
+  // Option
+  _ <- functorIdentity (Some 1)
+  _ <- functorIdentity (None)
+  _ <- functorComposition (Some 2) (_ + 1) (_ * 3)
+  _ <- monadLeftIdentity 5 (x => Some (x + 1))
+  _ <- monadRightIdentity (Some 7)
+  _ <- monadAssociativity (Some 1) (x => Some (x + 1)) (x => Some (x * 2))
+
+  // Result
+  _ <- functorIdentity (Ok 1)
+  _ <- functorIdentity (Err "e")
+  _ <- functorComposition (Ok 2) (_ + 1) (_ * 3)
+  _ <- monadLeftIdentity 5 (x => Ok (x + 1))
+  _ <- monadRightIdentity (Ok 7)
+  _ <- monadAssociativity (Ok 1) (x => Ok (x + 1)) (x => Ok (x * 2))
+
+  // List
+  _ <- functorIdentity ([])
+  _ <- functorIdentity ([1, 2, 3])
+  _ <- functorComposition ([2, 3]) (_ + 1) (_ * 3)
+  _ <- monadLeftIdentity 5 (x => [x, x + 1])
+  _ <- monadRightIdentity ([7, 8])
+  _ <- monadAssociativity [1, 2] (x => [x, x + 1]) (x => [x * 2])
+
+  pure Unit
+}

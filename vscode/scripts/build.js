@@ -81,11 +81,11 @@ function generateSyntaxes() {
 }
 
 function compileExtension() {
-  run("pnpm exec tsgo -p .", { cwd: vscodeDir });
+  run("pnpm run compile", { cwd: vscodeDir });
 }
 
 function packageVsix() {
-  run("pnpm install --node-linker=hoisted", { cwd: vscodeDir });
+  run("pnpm install --node-linker=hoisted --public-hoist-pattern=*", { cwd: vscodeDir });
   run("pnpm exec vsce package", { cwd: vscodeDir });
 }
 

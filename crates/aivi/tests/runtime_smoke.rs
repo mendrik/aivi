@@ -46,3 +46,10 @@ fn run_native_quaternion_example() {
     let program = desugar_target("examples/21_quaternion.aivi").expect("desugar");
     run_native(program).expect("run native");
 }
+
+#[test]
+fn run_native_fantasyland_law_tests() {
+    let _root = set_workspace_root();
+    let program = desugar_target("examples/22_fantasyland_laws.aivi").expect("desugar");
+    run_native(program).expect("run native");
+}

@@ -10,6 +10,7 @@ mod complex;
 mod concurrency;
 mod console;
 mod core;
+mod logic;
 mod crypto;
 mod database;
 mod decimal;
@@ -62,6 +63,10 @@ const EMBEDDED_MODULES: &[EmbeddedModule] = &[
     EmbeddedModule {
         name: collections::MODULE_NAME,
         source: collections::SOURCE,
+    },
+    EmbeddedModule {
+        name: logic::MODULE_NAME,
+        source: logic::SOURCE,
     },
     EmbeddedModule {
         name: regex::MODULE_NAME,
