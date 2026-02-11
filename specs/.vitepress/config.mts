@@ -155,6 +155,7 @@ export default defineConfig({
             items: [
               { text: 'Calendar', link: '/05_stdlib/02_chronos/02_calendar' },
               { text: 'Duration', link: '/05_stdlib/02_chronos/03_duration' },
+              { text: 'TimeZone', link: '/05_stdlib/02_chronos/04_timezone' },
             ]
           },
           {

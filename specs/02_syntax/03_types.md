@@ -33,9 +33,11 @@ ZonedDateTime
 
 Numeric suffixes:
 
-* `42n` → `BigInt`
-* `3.14dec` → `Decimal`
 * `2024-05-21T12:00:00Z` → `Instant`
+* `~d(2024-05-21)` → `Date`
+* `~t(12:00:00)` → `Time`
+* `~tz(Europe/Paris)` → `TimeZone`
+* `~zdt(2024-05-21T12:00:00Z[Europe/Paris])` → `ZonedDateTime`
 
 
 ## 3.2 Algebraic Data Types

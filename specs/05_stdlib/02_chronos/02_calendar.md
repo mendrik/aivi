@@ -13,17 +13,21 @@ use aivi.calendar (Date, DateTime)
 
 now = DateTime.now()
 
+// Instantiation using sigils
 birthday = ~d(1990-12-31)
-timestamp = ~dt(2025-02-08T12:34:56Z)
+event    = ~dt(2025-02-08T12:34:56Z)
+lunch    = ~t(12:30:00)
 
 // "Human" math: Add 7 days, regardless of seconds
-next_week = now + 7days
+next_week = now + 7d
 ```
 
 ## Features
 
 ```aivi
-Date = { year: Int, month: Int, day: Int }
+Date     = { year: Int, month: Int, day: Int }
+Time     = { hour: Int, min: Int, sec: Int, nanos: Int }
+DateTime = { date: Date, time: Time }
 
 EndOfMonth = EndOfMonth
 ```
