@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use aivi::{parse_modules, ModuleItem, Span};
-use tower_lsp::lsp_types::{CodeActionOrCommand, DiagnosticSeverity, HoverContents, Position, Url};
+use tower_lsp::lsp_types::{
+    CodeActionOrCommand, DiagnosticSeverity, HoverContents, NumberOrString, Position, Url,
+};
 
 use crate::backend::Backend;
 use crate::state::IndexedModule;
@@ -385,6 +387,26 @@ fn build_diagnostics_reports_error() {
     assert!(!diagnostics.is_empty());
     assert_eq!(diagnostics[0].severity, Some(DiagnosticSeverity::ERROR));
     assert_eq!(diagnostics[0].source.as_deref(), Some("aivi"));
+}
+
+#[test]
+fn diagnostics_report_missing_list_comma() {
+    let text = "module demo\n\nitems = [1 2]";
+    let uri = sample_uri();
+    let diagnostics = Backend::build_diagnostics(text, &uri);
+    assert!(diagnostics.iter().any(|diag| {
+        matches!(diag.code.as_ref(), Some(NumberOrString::String(code)) if code == "E1524")
+    }));
+}
+
+#[test]
+fn diagnostics_report_missing_record_comma() {
+    let text = "module demo\n\nrecord = { a: 1 b: 2 }";
+    let uri = sample_uri();
+    let diagnostics = Backend::build_diagnostics(text, &uri);
+    assert!(diagnostics.iter().any(|diag| {
+        matches!(diag.code.as_ref(), Some(NumberOrString::String(code)) if code == "E1525")
+    }));
 }
 
 #[test]

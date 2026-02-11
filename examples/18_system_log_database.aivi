@@ -9,8 +9,8 @@ use aivi.text
 User = { id: Int, name: Text, active: Bool }
 
 userTable = database.table "users" [
-  { name: "id", type: IntType, constraints: [NotNull], default: None }
-  { name: "name", type: Varchar 64, constraints: [NotNull], default: None }
+  { name: "id", type: IntType, constraints: [NotNull], default: None },
+  { name: "name", type: Varchar 64, constraints: [NotNull], default: None },
   { name: "active", type: BoolType, constraints: [NotNull], default: Some (DefaultBool False) }
 ]
 

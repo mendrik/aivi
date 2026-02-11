@@ -1148,6 +1148,21 @@ impl Parser {
             || self.peek_keyword("resource")
     }
 
+    fn is_record_field_start(&self) -> bool {
+        let Some(token) = self.tokens.get(self.pos) else {
+            return false;
+        };
+        match token.kind {
+            TokenKind::Ident => token
+                .text
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_lowercase()),
+            TokenKind::Symbol => token.text == "...",
+            _ => false,
+        }
+    }
+
     fn is_pattern_start(&self) -> bool {
         if let Some(token) = self.tokens.get(self.pos) {
             match token.kind {
@@ -1210,6 +1225,7 @@ impl Parser {
                     let span = expr_span(&expr);
                     items.push(ListItem { expr, spread, span });
                 }
+                let had_newline = self.peek_newline();
                 self.consume_newlines();
                 if self.consume_symbol(",") {
                     self.consume_newlines();
@@ -1219,6 +1235,10 @@ impl Parser {
                     break;
                 }
                 if self.is_expr_start() {
+                    if !had_newline {
+                        let span = self.peek_span().unwrap_or_else(|| self.previous_span());
+                        self.emit_diag("E1524", "expected ',' between list items", span);
+                    }
                     continue;
                 }
                 break;
@@ -1246,9 +1266,30 @@ impl Parser {
             if is_record {
                 self.consume_symbol("{");
                 let mut fields = Vec::new();
+                self.consume_newlines();
                 while !self.check_symbol("}") && self.pos < self.tokens.len() {
                     if let Some(field) = self.parse_record_field() {
                         fields.push(field);
+                        let had_newline = self.peek_newline();
+                        self.consume_newlines();
+                        if self.consume_symbol(",") {
+                            self.consume_newlines();
+                            continue;
+                        }
+                        if self.check_symbol("}") {
+                            break;
+                        }
+                        if self.is_record_field_start() {
+                            if !had_newline {
+                                let span = self.peek_span().unwrap_or_else(|| self.previous_span());
+                                self.emit_diag(
+                                    "E1525",
+                                    "expected ',' between record fields",
+                                    span,
+                                );
+                            }
+                            continue;
+                        }
                         continue;
                     }
                     self.pos += 1;

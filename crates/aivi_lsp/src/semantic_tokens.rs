@@ -1,4 +1,6 @@
-use aivi::{lex_cst, syntax, CstToken};
+use std::collections::{HashMap, HashSet};
+
+use aivi::{lex_cst, syntax, CstToken, Span};
 use tower_lsp::lsp_types::{
     SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens, SemanticTokensLegend,
 };
@@ -24,6 +26,11 @@ impl Backend {
     pub(super) const SEM_TOKEN_UNIT: u32 = 12;
     pub(super) const SEM_TOKEN_SIGIL: u32 = 13;
     pub(super) const SEM_TOKEN_PROPERTY: u32 = 14;
+    pub(super) const SEM_TOKEN_DOT: u32 = 15;
+    pub(super) const SEM_TOKEN_PATH_HEAD: u32 = 16;
+    pub(super) const SEM_TOKEN_PATH_MID: u32 = 17;
+    pub(super) const SEM_TOKEN_PATH_TAIL: u32 = 18;
+    pub(super) const SEM_TOKEN_TYPE_PARAMETER: u32 = 19;
 
     pub(super) const SEM_MOD_SIGNATURE: u32 = 0;
 
@@ -45,9 +52,18 @@ impl Backend {
                 SemanticTokenType::new("aivi.unit"),
                 SemanticTokenType::new("aivi.sigil"),
                 SemanticTokenType::PROPERTY,
+                SemanticTokenType::new("aivi.dot"),
+                SemanticTokenType::new("aivi.path.head"),
+                SemanticTokenType::new("aivi.path.mid"),
+                SemanticTokenType::new("aivi.path.tail"),
+                SemanticTokenType::TYPE_PARAMETER,
             ],
             token_modifiers: vec![SemanticTokenModifier::new("signature")],
         }
+    }
+
+    fn is_adjacent_span(left: &Span, right: &Span) -> bool {
+        left.end.line == right.start.line && left.end.column.saturating_add(1) == right.start.column
     }
 
     fn is_arrow_symbol(symbol: &str) -> bool {
@@ -60,6 +76,19 @@ impl Backend {
 
     fn is_bracket_symbol(symbol: &str) -> bool {
         matches!(symbol, "(" | ")" | "[" | "]" | "{" | "}")
+    }
+
+    fn is_lower_ident(token: &CstToken) -> bool {
+        token.kind == "ident"
+            && token
+                .text
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_lowercase())
+    }
+
+    fn is_type_parameter_name(text: &str) -> bool {
+        text.len() == 1 && text.chars().all(|ch| ch.is_ascii_uppercase())
     }
 
     fn is_operator_symbol(symbol: &str) -> bool {
@@ -91,8 +120,59 @@ impl Backend {
                 | ".."
                 | "..."
                 | ":"
-                | "."
         )
+    }
+
+    fn dotted_path_roles(tokens: &[CstToken]) -> HashMap<usize, u32> {
+        let mut roles = HashMap::new();
+        let mut index = 0;
+        while index < tokens.len() {
+            if !Self::is_lower_ident(&tokens[index]) {
+                index += 1;
+                continue;
+            }
+            let mut ident_indices = vec![index];
+            let mut current = index;
+            loop {
+                let dot_index = current + 1;
+                let next_index = current + 2;
+                if next_index >= tokens.len() {
+                    break;
+                }
+                let dot = &tokens[dot_index];
+                let next = &tokens[next_index];
+                if dot.kind != "symbol" || dot.text != "." {
+                    break;
+                }
+                if !Self::is_lower_ident(next) {
+                    break;
+                }
+                if !Self::is_adjacent_span(&tokens[current].span, &dot.span)
+                    || !Self::is_adjacent_span(&dot.span, &next.span)
+                {
+                    break;
+                }
+                ident_indices.push(next_index);
+                current = next_index;
+            }
+            if ident_indices.len() > 1 {
+                let last = ident_indices.len().saturating_sub(1);
+                for (pos, idx) in ident_indices.iter().enumerate() {
+                    let role = if pos == last {
+                        Self::SEM_TOKEN_PATH_TAIL
+                    } else if pos + 1 == last {
+                        Self::SEM_TOKEN_PATH_MID
+                    } else {
+                        Self::SEM_TOKEN_PATH_HEAD
+                    };
+                    roles.insert(*idx, role);
+                }
+                index = ident_indices[last].saturating_add(1);
+            } else {
+                index += 1;
+            }
+        }
+        roles
     }
 
     fn is_record_label(prev: Option<&CstToken>, next: Option<&CstToken>) -> bool {
@@ -121,6 +201,8 @@ impl Backend {
             "symbol" => {
                 if token.text == "@" {
                     Some(Self::SEM_TOKEN_DECORATOR)
+                } else if token.text == "." {
+                    Some(Self::SEM_TOKEN_DOT)
                 } else if Self::is_arrow_symbol(&token.text) {
                     Some(Self::SEM_TOKEN_ARROW)
                 } else if Self::is_pipe_symbol(&token.text) {
@@ -136,6 +218,9 @@ impl Backend {
             "ident" => {
                 if prev.is_some_and(|prev| Self::is_unit_suffix(prev, token)) {
                     return Some(Self::SEM_TOKEN_UNIT);
+                }
+                if Self::is_type_parameter_name(&token.text) {
+                    return Some(Self::SEM_TOKEN_TYPE_PARAMETER);
                 }
                 if token.text == "_" {
                     return Some(Self::SEM_TOKEN_KEYWORD);
@@ -180,8 +265,8 @@ impl Backend {
         prev.span.end.column.saturating_add(1) == token.span.start.column
     }
 
-    fn signature_lines(tokens: &[CstToken]) -> std::collections::HashSet<u32> {
-        let mut lines = std::collections::HashSet::new();
+    fn signature_lines(tokens: &[CstToken]) -> HashSet<u32> {
+        let mut lines = HashSet::new();
         let mut index = 0;
         while index < tokens.len() {
             let line = tokens[index].span.start.line;
@@ -468,6 +553,7 @@ impl Backend {
         let mut last_line = 0u32;
         let mut last_start = 0u32;
         let signature_lines = Self::signature_lines(&tokens);
+        let dotted_paths = Self::dotted_path_roles(&tokens);
 
         for (position, token_index) in significant.iter().copied().enumerate() {
             let token = &tokens[token_index];
@@ -487,7 +573,11 @@ impl Backend {
                 continue;
             }
 
-            let Some(token_type) = Self::classify_semantic_token(prev, token, next) else {
+            let token_type = dotted_paths
+                .get(&token_index)
+                .copied()
+                .or_else(|| Self::classify_semantic_token(prev, token, next));
+            let Some(token_type) = token_type else {
                 continue;
             };
 

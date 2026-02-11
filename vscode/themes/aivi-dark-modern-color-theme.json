@@ -137,16 +137,32 @@
     "editorIndentGuide.activeBackground": "#707070",
     "editor.lineHighlightBackground": "#2A2D2E",
     "editorBracketMatch.background": "#515C6A40",
-    "editorBracketMatch.border": "#515C6A"
+    "editorBracketMatch.border": "#515C6A",
+    "editorBracketHighlight.foreground1": "#6E6E6E",
+    "editorBracketHighlight.foreground2": "#6E6E6E",
+    "editorBracketHighlight.foreground3": "#6E6E6E",
+    "editorBracketHighlight.foreground4": "#6E6E6E",
+    "editorBracketHighlight.foreground5": "#6E6E6E",
+    "editorBracketHighlight.foreground6": "#6E6E6E"
   },
   "semanticHighlighting": true,
   "semanticTokenColors": {
     "aivi.arrow": "#c53665",
     "aivi.pipe": "#569CD6",
     "aivi.bracket": "#BFBFBF",
+    "aivi.dot": "#5A5A5A",
+    "aivi.path.head": "#7A7A7A",
+    "aivi.path.mid": "#A6A6A6",
+    "aivi.path.tail": "#FFFFFF",
     "aivi.unit": "#D7BA7D",
     "aivi.sigil": "#D18616",
     "property": "#9CDCFE",
+    "typeParameter": "#DCDCAA",
+    "aivi.bracket.signature": "#6E6E6E",
+    "aivi.dot.signature": "#6E6E6E",
+    "aivi.path.head.signature": "#6E6E6E",
+    "aivi.path.mid.signature": "#6E6E6E",
+    "aivi.path.tail.signature": "#6E6E6E",
     "*.signature": {
       "foreground": "#6E6E6E"
     }
