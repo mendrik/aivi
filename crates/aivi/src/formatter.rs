@@ -372,7 +372,7 @@ pub fn format_text_with_options(content: &str, options: FormatOptions) -> String
 
         let (input_indent, _) = leading_indent(raw_lines[line_index]);
 
-        let mut indent_level = stack.iter().filter(|f| f.sym == '{').count();
+        let mut indent_level = stack.iter().filter(|f| matches!(f.sym, '{' | '[' | '(')).count();
         if !degraded {
             if let Some(first_idx) = first_code_index(&line_tokens) {
                 if is_close_sym(line_tokens[first_idx].text.as_str()).is_some() {
@@ -714,7 +714,9 @@ pub fn format_text_with_options(content: &str, options: FormatOptions) -> String
         rendered_lines.push(out);
     }
 
-    rendered_lines.join("\n")
+    let mut result = rendered_lines.join("\n");
+    result.push('\n');
+    result
 }
 
 fn is_op(text: &str) -> bool {
