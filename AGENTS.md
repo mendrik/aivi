@@ -134,6 +134,7 @@ To validate the project end-to-end, run these from the repo root:
 Before submitting changes:
 - [ ] Did I check the specs?
 - [ ] Did I run existing tests?
+- [ ] Did I run `cargo fmt --all -- --check`?
 - [ ] Did I add a new test case?
 - [ ] Is the code consistent with AIVI style?
 - [ ] Did I avoid hallucinating features not in the roadmap?
