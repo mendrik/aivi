@@ -12,7 +12,8 @@ def main = {
 def main = {
   let x = 1
   x
-}"#;
+}
+"#;
     assert_eq!(format_text(input), expected);
 }
 

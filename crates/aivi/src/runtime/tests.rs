@@ -44,6 +44,7 @@ s = "Count: {1 + 2}"
 n = -1
 t = "negative{n}"
 u = "brace \{x\}"
+v = "user: { { name: \"A\" }.name }"
 "#;
 
     let (modules, diags) = crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);
@@ -91,6 +92,7 @@ u = "brace \{x\}"
     let s = runtime.ctx.globals.get("s").unwrap();
     let t = runtime.ctx.globals.get("t").unwrap();
     let u = runtime.ctx.globals.get("u").unwrap();
+    let v = runtime.ctx.globals.get("v").unwrap();
 
     let s = match runtime.force_value(s) {
         Ok(Value::Text(value)) => value,
@@ -107,10 +109,16 @@ u = "brace \{x\}"
         Ok(_) => panic!("expected Text for u"),
         Err(_) => panic!("failed to evaluate u"),
     };
+    let v = match runtime.force_value(v) {
+        Ok(Value::Text(value)) => value,
+        Ok(_) => panic!("expected Text for v"),
+        Err(_) => panic!("failed to evaluate v"),
+    };
 
     assert_eq!(s, "Count: 3");
     assert_eq!(t, "negative-1");
     assert_eq!(u, "brace {x}");
+    assert_eq!(v, "user: A");
 }
 
 #[test]

@@ -6,8 +6,14 @@ use aivi::{
 };
 use sha2::{Digest, Sha256};
 use std::env;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+use std::time::Duration;
 
 fn main() -> ExitCode {
     match run() {
@@ -161,7 +167,7 @@ fn run() -> Result<(), AiviError> {
                             opts.target
                         )));
                     }
-                    let _modules = load_checked_modules(&opts.input)?;
+                    let _modules = load_checked_modules_with_progress(&opts.input)?;
                     let program = desugar_target(&opts.input)?;
                     if opts.target == "rust" {
                         let rust = compile_rust(program)?;
@@ -337,6 +343,65 @@ fn parse_build_args(
     }))
 }
 
+struct Spinner {
+    stop: Arc<AtomicBool>,
+    message: Arc<Mutex<String>>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Spinner {
+    fn new(message: String) -> Self {
+        let stop = Arc::new(AtomicBool::new(false));
+        let message_state = Arc::new(Mutex::new(message));
+        let stop_clone = Arc::clone(&stop);
+        let message_clone = Arc::clone(&message_state);
+        let handle = std::thread::spawn(move || {
+            let frames = ["|", "/", "-", "\\"];
+            let mut idx = 0usize;
+            while !stop_clone.load(Ordering::Relaxed) {
+                let msg = message_clone
+                    .lock()
+                    .map(|guard| guard.clone())
+                    .unwrap_or_default();
+                eprint!("\r{} {}", frames[idx], msg);
+                let _ = std::io::stderr().flush();
+                idx = (idx + 1) % frames.len();
+                std::thread::sleep(Duration::from_millis(80));
+            }
+            let msg = message_clone
+                .lock()
+                .map(|guard| guard.clone())
+                .unwrap_or_default();
+            eprint!("\rdone {}\n", msg);
+            let _ = std::io::stderr().flush();
+        });
+        Self {
+            stop,
+            message: message_state,
+            handle: Some(handle),
+        }
+    }
+
+    fn set_message(&self, message: String) {
+        if let Ok(mut guard) = self.message.lock() {
+            *guard = message;
+        }
+    }
+
+    fn stop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            self.stop.store(true, Ordering::Relaxed);
+            let _ = handle.join();
+        }
+    }
+}
+
+impl Drop for Spinner {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
 fn write_rust_project(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let aivi_path = normalize_path(&manifest_dir);
@@ -353,6 +418,40 @@ fn write_rust_project(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
 
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn load_checked_modules_with_progress(target: &str) -> Result<Vec<aivi::Module>, AiviError> {
+    let paths = aivi::resolve_target(target)?;
+    let mut spinner = Spinner::new("checking sources".to_string());
+    let mut diagnostics = Vec::new();
+    let mut modules = Vec::new();
+
+    for path in &paths {
+        spinner.set_message(format!("checking {}", path.display()));
+        let content = std::fs::read_to_string(path)?;
+        let (mut parsed, mut file_diags) = aivi::parse_modules(path, &content);
+        modules.append(&mut parsed);
+        diagnostics.append(&mut file_diags);
+    }
+
+    spinner.stop();
+
+    let mut stdlib_modules = aivi::embedded_stdlib_modules();
+    stdlib_modules.append(&mut modules);
+    diagnostics.extend(check_modules(&stdlib_modules));
+    if diagnostics.is_empty() {
+        diagnostics.extend(check_types(&stdlib_modules));
+    }
+    if diagnostics.is_empty() {
+        return Ok(stdlib_modules);
+    }
+    for diag in diagnostics {
+        let rendered = render_diagnostics(&diag.path, std::slice::from_ref(&diag.diagnostic));
+        if !rendered.is_empty() {
+            eprintln!("{rendered}");
+        }
+    }
+    Err(AiviError::Diagnostics)
 }
 
 fn load_checked_modules(target: &str) -> Result<Vec<aivi::Module>, AiviError> {

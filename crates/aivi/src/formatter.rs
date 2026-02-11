@@ -5,6 +5,8 @@ pub fn format_text(content: &str) -> String {
     let (tokens, _) = lex(content);
     let mut output = String::new();
     let mut depth: isize = 0;
+    let mut last_last_kind = "";
+    let mut last_last_text = "";
     let mut last_kind = "";
     let mut last_text = "";
     let mut last_line = 0;
@@ -24,8 +26,8 @@ pub fn format_text(content: &str) -> String {
             newline_pending = true;
         }
 
-        // Before printing token assignment
-        if text == "}" {
+        // Before printing token: decrease depth for closing symbols
+        if text == "}" || text == ")" || text == "]" {
             depth = (depth - 1).max(0);
         }
 
@@ -35,7 +37,14 @@ pub fn format_text(content: &str) -> String {
             }
             output.push_str(&"  ".repeat(depth as usize));
             newline_pending = false;
-        } else if should_add_space(last_kind, last_text, kind, text) {
+        } else if should_add_space(
+            last_last_kind,
+            last_last_text,
+            last_kind,
+            last_text,
+            kind,
+            text,
+        ) {
             output.push(' ');
         }
 
@@ -46,6 +55,8 @@ pub fn format_text(content: &str) -> String {
             output.push_str(text);
             newline_pending = true; // Force newline after comment
 
+            last_last_kind = last_kind;
+            last_last_text = last_text;
             last_kind = kind;
             last_text = text;
             last_line = line; // Use current line effectively
@@ -54,7 +65,8 @@ pub fn format_text(content: &str) -> String {
 
         output.push_str(text);
 
-        if text == "{" {
+        // After printing token: increase depth for opening symbols
+        if text == "{" || text == "(" || text == "[" {
             depth += 1;
             let mut j = i + 1;
             while j < tokens.len() && tokens[j].kind == "whitespace" {
@@ -65,6 +77,8 @@ pub fn format_text(content: &str) -> String {
             }
         }
 
+        last_last_kind = last_kind;
+        last_last_text = last_text;
         last_kind = kind;
         last_text = text;
         last_line = line;
@@ -78,20 +92,56 @@ pub fn format_text(content: &str) -> String {
 }
 
 fn should_add_space(
+    last_last_kind: &str,
+    last_last_text: &str,
     last_kind: &str,
     last_text: &str,
     current_kind: &str,
     current_text: &str,
 ) -> bool {
-    if last_kind == "" || current_text == "," || current_text == ";" || current_text == "." {
+    if last_kind == ""
+        || current_text == ","
+        || current_text == ";"
+        || current_text == "."
+        || current_text == ":"
+        || current_text == ")"
+        || current_text == "]"
+    {
         return false;
+    }
+
+    if last_text == "(" || last_text == "[" {
+        return false;
+    }
+
+    if current_text == "}" {
+        return last_text != "{";
     }
 
     if last_text == "{" {
         return current_text != "}";
     }
-    if current_text == "}" {
-        return last_text != "{";
+
+    // Date/Time fragments: no space around '-' or ':' if surrounded by numbers
+    if current_text == "-" && last_kind == "number" {
+        return false;
+    }
+    if last_text == "-" && last_last_kind == "number" {
+        return false;
+    }
+
+    if current_text == ":" && last_kind == "number" {
+        return false;
+    }
+    if last_text == ":" && last_last_kind == "number" && current_kind == "number" {
+        return false;
+    }
+
+    // Unit suffixes: no space between number and ident/percent (except if ident is keyword)
+    if last_kind == "number"
+        && (current_text == "%" || (current_kind == "ident" && !is_keyword(current_text)))
+    {
+        return false;
     }
 
     let last_is_keyword = is_keyword(last_text);
@@ -110,15 +160,17 @@ fn should_add_space(
         return true;
     }
     if last_kind == "number" && current_kind == "ident" {
-        // e.g. 1 else
         return true;
     }
 
     // Operators
-    if is_op(current_text) {
+    if is_op(current_text) || current_text == "=" {
         return true;
     }
     if is_op(last_text) {
+        if (last_text == "-" || last_text == "+") && !is_binary_precursor(last_last_text) {
+            return false;
+        }
         return true;
     }
 
@@ -126,11 +178,21 @@ fn should_add_space(
     if last_text == "," || last_text == ":" {
         return true;
     }
-    if current_text == "=" {
-        return true;
-    }
 
     false
+}
+
+fn is_binary_precursor(text: &str) -> bool {
+    if text.is_empty() {
+        return false;
+    }
+    // Symbols that typically end an expression or literal
+    if text == "}" || text == ")" || text == "]" {
+        return true;
+    }
+    // Identifiers and numbers can be precursors to binary ops
+    // We don't have kind here, but we can assume if it's not a symbol/keyword it's an ident/number
+    !is_op(text) && text != "=" && text != "(" && text != "[" && text != "{" && text != "," && text != ":" && text != ";" && !is_keyword(text)
 }
 
 fn is_keyword(text: &str) -> bool {

@@ -2248,10 +2248,16 @@ impl Parser {
 
                 let close_index = i + 1 + close_offset;
                 let expr_raw: String = raw_chars[i + 1..close_index].iter().collect();
+                let (expr_decoded, expr_raw_map) = decode_interpolation_source_with_map(&expr_raw);
                 let expr_start_col = token.span.start.column + 1 + open_index + 1; // opening quote + '{'
                 let expr_line = token.span.start.line;
 
-                match self.parse_embedded_expr(&expr_raw, expr_line, expr_start_col) {
+                match self.parse_embedded_expr(
+                    &expr_decoded,
+                    &expr_raw_map,
+                    expr_line,
+                    expr_start_col,
+                ) {
                     Some(expr) => {
                         let part_span =
                             span_in_text_literal(&token.span, open_index, close_index + 1);
@@ -2303,21 +2309,32 @@ impl Parser {
         Expr::TextInterpolate { parts, span }
     }
 
-    fn parse_embedded_expr(&mut self, text: &str, line: usize, column: usize) -> Option<Expr> {
+    fn parse_embedded_expr(
+        &mut self,
+        text: &str,
+        raw_map: &[usize],
+        line: usize,
+        column: usize,
+    ) -> Option<Expr> {
         let (cst_tokens, lex_diags) = lex(text);
         for diag in lex_diags {
+            let mapped_span = map_span_columns(&diag.span, raw_map);
             self.diagnostics.push(FileDiagnostic {
                 path: self.path.clone(),
                 diagnostic: Diagnostic {
                     code: diag.code,
                     message: diag.message,
-                    span: shift_span(&diag.span, line - 1, column - 1),
+                    span: shift_span(&mapped_span, line - 1, column - 1),
                     labels: diag
                         .labels
                         .into_iter()
                         .map(|label| DiagnosticLabel {
                             message: label.message,
-                            span: shift_span(&label.span, line - 1, column - 1),
+                            span: shift_span(
+                                &map_span_columns(&label.span, raw_map),
+                                line - 1,
+                                column - 1,
+                            ),
                         })
                         .collect(),
                 },
@@ -2325,7 +2342,8 @@ impl Parser {
         }
         let mut tokens = filter_tokens(&cst_tokens);
         for token in &mut tokens {
-            token.span = shift_span(&token.span, line - 1, column - 1);
+            let mapped_span = map_span_columns(&token.span, raw_map);
+            token.span = shift_span(&mapped_span, line - 1, column - 1);
         }
 
         let mut parser = Parser::new(tokens, Path::new(&self.path));
@@ -2597,7 +2615,8 @@ fn span_in_text_literal(token_span: &Span, start: usize, end: usize) -> Span {
 }
 
 fn find_interpolation_close(remainder: &str) -> Option<usize> {
-    let (tokens, _) = lex(remainder);
+    let (decoded, raw_map) = decode_interpolation_source_with_map(remainder);
+    let (tokens, _) = lex(&decoded);
     let mut depth = 0usize;
     for token in tokens {
         if token.kind != "symbol" {
@@ -2607,7 +2626,12 @@ fn find_interpolation_close(remainder: &str) -> Option<usize> {
             "{" => depth += 1,
             "}" => {
                 if depth == 0 {
-                    return Some(token.span.start.column.saturating_sub(1));
+                    let decoded_index = decoded_char_index(
+                        &decoded,
+                        token.span.start.line,
+                        token.span.start.column,
+                    )?;
+                    return raw_map.get(decoded_index).copied();
                 }
                 depth -= 1;
             }
@@ -2615,6 +2639,62 @@ fn find_interpolation_close(remainder: &str) -> Option<usize> {
         }
     }
     None
+}
+
+fn decode_interpolation_source_with_map(raw: &str) -> (String, Vec<usize>) {
+    let raw_chars: Vec<char> = raw.chars().collect();
+    let mut decoded = String::new();
+    let mut raw_map = Vec::new();
+    let mut i = 0usize;
+    while i < raw_chars.len() {
+        let ch = raw_chars[i];
+        if ch == '\\' && i + 1 < raw_chars.len() {
+            let esc = raw_chars[i + 1];
+            if matches!(esc, '\\' | '"' | '{' | '}') {
+                decoded.push(esc);
+                raw_map.push(i + 1);
+                i += 2;
+                continue;
+            }
+        }
+        decoded.push(ch);
+        raw_map.push(i);
+        i += 1;
+    }
+    (decoded, raw_map)
+}
+
+fn decoded_char_index(text: &str, line: usize, column: usize) -> Option<usize> {
+    if line == 0 || column == 0 {
+        return None;
+    }
+    let mut line_offsets = vec![0usize];
+    let mut idx = 0usize;
+    for ch in text.chars() {
+        idx += 1;
+        if ch == '\n' {
+            line_offsets.push(idx);
+        }
+    }
+    let line_start = *line_offsets.get(line - 1)?;
+    Some(line_start + (column - 1))
+}
+
+fn map_span_columns(span: &Span, raw_map: &[usize]) -> Span {
+    let start_idx = span.start.column.saturating_sub(1);
+    let end_idx = span.end.column.saturating_sub(1);
+    let start_raw = raw_map.get(start_idx).copied().unwrap_or(start_idx);
+    let end_raw = raw_map.get(end_idx).copied().unwrap_or(end_idx);
+    Span {
+        start: Position {
+            line: span.start.line,
+            column: start_raw + 1,
+        },
+        end: Position {
+            line: span.end.line,
+            column: end_raw + 1,
+        },
+    }
 }
 
 fn expr_span(expr: &Expr) -> Span {
