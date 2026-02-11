@@ -11,5 +11,7 @@ mod workspace;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod repro_lsp;
 
 pub use server::run;

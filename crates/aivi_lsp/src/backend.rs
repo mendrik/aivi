@@ -72,29 +72,86 @@ impl Backend {
         if bytes.is_empty() {
             return None;
         }
-        let mut start = offset.min(bytes.len());
-        while start > 0 {
-            let ch = text[start - 1..].chars().next()?;
-            if ch.is_alphanumeric() || ch == '_' || ch == '.' {
-                start -= ch.len_utf8();
-            } else {
-                break;
-            }
+
+        // Check if we are on a symbol/operator character
+        fn is_symbol_char(c: char) -> bool {
+            !c.is_alphanumeric() && c != '_' && c != ' ' && c != '\t' && c != '\n' && c != '\r'
         }
-        let mut end = offset.min(bytes.len());
-        while end < bytes.len() {
-            let ch = text[end..].chars().next()?;
-            if ch.is_alphanumeric() || ch == '_' || ch == '.' {
-                end += ch.len_utf8();
-            } else {
-                break;
-            }
+
+        // Helper to check if a char is part of a standard identifier
+        fn is_ident_char(c: char) -> bool {
+            c.is_alphanumeric() || c == '_' || c == '.'
         }
-        let ident = text[start..end].trim();
-        if ident.is_empty() {
-            None
+
+        // Determine if we are on a symbol or an identifier
+        // We look at the character *before* the cursor (if any) and *at* the cursor.
+        // If the cursor is at offset, we might be right after the last char of interest.
+        let on_symbol = if offset < bytes.len() {
+             let ch = text[offset..].chars().next().unwrap();
+             is_symbol_char(ch)
+        } else if offset > 0 {
+             let ch = text[offset-1..].chars().next().unwrap();
+             is_symbol_char(ch)
         } else {
-            Some(ident.to_string())
+             false
+        };
+        
+        // If we are on a symbol, scan for continuous symbol characters.
+        // Note: Aivi might have multi-char operators like <|, |>, ++, etc.
+        if on_symbol {
+             let mut start = offset.min(bytes.len());
+             // Scan backwards for symbol chars
+             while start > 0 {
+                 let ch = text[..start].chars().last().unwrap();
+                 if is_symbol_char(ch) {
+                     start -= ch.len_utf8();
+                 } else {
+                     break;
+                 }
+             }
+             let mut end = offset.min(bytes.len());
+             // Scan forwards for symbol chars
+             while end < bytes.len() {
+                 let ch = text[end..].chars().next().unwrap();
+                 if is_symbol_char(ch) {
+                     end += ch.len_utf8();
+                 } else {
+                     break;
+                 }
+             }
+
+             let ident = text[start..end].trim();
+             if ident.is_empty() {
+                 None
+             } else {
+                 Some(ident.to_string())
+             }
+        } else {
+             // Existing logic for alphanumeric identifiers
+             let mut start = offset.min(bytes.len());
+             while start > 0 {
+                 let ch = text[..start].chars().last().unwrap();
+                 if is_ident_char(ch) {
+                     start -= ch.len_utf8();
+                 } else {
+                     break;
+                 }
+             }
+             let mut end = offset.min(bytes.len());
+             while end < bytes.len() {
+                 let ch = text[end..].chars().next().unwrap();
+                 if is_ident_char(ch) {
+                     end += ch.len_utf8();
+                 } else {
+                     break;
+                 }
+             }
+             let ident = text[start..end].trim();
+             if ident.is_empty() {
+                 None
+             } else {
+                 Some(ident.to_string())
+             }
         }
     }
 
@@ -243,20 +300,22 @@ impl Backend {
         type_signatures: &HashMap<String, String>,
         inferred: Option<&HashMap<String, String>>,
     ) -> Option<String> {
+        let matches = |name: &str| name == ident || name == format!("({})", ident);
+
         match item {
             ModuleItem::Def(def) => {
-                if def.name.name == ident {
-                    if let Some(sig) = type_signatures.get(ident) {
+                if matches(&def.name.name) {
+                    if let Some(sig) = type_signatures.get(ident).or_else(|| type_signatures.get(&format!("({})", ident))) {
                         return Some(sig.clone());
                     }
-                    if let Some(ty) = inferred.and_then(|types| types.get(ident)) {
+                    if let Some(ty) = inferred.and_then(|types| types.get(ident).or_else(|| types.get(&format!("({})", ident)))) {
                         return Some(format!("`{}` : `{}`", def.name.name, ty));
                     }
                     return Some(format!("`{}`", def.name.name));
                 }
             }
             ModuleItem::TypeSig(sig) => {
-                if sig.name.name == ident {
+                if matches(&sig.name.name) {
                     return Some(format!(
                         "`{}` : `{}`",
                         sig.name.name,
@@ -279,7 +338,7 @@ impl Backend {
                     return Some(format!("`{}`", Self::format_class_decl(class_decl)));
                 }
                 for member in class_decl.members.iter() {
-                    if member.name.name == ident {
+                    if matches(&member.name.name) {
                         return Some(format!(
                             "`{}` : `{}`",
                             member.name.name,
@@ -311,6 +370,8 @@ impl Backend {
         ident: &str,
         inferred: Option<&HashMap<String, String>>,
     ) -> Option<String> {
+        let matches = |name: &str| name == ident || name == format!("({})", ident);
+
         let mut type_signatures = HashMap::new();
         for item in domain_decl.items.iter() {
             if let DomainItem::TypeSig(sig) = item {
@@ -324,7 +385,7 @@ impl Backend {
                 );
             }
         }
-        if let Some(sig) = type_signatures.get(ident) {
+        if let Some(sig) = type_signatures.get(ident).or_else(|| type_signatures.get(&format!("({})", ident))) {
             return Some(sig.clone());
         }
         for item in domain_decl.items.iter() {
@@ -336,11 +397,11 @@ impl Backend {
                 }
                 DomainItem::TypeSig(_) => {}
                 DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
-                    if def.name.name == ident {
-                        if let Some(sig) = type_signatures.get(ident) {
+                    if matches(&def.name.name) {
+                        if let Some(sig) = type_signatures.get(ident).or_else(|| type_signatures.get(&format!("({})", ident))) {
                             return Some(sig.clone());
                         }
-                        if let Some(ty) = inferred.and_then(|types| types.get(ident)) {
+                        if let Some(ty) = inferred.and_then(|types| types.get(ident).or_else(|| types.get(&format!("({})", ident)))) {
                             return Some(format!("`{}` : `{}`", def.name.name, ty));
                         }
                         return Some(format!("`{}`", def.name.name));
