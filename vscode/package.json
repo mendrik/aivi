@@ -96,6 +96,11 @@
           "description": "Maximum number of consecutive blank lines produced by the formatter."
         }
       }
+    },
+    "configurationDefaults": {
+      "[aivi]": {
+        "editor.defaultFormatter": "aivi.aivi-vscode"
+      }
     }
   },
   "scripts": {
