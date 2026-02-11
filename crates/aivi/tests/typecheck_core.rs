@@ -198,6 +198,37 @@ module test.rows = {
 }
 
 #[test]
+fn typecheck_patch_literal() {
+    let source = r#"
+module test.patch_literal = {
+  export promote
+
+  User = { id: Int, name: Text, age: Int }
+
+  promote : Patch User
+  promote = patch { age: _ + 1 }
+}
+"#;
+    check_ok(source);
+}
+
+#[test]
+fn typecheck_row_op_errors() {
+    let source = r#"
+module test.row_errors = {
+  User = { id: Int, name: Text }
+
+  badPick : Pick (missing) User
+  badPick = { id: 1, name: "x" }
+
+  badRename : Rename { id: name } User
+  badRename = { name: 1 }
+}
+"#;
+    check_err(source);
+}
+
+#[test]
 fn typecheck_type_classes_missing_instance_errors() {
     let source = r#"
 module test.classes_err = {

@@ -294,6 +294,9 @@ fn lower_expr(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
             return lower_expr_inner(expr, id_gen);
         }
     }
+    if matches!(&expr, Expr::PatchLit { .. }) {
+        return lower_expr_inner(expr, id_gen);
+    }
     if contains_hole(&expr) {
         let (rewritten, params) = replace_holes(expr);
         let mut hir = lower_expr_inner(rewritten, id_gen);
@@ -448,6 +451,40 @@ fn lower_expr_inner(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
                 })
                 .collect(),
         },
+        Expr::PatchLit { fields, .. } => {
+            let param = format!("__patch_target{}", id_gen.next());
+            let target = HirExpr::Var {
+                id: id_gen.next(),
+                name: param.clone(),
+            };
+            let patch = HirExpr::Patch {
+                id: id_gen.next(),
+                target: Box::new(target),
+                fields: fields
+                    .into_iter()
+                    .map(|field| HirRecordField {
+                        path: field
+                            .path
+                            .into_iter()
+                            .map(|segment| match segment {
+                                crate::surface::PathSegment::Field(name) => {
+                                    HirPathSegment::Field(name.name)
+                                }
+                                crate::surface::PathSegment::Index(expr, _) => {
+                                    HirPathSegment::Index(lower_expr(expr, id_gen))
+                                }
+                            })
+                            .collect(),
+                        value: lower_expr(field.value, id_gen),
+                    })
+                    .collect(),
+            };
+            HirExpr::Lambda {
+                id: id_gen.next(),
+                param,
+                body: Box::new(patch),
+            }
+        }
         Expr::FieldAccess { base, field, .. } => HirExpr::FieldAccess {
             id: id_gen.next(),
             base: Box::new(lower_expr(*base, id_gen)),
@@ -742,6 +779,13 @@ fn contains_hole(expr: &Expr) -> bool {
                 .any(|segment| matches!(segment, crate::surface::PathSegment::Index(expr, _) if contains_hole(expr)))
                 || contains_hole(&field.value)
         }),
+        Expr::PatchLit { fields, .. } => fields.iter().any(|field| {
+            field
+                .path
+                .iter()
+                .any(|segment| matches!(segment, crate::surface::PathSegment::Index(expr, _) if contains_hole(expr)))
+                || contains_hole(&field.value)
+        }),
         Expr::FieldAccess { base, .. } => contains_hole(base),
         Expr::FieldSection { .. } => true,
         Expr::Index { base, index, .. } => contains_hole(base) || contains_hole(index),
@@ -825,6 +869,31 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
             span,
         },
         Expr::Record { fields, span } => Expr::Record {
+            fields: fields
+                .into_iter()
+                .map(|field| crate::surface::RecordField {
+                    path: field
+                        .path
+                        .into_iter()
+                        .map(|segment| match segment {
+                            crate::surface::PathSegment::Field(name) => {
+                                crate::surface::PathSegment::Field(name)
+                            }
+                            crate::surface::PathSegment::Index(expr, span) => {
+                                crate::surface::PathSegment::Index(
+                                    replace_holes_inner(expr, counter, params),
+                                    span,
+                                )
+                            }
+                        })
+                        .collect(),
+                    value: replace_holes_inner(field.value, counter, params),
+                    span: field.span,
+                })
+                .collect(),
+            span,
+        },
+        Expr::PatchLit { fields, span } => Expr::PatchLit {
             fields: fields
                 .into_iter()
                 .map(|field| crate::surface::RecordField {

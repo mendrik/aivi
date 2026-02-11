@@ -760,6 +760,11 @@ impl Backend {
                     Self::collect_record_field_references(field, ident, uri, locations);
                 }
             }
+            Expr::PatchLit { fields, .. } => {
+                for field in fields.iter() {
+                    Self::collect_record_field_references(field, ident, uri, locations);
+                }
+            }
             Expr::FieldAccess { base, field, .. } => {
                 Self::collect_expr_references(base, ident, uri, locations);
                 if field.name == ident {

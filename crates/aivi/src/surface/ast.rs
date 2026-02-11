@@ -202,6 +202,10 @@ pub enum Expr {
         fields: Vec<RecordField>,
         span: Span,
     },
+    PatchLit {
+        fields: Vec<RecordField>,
+        span: Span,
+    },
     FieldAccess {
         base: Box<Expr>,
         field: SpannedName,
@@ -346,4 +350,3 @@ pub struct RecordPatternField {
     pub pattern: Pattern,
     pub span: Span,
 }
-

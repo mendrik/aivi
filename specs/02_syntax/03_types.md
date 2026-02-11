@@ -131,6 +131,11 @@ Semantics:
 - `Rename` renames fields; collisions are errors.
 - `Defaulted` is equivalent to `Optional` at the type level and is reserved for codec/default derivation.
 
+Errors:
+
+- Selecting or renaming a field that does not exist in the source record is a type error.
+- `Rename` collisions (two fields mapping to the same name, or a rename colliding with an existing field) are type errors.
+
 Type-level piping mirrors expression piping and applies the left type as the final argument:
 
 ```aivi

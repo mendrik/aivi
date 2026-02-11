@@ -186,6 +186,7 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
         checker.reset_module_context(module);
         let mut env = checker.builtins.clone();
         checker.register_module_types(module);
+        diagnostics.extend(checker.collect_type_expr_diags(module));
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
         checker.register_imports(module, &module_exports, &mut env);
@@ -239,6 +240,7 @@ pub fn infer_value_types(
         checker.reset_module_context(module);
         let mut env = checker.builtins.clone();
         checker.register_module_types(module);
+        diagnostics.extend(checker.collect_type_expr_diags(module));
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
         checker.register_imports(module, &module_exports, &mut env);

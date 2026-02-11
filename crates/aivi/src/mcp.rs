@@ -444,6 +444,9 @@ fn expr_is_effectful(expr: &Expr) -> bool {
         Expr::Record { fields, .. } => fields
             .iter()
             .any(|field: &RecordField| expr_is_effectful(&field.value)),
+        Expr::PatchLit { fields, .. } => fields
+            .iter()
+            .any(|field: &RecordField| expr_is_effectful(&field.value)),
         Expr::FieldAccess { base, .. } => expr_is_effectful(base),
         Expr::Index { base, index, .. } => expr_is_effectful(base) || expr_is_effectful(index),
         Expr::FieldSection { .. } | Expr::Ident(_) | Expr::Literal(_) | Expr::Raw { .. } => false,

@@ -707,6 +707,17 @@ impl Parser {
                         .collect(),
                     span,
                 },
+                Expr::PatchLit { fields, span } => Expr::PatchLit {
+                    fields: fields
+                        .into_iter()
+                        .map(|field| RecordField {
+                            path: field.path,
+                            value: rewrite_literal_template(field.value, needle, param),
+                            span: field.span,
+                        })
+                        .collect(),
+                    span,
+                },
                 Expr::FieldAccess { base, field, span } => Expr::FieldAccess {
                     base: Box::new(rewrite_literal_template(*base, needle, param)),
                     field,
@@ -1241,6 +1252,10 @@ impl Parser {
         if self.match_keyword("resource") {
             return Some(self.parse_block(BlockKind::Resource));
         }
+        if self.match_keyword("patch") {
+            let start = self.previous_span();
+            return Some(self.parse_patch_literal(start));
+        }
 
         if let Some(number) = self.consume_number() {
             if let Some(dt) = self.try_parse_datetime(number.clone()) {
@@ -1311,6 +1326,21 @@ impl Parser {
         }
         self.pos = checkpoint;
         None
+    }
+
+    fn parse_patch_literal(&mut self, start: Span) -> Expr {
+        self.expect_symbol("{", "expected '{' to start patch literal");
+        let mut fields = Vec::new();
+        while !self.check_symbol("}") && self.pos < self.tokens.len() {
+            if let Some(field) = self.parse_record_field() {
+                fields.push(field);
+                continue;
+            }
+            self.pos += 1;
+        }
+        let end = self.expect_symbol("}", "expected '}' to close patch literal");
+        let span = merge_span(start.clone(), end.unwrap_or(start));
+        Expr::PatchLit { fields, span }
     }
 
     fn parse_map_literal(&mut self, start_span: Span) -> Option<Expr> {
@@ -2506,6 +2536,7 @@ fn expr_span(expr: &Expr) -> Span {
         Expr::List { span, .. }
         | Expr::Tuple { span, .. }
         | Expr::Record { span, .. }
+        | Expr::PatchLit { span, .. }
         | Expr::FieldAccess { span, .. }
         | Expr::FieldSection { span, .. }
         | Expr::Index { span, .. }

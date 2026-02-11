@@ -7,6 +7,14 @@ Kernel record primitives:
 
 For nested paths, desugar into nested `update`/`delete`.
 
+## Patch literal
+
+Patch literals are desugared into unary functions:
+
+| Surface | Desugaring |
+| :--- | :--- |
+| `patch { a: v }` | `λx. x <| { a: v }` |
+
 ## Path compilation (dot paths)
 
 | Surface | Desugaring |

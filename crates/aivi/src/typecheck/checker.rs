@@ -41,6 +41,7 @@ impl TypeChecker {
             method_to_classes: HashMap::new(),
         };
         checker.register_builtin_types();
+        checker.register_builtin_aliases();
         checker.register_builtin_values();
         checker
     }
@@ -49,6 +50,7 @@ impl TypeChecker {
         self.subst.clear();
         self.type_constructors = self.builtin_type_constructors();
         self.aliases.clear();
+        self.register_builtin_aliases();
         self.checked_defs.clear();
         self.classes.clear();
         self.instances.clear();
@@ -444,6 +446,47 @@ impl TypeChecker {
                 _ => {}
             }
         }
+    }
+
+    pub(super) fn register_builtin_aliases(&mut self) {
+        let a = self.fresh_var_id();
+        self.aliases.insert(
+            "Patch".to_string(),
+            AliasInfo {
+                params: vec![a],
+                body: Type::Func(Box::new(Type::Var(a)), Box::new(Type::Var(a))),
+            },
+        );
+    }
+
+    pub(super) fn collect_type_expr_diags(&mut self, module: &Module) -> Vec<FileDiagnostic> {
+        let mut errors = Vec::new();
+        for item in &module.items {
+            match item {
+                ModuleItem::TypeSig(sig) => {
+                    self.validate_type_expr(&sig.ty, &mut errors);
+                }
+                ModuleItem::TypeAlias(alias) => {
+                    self.validate_type_expr(&alias.aliased, &mut errors);
+                }
+                ModuleItem::DomainDecl(domain) => {
+                    for domain_item in &domain.items {
+                        match domain_item {
+                            DomainItem::TypeSig(sig) => {
+                                self.validate_type_expr(&sig.ty, &mut errors);
+                            }
+                            DomainItem::TypeAlias(_) => {}
+                            DomainItem::Def(_) | DomainItem::LiteralDef(_) => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        errors
+            .into_iter()
+            .map(|err| self.error_to_diag(module, err))
+            .collect()
     }
 
     fn alias_info(&mut self, alias: &TypeAlias) -> AliasInfo {
@@ -874,6 +917,7 @@ impl TypeChecker {
             Expr::List { items, .. } => self.infer_list(items, env),
             Expr::Tuple { items, .. } => self.infer_tuple(items, env),
             Expr::Record { fields, .. } => self.infer_record(fields, env),
+            Expr::PatchLit { fields, .. } => self.infer_patch_literal(fields, env),
             Expr::FieldAccess { base, field, .. } => self.infer_field_access(base, field, env),
             Expr::FieldSection { field, .. } => {
                 let param = SpannedName {
@@ -1523,6 +1567,37 @@ impl TypeChecker {
         Ok(target_ty)
     }
 
+    fn infer_patch_literal(
+        &mut self,
+        fields: &[RecordField],
+        env: &mut TypeEnv,
+    ) -> Result<Type, TypeError> {
+        let mut record_ty = Type::Record {
+            fields: BTreeMap::new(),
+            open: true,
+        };
+        for field in fields {
+            let value_ty = self.infer_expr(&field.value, env)?;
+            let field_ty = self.fresh_var();
+            let requirement = self.record_from_path(&field.path, field_ty.clone());
+            record_ty = self.merge_records(record_ty, requirement, field.span.clone())?;
+
+            let value_applied = self.apply(value_ty.clone());
+            if matches!(value_applied, Type::Func(_, _)) {
+                let func_ty = Type::Func(Box::new(field_ty.clone()), Box::new(field_ty.clone()));
+                if self
+                    .unify_with_span(value_ty.clone(), func_ty, field.span.clone())
+                    .is_ok()
+                {
+                    continue;
+                }
+            }
+            self.unify_with_span(value_ty, field_ty, field.span.clone())?;
+        }
+        let record_ty = self.apply(record_ty);
+        Ok(Type::Func(Box::new(record_ty.clone()), Box::new(record_ty)))
+    }
+
     fn infer_pattern(&mut self, pattern: &Pattern, env: &mut TypeEnv) -> Result<Type, TypeError> {
         match pattern {
             Pattern::Wildcard(_) => Ok(self.fresh_var()),
@@ -2100,6 +2175,153 @@ impl TypeChecker {
         }
     }
 
+    fn validate_type_expr(&mut self, expr: &TypeExpr, errors: &mut Vec<TypeError>) {
+        match expr {
+            TypeExpr::Apply { base, args, .. } => {
+                if let TypeExpr::Name(base_name) = base.as_ref() {
+                    if Self::is_row_op_name(&base_name.name) {
+                        self.validate_row_op(base_name, args, errors);
+                    }
+                }
+                self.validate_type_expr(base, errors);
+                for arg in args {
+                    self.validate_type_expr(arg, errors);
+                }
+            }
+            TypeExpr::Func { params, result, .. } => {
+                for param in params {
+                    self.validate_type_expr(param, errors);
+                }
+                self.validate_type_expr(result, errors);
+            }
+            TypeExpr::Record { fields, .. } => {
+                for (_, ty) in fields {
+                    self.validate_type_expr(ty, errors);
+                }
+            }
+            TypeExpr::Tuple { items, .. } => {
+                for item in items {
+                    self.validate_type_expr(item, errors);
+                }
+            }
+            TypeExpr::Name(_) | TypeExpr::Star { .. } | TypeExpr::Unknown { .. } => {}
+        }
+    }
+
+    fn validate_row_op(
+        &mut self,
+        base: &SpannedName,
+        args: &[TypeExpr],
+        errors: &mut Vec<TypeError>,
+    ) {
+        if args.len() != 2 {
+            errors.push(TypeError {
+                span: base.span.clone(),
+                message: format!("{} expects 2 type arguments", base.name),
+                expected: None,
+                found: None,
+            });
+            return;
+        }
+
+        let mut ctx = TypeContext::new(&self.type_constructors);
+        let Some((source_fields, _open)) = self.record_from_type_expr(&args[1], &mut ctx) else {
+            return;
+        };
+        let source_names: HashSet<String> = source_fields.keys().cloned().collect();
+
+        match base.name.as_str() {
+            "Rename" => {
+                let mut rename_map = BTreeMap::new();
+                if let TypeExpr::Record { fields, .. } = &args[0] {
+                    for (old_name, ty) in fields {
+                        if let TypeExpr::Name(new_name) = ty {
+                            rename_map.insert(
+                                old_name.name.clone(),
+                                (new_name.name.clone(), new_name.span.clone()),
+                            );
+                        }
+                    }
+                }
+
+                for (old, span) in self.row_record_fields_with_spans(&args[0]) {
+                    if !source_names.contains(&old) {
+                        errors.push(TypeError {
+                            span,
+                            message: format!("unknown field '{}' in Rename", old),
+                            expected: None,
+                            found: None,
+                        });
+                    }
+                }
+
+                let mut seen: HashSet<String> = HashSet::new();
+                for (name, _ty) in source_fields {
+                    let (new_name, span) = rename_map
+                        .get(&name)
+                        .cloned()
+                        .unwrap_or((name.clone(), base.span.clone()));
+                    if !seen.insert(new_name.clone()) {
+                        errors.push(TypeError {
+                            span,
+                            message: format!("rename collision for field '{}'", new_name),
+                            expected: None,
+                            found: None,
+                        });
+                    }
+                }
+            }
+            "Pick" | "Omit" | "Optional" | "Required" | "Defaulted" => {
+                let mut fields = self.row_fields_with_spans(&args[0]);
+                if fields.is_empty() {
+                    fields = self.row_record_fields_with_spans(&args[0]);
+                }
+                for (name, span) in fields {
+                    if !source_names.contains(&name) {
+                        errors.push(TypeError {
+                            span,
+                            message: format!("unknown field '{}' in {}", name, base.name),
+                            expected: None,
+                            found: None,
+                        });
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn row_fields_with_spans(&self, expr: &TypeExpr) -> Vec<(String, Span)> {
+        match expr {
+            TypeExpr::Tuple { items, .. } => items
+                .iter()
+                .filter_map(|item| match item {
+                    TypeExpr::Name(name) => Some((name.name.clone(), name.span.clone())),
+                    _ => None,
+                })
+                .collect(),
+            TypeExpr::Name(name) => vec![(name.name.clone(), name.span.clone())],
+            _ => Vec::new(),
+        }
+    }
+
+    fn row_record_fields_with_spans(&self, expr: &TypeExpr) -> Vec<(String, Span)> {
+        match expr {
+            TypeExpr::Record { fields, .. } => fields
+                .iter()
+                .map(|(name, _)| (name.name.clone(), name.span.clone()))
+                .collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    fn is_row_op_name(name: &str) -> bool {
+        matches!(
+            name,
+            "Pick" | "Omit" | "Optional" | "Required" | "Rename" | "Defaulted"
+        )
+    }
+
     fn row_pick(&mut self, args: &[TypeExpr], ctx: &mut TypeContext) -> Option<Type> {
         if args.len() != 2 {
             return None;
@@ -2317,6 +2539,7 @@ fn expr_span(expr: &Expr) -> Span {
         Expr::List { span, .. }
         | Expr::Tuple { span, .. }
         | Expr::Record { span, .. }
+        | Expr::PatchLit { span, .. }
         | Expr::FieldAccess { span, .. }
         | Expr::FieldSection { span, .. }
         | Expr::Index { span, .. }
@@ -2412,6 +2635,27 @@ fn desugar_holes_inner(expr: Expr, is_root: bool) -> Expr {
                 })
                 .collect();
             Expr::Record { fields, span }
+        }
+        Expr::PatchLit { fields, span } => {
+            let fields = fields
+                .into_iter()
+                .map(|mut field| {
+                    let path = field
+                        .path
+                        .into_iter()
+                        .map(|segment| match segment {
+                            PathSegment::Index(expr, span) => {
+                                PathSegment::Index(desugar_holes_inner(expr, false), span)
+                            }
+                            PathSegment::Field(name) => PathSegment::Field(name),
+                        })
+                        .collect();
+                    field.path = path;
+                    field.value = desugar_holes_inner(field.value, false);
+                    field
+                })
+                .collect();
+            Expr::PatchLit { fields, span }
         }
         Expr::FieldAccess { base, field, span } => Expr::FieldAccess {
             base: Box::new(desugar_holes_inner(*base, false)),
@@ -2538,6 +2782,11 @@ fn contains_hole(expr: &Expr) -> bool {
                 |segment| matches!(segment, PathSegment::Index(expr, _) if contains_hole(expr)),
             ) || contains_hole(&field.value)
         }),
+        Expr::PatchLit { fields, .. } => fields.iter().any(|field| {
+            field.path.iter().any(
+                |segment| matches!(segment, PathSegment::Index(expr, _) if contains_hole(expr)),
+            ) || contains_hole(&field.value)
+        }),
         Expr::FieldAccess { base, .. } => contains_hole(base),
         Expr::FieldSection { .. } => true,
         Expr::Index { base, index, .. } => contains_hole(base) || contains_hole(index),
@@ -2620,6 +2869,26 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
             span,
         },
         Expr::Record { fields, span } => Expr::Record {
+            fields: fields
+                .into_iter()
+                .map(|field| RecordField {
+                    path: field
+                        .path
+                        .into_iter()
+                        .map(|segment| match segment {
+                            PathSegment::Field(name) => PathSegment::Field(name),
+                            PathSegment::Index(expr, span) => {
+                                PathSegment::Index(replace_holes_inner(expr, counter, params), span)
+                            }
+                        })
+                        .collect(),
+                    value: replace_holes_inner(field.value, counter, params),
+                    span: field.span,
+                })
+                .collect(),
+            span,
+        },
+        Expr::PatchLit { fields, span } => Expr::PatchLit {
             fields: fields
                 .into_iter()
                 .map(|field| RecordField {

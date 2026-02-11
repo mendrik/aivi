@@ -316,6 +316,11 @@ fn check_expr(
                 check_expr(&field.value, scope, diagnostics, module, allow_unknown);
             }
         }
+        Expr::PatchLit { fields, .. } => {
+            for field in fields {
+                check_expr(&field.value, scope, diagnostics, module, allow_unknown);
+            }
+        }
         Expr::FieldAccess { base, .. } => {
             check_expr(base, scope, diagnostics, module, allow_unknown);
         }

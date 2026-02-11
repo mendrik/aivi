@@ -188,6 +188,7 @@ Atom           := Literal
                | TupleLit
                | ListLit
                | RecordLit
+               | "patch" PatchLit
                | Block
                | EffectBlock
                | GenerateBlock

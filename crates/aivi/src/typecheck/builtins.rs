@@ -16,6 +16,7 @@ impl TypeChecker {
             "List",
             "Option",
             "Result",
+            "Patch",
             "Map",
             "Set",
             "Queue",
@@ -55,6 +56,7 @@ impl TypeChecker {
         }
         self.type_constructors = self.builtin_types.clone();
     }
+
 
     pub(super) fn builtin_type_constructors(&self) -> HashSet<String> {
         self.builtin_types.clone()

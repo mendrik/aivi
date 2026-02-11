@@ -193,6 +193,9 @@ impl Backend {
             Expr::Record { fields, .. } => fields
                 .iter()
                 .find_map(|field| Self::find_call_info(&field.value, position)),
+            Expr::PatchLit { fields, .. } => fields
+                .iter()
+                .find_map(|field| Self::find_call_info(&field.value, position)),
             Expr::FieldAccess { base, .. } => Self::find_call_info(base, position),
             Expr::Index { base, index, .. } => Self::find_call_info(base, position)
                 .or_else(|| Self::find_call_info(index, position)),
@@ -283,6 +286,7 @@ impl Backend {
             Expr::List { span, .. }
             | Expr::Tuple { span, .. }
             | Expr::Record { span, .. }
+            | Expr::PatchLit { span, .. }
             | Expr::FieldAccess { span, .. }
             | Expr::FieldSection { span, .. }
             | Expr::Index { span, .. }

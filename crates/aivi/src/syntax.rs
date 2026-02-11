@@ -24,6 +24,7 @@ pub const KEYWORDS_OTHER: &[&str] = &[
     "instance",
     "type",
     "over",
+    "patch",
 ];
 
 pub const KEYWORDS_ALL: &[&str] = &[
@@ -49,6 +50,7 @@ pub const KEYWORDS_ALL: &[&str] = &[
     "instance",
     "type",
     "over",
+    "patch",
 ];
 
 pub const BOOLEAN_LITERALS: &[&str] = &["True", "False"];

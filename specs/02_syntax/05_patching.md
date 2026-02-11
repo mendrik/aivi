@@ -17,6 +17,15 @@ Patching is:
 `Patch A` is a first-class type alias for `A -> A` and is the canonical type for patch values.
 Applying a patch is done with `<|`.
 
+Patch literals can be lifted into patch functions:
+
+```aivi
+promote : Patch User
+promote = patch { isAdmin: True }
+```
+
+`patch { ... }` produces a patch value that can be applied later with `<|`.
+
 Compiler checks:
 
 * Patch paths must resolve against the target type (unknown fields/constructors are errors).
