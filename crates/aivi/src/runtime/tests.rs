@@ -2,9 +2,10 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use rudo_gc::GcMutex;
+use uuid::Uuid;
 
-use super::*;
 use super::values::KeyValue;
+use super::*;
 
 fn expect_ok<T>(result: Result<T, RuntimeError>, msg: &str) -> T {
     match result {
@@ -234,6 +235,56 @@ fn text_bytes_roundtrip() {
 }
 
 #[test]
+fn crypto_sha256_randoms() {
+    let globals = Env::new(None);
+    register_builtins(&globals);
+    let ctx = Arc::new(RuntimeContext { globals });
+    let cancel = CancelToken::root();
+    let mut runtime = Runtime::new(ctx, cancel);
+
+    let crypto_record = runtime.ctx.globals.get("crypto").expect("crypto record");
+    let Value::Record(fields) = crypto_record else {
+        panic!("expected crypto record");
+    };
+
+    let sha256 = fields.get("sha256").expect("sha256").clone();
+    let digest = runtime
+        .apply(sha256, Value::Text("hello".to_string()))
+        .unwrap_or_else(|_| panic!("sha256 applied"));
+    let Value::Text(digest) = digest else {
+        panic!("expected sha256 output");
+    };
+    assert_eq!(
+        digest,
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    );
+
+    let random_bytes = fields.get("randomBytes").expect("randomBytes").clone();
+    let effect = runtime
+        .apply(random_bytes, Value::Int(16))
+        .unwrap_or_else(|_| panic!("randomBytes applied"));
+    let value = runtime
+        .run_effect_value(effect)
+        .unwrap_or_else(|_| panic!("randomBytes run"));
+    let Value::Bytes(bytes) = value else {
+        panic!("expected Bytes");
+    };
+    assert_eq!(bytes.len(), 16);
+
+    let random_uuid = fields.get("randomUuid").expect("randomUuid").clone();
+    let effect = runtime
+        .apply(random_uuid, Value::Unit)
+        .unwrap_or_else(|_| panic!("randomUuid applied"));
+    let value = runtime
+        .run_effect_value(effect)
+        .unwrap_or_else(|_| panic!("randomUuid run"));
+    let Value::Text(text) = value else {
+        panic!("expected Text uuid");
+    };
+    Uuid::parse_str(&text).expect("uuid parse");
+}
+
+#[test]
 fn collections_map_set_queue_heap() {
     let globals = Env::new(None);
     register_builtins(&globals);
@@ -295,7 +346,9 @@ fn collections_map_set_queue_heap() {
     let dequeued = expect_ok(runtime.apply(dequeue, queue), "dequeue");
     match dequeued {
         Value::Constructor { name, args } if name == "Some" => {
-            assert!(matches!(args.as_slice(), [Value::Tuple(values)] if matches!(values.as_slice(), [Value::Text(value), _] if value == "first")));
+            assert!(
+                matches!(args.as_slice(), [Value::Tuple(values)] if matches!(values.as_slice(), [Value::Text(value), _] if value == "first"))
+            );
         }
         _ => panic!("expected Some from dequeue"),
     }
@@ -314,7 +367,9 @@ fn collections_map_set_queue_heap() {
     let popped = expect_ok(runtime.apply(pop_min, heap), "popMin");
     match popped {
         Value::Constructor { name, args } if name == "Some" => {
-            assert!(matches!(args.as_slice(), [Value::Tuple(values)] if matches!(values.as_slice(), [Value::Int(1), _])));
+            assert!(
+                matches!(args.as_slice(), [Value::Tuple(values)] if matches!(values.as_slice(), [Value::Int(1), _]))
+            );
         }
         _ => panic!("expected Some from heap pop"),
     }
@@ -388,7 +443,11 @@ fn linalg_dot_and_graph_shortest_path() {
         };
         fields.insert(
             "edges".to_string(),
-            Value::List(Arc::new(vec![edge(1, 2, 1.0), edge(2, 3, 1.0), edge(1, 3, 5.0)])),
+            Value::List(Arc::new(vec![
+                edge(1, 2, 1.0),
+                edge(2, 3, 1.0),
+                edge(1, 3, 5.0),
+            ])),
         );
         Value::Record(Arc::new(fields))
     };

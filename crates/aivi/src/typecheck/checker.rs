@@ -2,14 +2,13 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::diagnostics::{Diagnostic, FileDiagnostic, Span};
 use crate::surface::{
-    BlockItem, BlockKind, Def, DomainItem, Expr, Literal, Module, ModuleItem, PathSegment,
-    Pattern, RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeDecl,
-    TypeExpr, TypeSig,
+    BlockItem, BlockKind, Def, DomainItem, Expr, Literal, Module, ModuleItem, PathSegment, Pattern,
+    RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeDecl, TypeExpr, TypeSig,
 };
 
 use super::types::{
-    number_kind, split_suffixed_number, AliasInfo, NumberKind, Scheme, Type, TypeContext,
-    TypeEnv, TypeError, TypePrinter, TypeVarId,
+    number_kind, split_suffixed_number, AliasInfo, NumberKind, Scheme, Type, TypeContext, TypeEnv,
+    TypeError, TypePrinter, TypeVarId,
 };
 use super::{ClassDeclInfo, InstanceDeclInfo};
 
@@ -1423,14 +1422,17 @@ impl TypeChecker {
                 BlockItem::Bind { pattern, expr, .. } => {
                     let expr_ty = self.infer_expr(expr, &mut local_env)?;
                     let snapshot = self.subst.clone();
-                    let value_ty =
-                        match self.bind_effect_value(expr_ty.clone(), err_ty.clone(), expr_span(expr)) {
-                            Ok(value_ty) => value_ty,
-                            Err(_) => {
-                                self.subst = snapshot;
-                                expr_ty
-                            }
-                        };
+                    let value_ty = match self.bind_effect_value(
+                        expr_ty.clone(),
+                        err_ty.clone(),
+                        expr_span(expr),
+                    ) {
+                        Ok(value_ty) => value_ty,
+                        Err(_) => {
+                            self.subst = snapshot;
+                            expr_ty
+                        }
+                    };
                     let pat_ty = self.infer_pattern(pattern, &mut local_env)?;
                     self.unify_with_span(pat_ty, value_ty, pattern_span(pattern))?;
                 }
@@ -2453,7 +2455,9 @@ impl TypeChecker {
 
     fn row_fields_from_record_expr(&self, expr: &TypeExpr) -> Vec<String> {
         match expr {
-            TypeExpr::Record { fields, .. } => fields.iter().map(|(name, _)| name.name.clone()).collect(),
+            TypeExpr::Record { fields, .. } => {
+                fields.iter().map(|(name, _)| name.name.clone()).collect()
+            }
             _ => Vec::new(),
         }
     }

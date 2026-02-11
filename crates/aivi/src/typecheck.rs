@@ -4,8 +4,8 @@ use crate::diagnostics::FileDiagnostic;
 use crate::surface::{DomainItem, Module, ModuleItem, TypeExpr};
 
 mod builtins;
-mod types;
 mod checker;
+mod types;
 
 use self::checker::TypeChecker;
 use self::types::Scheme;

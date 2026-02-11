@@ -4,6 +4,7 @@ use super::calendar::build_calendar_record;
 use super::collections::build_collections_record;
 use super::color::build_color_record;
 use super::concurrency::build_concurrent_record;
+use super::crypto::build_crypto_record;
 use super::graph::build_graph_record;
 use super::linalg::build_linalg_record;
 use super::math::build_math_record;
@@ -14,10 +15,10 @@ use super::system::{
     build_clock_record, build_console_record, build_file_record, build_random_record,
     build_system_record,
 };
-use super::{database::build_database_record, log::build_log_record};
 use super::text::build_text_record;
 use super::url_http::{build_http_client_record, build_url_record, HttpClientMode};
 use super::util::{builtin, builtin_constructor};
+use super::{database::build_database_record, log::build_log_record};
 use crate::runtime::http::build_http_server_record;
 use crate::runtime::{format_value, EffectValue, Env, RuntimeError, Value};
 
@@ -86,8 +87,8 @@ pub(crate) fn register_builtins(env: &Env) {
         builtin("attempt", 1, |mut args, _| {
             let effect = args.remove(0);
             let effect = EffectValue::Thunk {
-                func: std::sync::Arc::new(
-                    move |runtime| match runtime.run_effect_value(effect.clone()) {
+                func: std::sync::Arc::new(move |runtime| {
+                    match runtime.run_effect_value(effect.clone()) {
                         Ok(value) => Ok(Value::Constructor {
                             name: "Ok".to_string(),
                             args: vec![value],
@@ -97,8 +98,8 @@ pub(crate) fn register_builtins(env: &Env) {
                             args: vec![value],
                         }),
                         Err(err) => Err(err),
-                    },
-                ),
+                    }
+                }),
             };
             Ok(Value::Effect(std::sync::Arc::new(effect)))
         }),
@@ -151,7 +152,10 @@ pub(crate) fn register_builtins(env: &Env) {
     env.set("system".to_string(), build_system_record());
     env.set("clock".to_string(), build_clock_record());
     env.set("random".to_string(), build_random_record());
-    env.set("channel".to_string(), super::concurrency::build_channel_record());
+    env.set(
+        "channel".to_string(),
+        super::concurrency::build_channel_record(),
+    );
     env.set("concurrent".to_string(), build_concurrent_record());
     env.set("httpServer".to_string(), build_http_server_record());
     env.set("text".to_string(), build_text_record());
@@ -166,10 +170,22 @@ pub(crate) fn register_builtins(env: &Env) {
     env.set("rational".to_string(), build_rational_record());
     env.set("decimal".to_string(), build_decimal_record());
     env.set("url".to_string(), build_url_record());
-    env.set("http".to_string(), build_http_client_record(HttpClientMode::Http));
-    env.set("https".to_string(), build_http_client_record(HttpClientMode::Https));
-    env.set("sockets".to_string(), super::sockets::build_sockets_record());
-    env.set("streams".to_string(), super::streams::build_streams_record());
+    env.set(
+        "http".to_string(),
+        build_http_client_record(HttpClientMode::Http),
+    );
+    env.set(
+        "https".to_string(),
+        build_http_client_record(HttpClientMode::Https),
+    );
+    env.set(
+        "sockets".to_string(),
+        super::sockets::build_sockets_record(),
+    );
+    env.set(
+        "streams".to_string(),
+        super::streams::build_streams_record(),
+    );
     let collections = build_collections_record();
     if let Value::Record(fields) = &collections {
         if let Some(map) = fields.get("map") {
@@ -190,6 +206,7 @@ pub(crate) fn register_builtins(env: &Env) {
     }
     env.set("collections".to_string(), collections);
     env.set("console".to_string(), build_console_record());
+    env.set("crypto".to_string(), build_crypto_record());
     env.set("logger".to_string(), build_log_record());
     env.set("database".to_string(), build_database_record());
 }

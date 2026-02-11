@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use url::Url;
 use ureq::Error as UreqError;
+use url::Url;
 
-use super::util::{builtin, expect_int, expect_list, expect_record, expect_text, list_value, make_err, make_none, make_ok, make_some};
+use super::util::{
+    builtin, expect_int, expect_list, expect_record, expect_text, list_value, make_err, make_none,
+    make_ok, make_some,
+};
 use crate::runtime::{EffectValue, RuntimeError, Value};
 fn url_from_value(value: Value, ctx: &str) -> Result<Url, RuntimeError> {
     let Value::Record(fields) = value else {
@@ -25,16 +28,14 @@ fn url_from_value(value: Value, ctx: &str) -> Result<Url, RuntimeError> {
         ctx,
     )?;
     let base = format!("{protocol}://{host}");
-    let mut url = Url::parse(&base).map_err(|err| {
-        RuntimeError::Message(format!("{ctx} invalid Url base: {err}"))
-    })?;
+    let mut url = Url::parse(&base)
+        .map_err(|err| RuntimeError::Message(format!("{ctx} invalid Url base: {err}")))?;
     if let Some(port) = fields.get("port") {
         match port {
             Value::Constructor { name, args } if name == "Some" && args.len() == 1 => {
                 let port = expect_int(args[0].clone(), ctx)? as u16;
-                url.set_port(Some(port)).map_err(|_| {
-                    RuntimeError::Message(format!("{ctx} invalid Url port"))
-                })?;
+                url.set_port(Some(port))
+                    .map_err(|_| RuntimeError::Message(format!("{ctx} invalid Url port")))?;
             }
             Value::Constructor { name, args } if name == "None" && args.is_empty() => {}
             _ => {
@@ -88,7 +89,10 @@ fn url_from_value(value: Value, ctx: &str) -> Result<Url, RuntimeError> {
 
 fn url_to_record(url: &Url) -> HashMap<String, Value> {
     let mut map = HashMap::new();
-    map.insert("protocol".to_string(), Value::Text(url.scheme().to_string()));
+    map.insert(
+        "protocol".to_string(),
+        Value::Text(url.scheme().to_string()),
+    );
     map.insert(
         "host".to_string(),
         Value::Text(url.host_str().unwrap_or("").to_string()),
@@ -220,9 +224,7 @@ fn ensure_http_scheme(url: &Url, mode: HttpClientMode, ctx: &str) -> Result<(), 
             if url.scheme() == "https" {
                 Ok(())
             } else {
-                Err(RuntimeError::Message(format!(
-                    "{ctx} expects an https URL"
-                )))
+                Err(RuntimeError::Message(format!("{ctx} expects an https URL")))
             }
         }
     }
@@ -252,9 +254,7 @@ fn http_request(
 fn http_error_message(err: UreqError) -> Result<String, RuntimeError> {
     match err {
         UreqError::Status(code, response) => {
-            let body = response
-                .into_string()
-                .unwrap_or_else(|_| String::new());
+            let body = response.into_string().unwrap_or_else(|_| String::new());
             if body.is_empty() {
                 Ok(format!("http status {code}"))
             } else {
@@ -343,9 +343,7 @@ fn text_option_from_value(value: Value, ctx: &str) -> Result<Option<String>, Run
             Ok(Some(expect_text(args[0].clone(), ctx)?))
         }
         Value::Constructor { name, args } if name == "None" && args.is_empty() => Ok(None),
-        _ => Err(RuntimeError::Message(format!(
-            "{ctx} expects Option Text"
-        ))),
+        _ => Err(RuntimeError::Message(format!("{ctx} expects Option Text"))),
     }
 }
 

@@ -121,7 +121,9 @@ fn row_fields_from_expr(expr: &TypeExpr) -> Vec<String> {
 
 fn row_fields_from_record_expr(expr: &TypeExpr) -> Vec<String> {
     match expr {
-        TypeExpr::Record { fields, .. } => fields.iter().map(|(name, _)| name.name.clone()).collect(),
+        TypeExpr::Record { fields, .. } => {
+            fields.iter().map(|(name, _)| name.name.clone()).collect()
+        }
         _ => Vec::new(),
     }
 }

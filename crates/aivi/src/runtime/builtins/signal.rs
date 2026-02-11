@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use rustfft::{FftPlanner, num_complex::Complex as FftComplex};
+use rustfft::{num_complex::Complex as FftComplex, FftPlanner};
 
 use super::util::{builtin, expect_float, expect_list, expect_record, list_floats};
 use crate::runtime::{RuntimeError, Value};
@@ -36,10 +36,7 @@ pub(super) fn build_signal_record() -> Value {
             let fft = planner.plan_fft_inverse(bins.len());
             fft.process(&mut bins);
             let scale = bins.len() as f64;
-            let samples = bins
-                .into_iter()
-                .map(|value| value.re / scale)
-                .collect();
+            let samples = bins.into_iter().map(|value| value.re / scale).collect();
             Ok(signal_to_value(samples, rate))
         }),
     );
@@ -85,11 +82,7 @@ fn signal_from_value(value: Value, ctx: &str) -> Result<(Vec<f64>, f64), Runtime
     let record = expect_record(value, ctx)?;
     let rate = match record.get("rate") {
         Some(value) => expect_float(value.clone(), ctx)?,
-        None => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects Signal.rate"
-            )))
-        }
+        None => return Err(RuntimeError::Message(format!("{ctx} expects Signal.rate"))),
     };
     let samples_list = match record.get("samples") {
         Some(value) => expect_list(value.clone(), ctx)?,
@@ -111,7 +104,10 @@ fn signal_to_value(samples: Vec<f64>, rate: f64) -> Value {
     fields.insert("rate".to_string(), Value::Float(rate));
     Value::Record(Arc::new(fields))
 }
-fn spectrum_from_value(value: Value, ctx: &str) -> Result<(Vec<FftComplex<f64>>, f64), RuntimeError> {
+fn spectrum_from_value(
+    value: Value,
+    ctx: &str,
+) -> Result<(Vec<FftComplex<f64>>, f64), RuntimeError> {
     let record = expect_record(value, ctx)?;
     let rate = match record.get("rate") {
         Some(value) => expect_float(value.clone(), ctx)?,
@@ -134,19 +130,11 @@ fn spectrum_from_value(value: Value, ctx: &str) -> Result<(Vec<FftComplex<f64>>,
         let record = expect_record(item.clone(), ctx)?;
         let re = match record.get("re") {
             Some(value) => expect_float(value.clone(), ctx)?,
-            None => {
-                return Err(RuntimeError::Message(format!(
-                    "{ctx} expects Complex.re"
-                )))
-            }
+            None => return Err(RuntimeError::Message(format!("{ctx} expects Complex.re"))),
         };
         let im = match record.get("im") {
             Some(value) => expect_float(value.clone(), ctx)?,
-            None => {
-                return Err(RuntimeError::Message(format!(
-                    "{ctx} expects Complex.im"
-                )))
-            }
+            None => return Err(RuntimeError::Message(format!("{ctx} expects Complex.im"))),
         };
         bins.push(FftComplex::new(re, im));
     }

@@ -7,7 +7,9 @@ use num_traits::{ToPrimitive, Zero};
 use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::Decimal;
 
-use super::util::{builtin, expect_bigint, expect_decimal, expect_float, expect_int, expect_rational};
+use super::util::{
+    builtin, expect_bigint, expect_decimal, expect_float, expect_int, expect_rational,
+};
 use crate::runtime::{RuntimeError, Value};
 
 pub(super) fn build_bigint_record() -> Value {
@@ -23,9 +25,9 @@ pub(super) fn build_bigint_record() -> Value {
         "toInt".to_string(),
         builtin("bigint.toInt", 1, |mut args, _| {
             let value = expect_bigint(args.pop().unwrap(), "bigint.toInt")?;
-            let out = value.to_i64().ok_or_else(|| {
-                RuntimeError::Message("bigint.toInt overflow".to_string())
-            })?;
+            let out = value
+                .to_i64()
+                .ok_or_else(|| RuntimeError::Message("bigint.toInt overflow".to_string()))?;
             Ok(Value::Int(out))
         }),
     );
@@ -144,9 +146,9 @@ pub(super) fn build_decimal_record() -> Value {
         "toFloat".to_string(),
         builtin("decimal.toFloat", 1, |mut args, _| {
             let value = expect_decimal(args.pop().unwrap(), "decimal.toFloat")?;
-            let out = value.to_f64().ok_or_else(|| {
-                RuntimeError::Message("decimal.toFloat overflow".to_string())
-            })?;
+            let out = value
+                .to_f64()
+                .ok_or_else(|| RuntimeError::Message("decimal.toFloat overflow".to_string()))?;
             Ok(Value::Float(out))
         }),
     );

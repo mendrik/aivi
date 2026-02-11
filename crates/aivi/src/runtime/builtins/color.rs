@@ -15,7 +15,11 @@ pub(super) fn build_color_record() -> Value {
             let (r, g, b) = rgb_from_value(args.pop().unwrap(), "color.adjustLightness")?;
             let hsl: Hsl = Hsl::from_color(Srgb::new(r, g, b));
             let delta = amount as f32 / 100.0;
-            let next = Hsl::new(hsl.hue, hsl.saturation, (hsl.lightness + delta).clamp(0.0, 1.0));
+            let next = Hsl::new(
+                hsl.hue,
+                hsl.saturation,
+                (hsl.lightness + delta).clamp(0.0, 1.0),
+            );
             Ok(rgb_to_value(Srgb::from_color(next)))
         }),
     );
@@ -26,7 +30,11 @@ pub(super) fn build_color_record() -> Value {
             let (r, g, b) = rgb_from_value(args.pop().unwrap(), "color.adjustSaturation")?;
             let hsl: Hsl = Hsl::from_color(Srgb::new(r, g, b));
             let delta = amount as f32 / 100.0;
-            let next = Hsl::new(hsl.hue, (hsl.saturation + delta).clamp(0.0, 1.0), hsl.lightness);
+            let next = Hsl::new(
+                hsl.hue,
+                (hsl.saturation + delta).clamp(0.0, 1.0),
+                hsl.lightness,
+            );
             Ok(rgb_to_value(Srgb::from_color(next)))
         }),
     );

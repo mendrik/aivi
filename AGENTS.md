@@ -137,3 +137,4 @@ Before submitting changes:
 - [ ] Did I add a new test case?
 - [ ] Is the code consistent with AIVI style?
 - [ ] Did I avoid hallucinating features not in the roadmap?
+- [ ] Did I update AIVI_LANGUAGE.md for LLM use?

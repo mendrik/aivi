@@ -358,9 +358,8 @@ pub(super) fn build_text_record() -> Value {
         builtin("text.toBytes", 2, |mut args, _| {
             let value = expect_text(args.pop().unwrap(), "text.toBytes")?;
             let encoding = args.pop().unwrap();
-            let encoding = encoding_kind(&encoding).ok_or_else(|| {
-                RuntimeError::Message("text expects Encoding".to_string())
-            })?;
+            let encoding = encoding_kind(&encoding)
+                .ok_or_else(|| RuntimeError::Message("text expects Encoding".to_string()))?;
             let bytes = encode_text(encoding, &value);
             Ok(Value::Bytes(Arc::new(bytes)))
         }),
@@ -370,9 +369,8 @@ pub(super) fn build_text_record() -> Value {
         builtin("text.fromBytes", 2, |mut args, _| {
             let bytes = expect_bytes(args.pop().unwrap(), "text.fromBytes")?;
             let encoding = args.pop().unwrap();
-            let encoding = encoding_kind(&encoding).ok_or_else(|| {
-                RuntimeError::Message("text expects Encoding".to_string())
-            })?;
+            let encoding = encoding_kind(&encoding)
+                .ok_or_else(|| RuntimeError::Message("text expects Encoding".to_string()))?;
             match decode_bytes(encoding, &bytes) {
                 Ok(text) => Ok(make_ok(Value::Text(text))),
                 Err(_) => Ok(make_err(Value::Text("InvalidEncoding".to_string()))),
@@ -496,7 +494,10 @@ fn slice_chars(text: &str, start: i64, end: i64) -> String {
     if start >= end {
         return String::new();
     }
-    text.chars().skip(start as usize).take((end - start) as usize).collect()
+    text.chars()
+        .skip(start as usize)
+        .take((end - start) as usize)
+        .collect()
 }
 
 fn pad_text(text: &str, width: usize, fill: &str, start: bool) -> String {

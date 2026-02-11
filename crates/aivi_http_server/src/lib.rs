@@ -9,12 +9,12 @@ use http_body_util::{BodyExt, Full};
 use hyper::body::{Bytes, Incoming};
 use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode};
+use hyper_tungstenite::HyperWebsocketStream;
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto;
 use tokio::net::TcpListener;
 use tokio::runtime::{Handle, Runtime};
 use tokio::sync::{oneshot, Mutex as TokioMutex};
-use hyper_tungstenite::HyperWebsocketStream;
 
 pub struct AiviRequest {
     pub method: String,
@@ -74,9 +74,9 @@ impl ServerHandle {
         }
         if let Ok(mut guard) = self.join_handle.lock() {
             if let Some(handle) = guard.take() {
-                handle
-                    .join()
-                    .map_err(|_| AiviHttpError { message: "server thread panicked".to_string() })?;
+                handle.join().map_err(|_| AiviHttpError {
+                    message: "server thread panicked".to_string(),
+                })?;
             }
         }
         Ok(())
@@ -104,7 +104,9 @@ impl WebSocketHandle {
             let mut socket = socket.lock().await;
             match socket.next().await {
                 Some(Ok(msg)) => Ok(map_ws_message(msg)),
-                Some(Err(err)) => Err(AiviHttpError { message: err.to_string() }),
+                Some(Err(err)) => Err(AiviHttpError {
+                    message: err.to_string(),
+                }),
                 None => Ok(AiviWsMessage::Close),
             }
         })
@@ -116,7 +118,9 @@ impl WebSocketHandle {
         handle.block_on(async move {
             let mut socket = socket.lock().await;
             let msg = to_ws_message(msg);
-            socket.send(msg).await.map_err(|err| AiviHttpError { message: err.to_string() })
+            socket.send(msg).await.map_err(|err| AiviHttpError {
+                message: err.to_string(),
+            })
         })
     }
 
@@ -128,7 +132,9 @@ impl WebSocketHandle {
             socket
                 .send(hyper_tungstenite::tungstenite::Message::Close(None))
                 .await
-                .map_err(|err| AiviHttpError { message: err.to_string() })
+                .map_err(|err| AiviHttpError {
+                    message: err.to_string(),
+                })
         })
     }
 }
@@ -142,7 +148,9 @@ pub fn start_server(addr: SocketAddr, handler: Handler) -> Result<ServerHandle, 
             .worker_threads(worker_threads)
             .enable_all()
             .build()
-            .map_err(|err| AiviHttpError { message: err.to_string() })?,
+            .map_err(|err| AiviHttpError {
+                message: err.to_string(),
+            })?,
     );
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -320,9 +328,10 @@ fn convert_response(response: AiviResponse) -> Result<Response<Full<Bytes>>, Aiv
                     message: "invalid header name".to_string(),
                 }
             })?;
-            let value = hyper::header::HeaderValue::from_str(&value).map_err(|_| AiviHttpError {
-                message: "invalid header value".to_string(),
-            })?;
+            let value =
+                hyper::header::HeaderValue::from_str(&value).map_err(|_| AiviHttpError {
+                    message: "invalid header value".to_string(),
+                })?;
             headers.append(name, value);
         }
     }

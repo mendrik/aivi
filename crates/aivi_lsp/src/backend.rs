@@ -421,10 +421,22 @@ impl Backend {
                 );
             }
             ModuleItem::TypeAlias(alias) => {
-                Self::collect_type_alias_references(alias, ident, uri, include_declaration, locations);
+                Self::collect_type_alias_references(
+                    alias,
+                    ident,
+                    uri,
+                    include_declaration,
+                    locations,
+                );
             }
             ModuleItem::ClassDecl(class_decl) => {
-                Self::collect_class_references(class_decl, ident, uri, include_declaration, locations);
+                Self::collect_class_references(
+                    class_decl,
+                    ident,
+                    uri,
+                    include_declaration,
+                    locations,
+                );
             }
             ModuleItem::InstanceDecl(instance_decl) => {
                 Self::collect_instance_references(
@@ -1140,7 +1152,6 @@ impl Backend {
     }
 
     pub(super) fn stdlib_uri(name: &str) -> Url {
-        Url::parse(&format!("aivi://stdlib/{name}"))
-            .expect("stdlib uri should be valid")
+        Url::parse(&format!("aivi://stdlib/{name}")).expect("stdlib uri should be valid")
     }
 }

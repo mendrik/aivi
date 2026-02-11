@@ -1,56 +1,17 @@
 pub const KEYWORDS_CONTROL: &[&str] = &[
-    "do",
-    "effect",
-    "generate",
-    "resource",
-    "if",
-    "then",
-    "else",
-    "when",
-    "yield",
-    "loop",
-    "recurse",
-    "pure",
+    "do", "effect", "generate", "resource", "if", "then", "else", "when", "yield", "loop",
+    "recurse", "pure",
 ];
 
 pub const KEYWORDS_OTHER: &[&str] = &[
-    "module",
-    "export",
-    "use",
-    "as",
-    "hiding",
-    "domain",
-    "class",
-    "instance",
-    "type",
-    "over",
+    "module", "export", "use", "as", "hiding", "domain", "class", "instance", "type", "over",
     "patch",
 ];
 
 pub const KEYWORDS_ALL: &[&str] = &[
-    "do",
-    "effect",
-    "generate",
-    "resource",
-    "if",
-    "then",
-    "else",
-    "when",
-    "yield",
-    "loop",
-    "recurse",
-    "pure",
-    "module",
-    "export",
-    "use",
-    "as",
-    "hiding",
-    "domain",
-    "class",
-    "instance",
-    "type",
-    "over",
-    "patch",
+    "do", "effect", "generate", "resource", "if", "then", "else", "when", "yield", "loop",
+    "recurse", "pure", "module", "export", "use", "as", "hiding", "domain", "class", "instance",
+    "type", "over", "patch",
 ];
 
 pub const BOOLEAN_LITERALS: &[&str] = &["True", "False"];
@@ -81,6 +42,6 @@ pub const SYMBOLS_2: &[([char; 2], &str)] = &[
 ];
 
 pub const SYMBOLS_1: &[char] = &[
-    '{', '}', '(', ')', '[', ']', ',', '.', ':', ';', '=', '+', '-', '*', '/', '|', '&', '!',
-    '<', '>', '?', '@', '%', '~', '^',
+    '{', '}', '(', ')', '[', ']', ',', '.', ':', ';', '=', '+', '-', '*', '/', '|', '&', '!', '<',
+    '>', '?', '@', '%', '~', '^',
 ];

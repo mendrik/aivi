@@ -3,14 +3,12 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use aivi_http_server::{
-    AiviHttpError, AiviRequest, AiviResponse, AiviWsMessage, Handler, ServerReply,
-    WebSocketHandle, WsHandlerFuture,
+    AiviHttpError, AiviRequest, AiviResponse, AiviWsMessage, Handler, ServerReply, WebSocketHandle,
+    WsHandlerFuture,
 };
 
 use super::builtins::builtin;
-use super::{
-    CancelToken, EffectValue, Runtime, RuntimeContext, RuntimeError, Value, format_value,
-};
+use super::{format_value, CancelToken, EffectValue, Runtime, RuntimeContext, RuntimeError, Value};
 
 pub(super) fn build_http_server_record() -> Value {
     let mut fields = HashMap::new();
@@ -243,8 +241,8 @@ fn server_reply_from_value(
 }
 
 fn response_from_value(value: Value) -> Result<AiviResponse, AiviHttpError> {
-    let record = expect_record(value, "Response must be a record")
-        .map_err(runtime_error_to_http_error)?;
+    let record =
+        expect_record(value, "Response must be a record").map_err(runtime_error_to_http_error)?;
     let status = match record.get("status") {
         Some(Value::Int(value)) => *value,
         _ => {
@@ -385,9 +383,7 @@ fn value_to_ws_message(value: Value) -> Result<AiviWsMessage, RuntimeError> {
             }
             match args.pop().unwrap() {
                 Value::Text(text) => Ok(AiviWsMessage::TextMsg(text)),
-                _ => Err(RuntimeError::Message(
-                    "TextMsg expects Text".to_string(),
-                )),
+                _ => Err(RuntimeError::Message("TextMsg expects Text".to_string())),
             }
         }
         Value::Constructor { name, mut args } if name == "BinaryMsg" => {
@@ -421,10 +417,7 @@ fn value_to_ws_message(value: Value) -> Result<AiviWsMessage, RuntimeError> {
     }
 }
 
-fn expect_record(
-    value: Value,
-    message: &str,
-) -> Result<Arc<HashMap<String, Value>>, RuntimeError> {
+fn expect_record(value: Value, message: &str) -> Result<Arc<HashMap<String, Value>>, RuntimeError> {
     match value {
         Value::Record(record) => Ok(record),
         _ => Err(RuntimeError::Message(message.to_string())),

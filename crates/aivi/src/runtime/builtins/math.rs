@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use num_bigint::BigInt;
 
-
-use super::util::{builtin, expect_float, expect_int, expect_list, list_floats, list_ints, make_none, make_some};
+use super::util::{
+    builtin, expect_float, expect_int, expect_list, list_floats, list_ints, make_none, make_some,
+};
 use crate::runtime::{RuntimeError, Value};
 
 pub(super) fn build_math_record() -> Value {
@@ -28,7 +29,9 @@ pub(super) fn build_math_record() -> Value {
             match value {
                 Value::Int(value) => Ok(Value::Int(value.wrapping_abs())),
                 Value::Float(value) => Ok(Value::Float(value.abs())),
-                _ => Err(RuntimeError::Message("math.abs expects Int or Float".to_string())),
+                _ => Err(RuntimeError::Message(
+                    "math.abs expects Int or Float".to_string(),
+                )),
             }
         }),
     );
@@ -178,7 +181,10 @@ pub(super) fn build_math_record() -> Value {
             let value = expect_float(args.pop().unwrap(), "math.modf")?;
             let int_part = value.trunc();
             let frac_part = value.fract();
-            Ok(Value::Tuple(vec![Value::Float(int_part), Value::Float(frac_part)]))
+            Ok(Value::Tuple(vec![
+                Value::Float(int_part),
+                Value::Float(frac_part),
+            ]))
         }),
     );
     fields.insert(
@@ -421,8 +427,9 @@ pub(super) fn build_math_record() -> Value {
         "factorial".to_string(),
         builtin("math.factorial", 1, |mut args, _| {
             let n = expect_int(args.pop().unwrap(), "math.factorial")?;
-            let value = factorial_bigint(n)
-                .ok_or_else(|| RuntimeError::Message("math.factorial expects n >= 0".to_string()))?;
+            let value = factorial_bigint(n).ok_or_else(|| {
+                RuntimeError::Message("math.factorial expects n >= 0".to_string())
+            })?;
             Ok(Value::BigInt(Arc::new(value)))
         }),
     );
@@ -431,8 +438,9 @@ pub(super) fn build_math_record() -> Value {
         builtin("math.comb", 2, |mut args, _| {
             let k = expect_int(args.pop().unwrap(), "math.comb")?;
             let n = expect_int(args.pop().unwrap(), "math.comb")?;
-            let value = comb_bigint(n, k)
-                .ok_or_else(|| RuntimeError::Message("math.comb expects 0 <= k <= n".to_string()))?;
+            let value = comb_bigint(n, k).ok_or_else(|| {
+                RuntimeError::Message("math.comb expects 0 <= k <= n".to_string())
+            })?;
             Ok(Value::BigInt(Arc::new(value)))
         }),
     );
@@ -441,8 +449,9 @@ pub(super) fn build_math_record() -> Value {
         builtin("math.perm", 2, |mut args, _| {
             let k = expect_int(args.pop().unwrap(), "math.perm")?;
             let n = expect_int(args.pop().unwrap(), "math.perm")?;
-            let value = perm_bigint(n, k)
-                .ok_or_else(|| RuntimeError::Message("math.perm expects 0 <= k <= n".to_string()))?;
+            let value = perm_bigint(n, k).ok_or_else(|| {
+                RuntimeError::Message("math.perm expects 0 <= k <= n".to_string())
+            })?;
             Ok(Value::BigInt(Arc::new(value)))
         }),
     );
@@ -452,7 +461,9 @@ pub(super) fn build_math_record() -> Value {
             let b = expect_int(args.pop().unwrap(), "math.divmod")?;
             let a = expect_int(args.pop().unwrap(), "math.divmod")?;
             if b == 0 {
-                return Err(RuntimeError::Message("math.divmod expects non-zero divisor".to_string()));
+                return Err(RuntimeError::Message(
+                    "math.divmod expects non-zero divisor".to_string(),
+                ));
             }
             let mut q = a / b;
             let mut r = a % b;
@@ -471,7 +482,9 @@ pub(super) fn build_math_record() -> Value {
             let exp = expect_int(args.pop().unwrap(), "math.modPow")?;
             let base = expect_int(args.pop().unwrap(), "math.modPow")?;
             if exp < 0 || modulus == 0 {
-                return Err(RuntimeError::Message("math.modPow expects exp >= 0 and modulus != 0".to_string()));
+                return Err(RuntimeError::Message(
+                    "math.modPow expects exp >= 0 and modulus != 0".to_string(),
+                ));
             }
             Ok(Value::Int(mod_pow(base, exp, modulus)))
         }),
@@ -509,7 +522,14 @@ pub(super) fn build_math_record() -> Value {
         "ulp".to_string(),
         builtin("math.ulp", 1, |mut args, _| {
             let value = expect_float(args.pop().unwrap(), "math.ulp")?;
-            let next = next_after(value, if value.is_sign_positive() { f64::INFINITY } else { f64::NEG_INFINITY });
+            let next = next_after(
+                value,
+                if value.is_sign_positive() {
+                    f64::INFINITY
+                } else {
+                    f64::NEG_INFINITY
+                },
+            );
             Ok(Value::Float((next - value).abs()))
         }),
     );

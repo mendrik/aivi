@@ -9,7 +9,7 @@ use tower_lsp::lsp_types::request::{
 use tower_lsp::lsp_types::{
     CodeActionOrCommand, CodeActionParams, CompletionParams, CompletionResponse,
     DeclarationCapability, DocumentSymbolParams, DocumentSymbolResponse, GotoDefinitionParams,
-    GotoDefinitionResponse, Hover, HoverProviderCapability, HoverParams,
+    GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability,
     ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
     Location, OneOf, ReferenceParams, RenameParams, SemanticTokensFullOptions,
     SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
@@ -70,9 +70,9 @@ impl LanguageServer for Backend {
                         },
                     ),
                 ),
-                code_action_provider: Some(tower_lsp::lsp_types::CodeActionProviderCapability::Simple(
-                    true,
-                )),
+                code_action_provider: Some(
+                    tower_lsp::lsp_types::CodeActionProviderCapability::Simple(true),
+                ),
                 completion_provider: Some(tower_lsp::lsp_types::CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: None,

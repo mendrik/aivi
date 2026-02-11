@@ -92,9 +92,9 @@ pub(super) fn build_streams_record() -> Value {
                         .lock()
                         .map_err(|_| RuntimeError::Message("connection poisoned".to_string()))?;
                     while let Some(chunk) = next_chunk(&stream)? {
-                        socket
-                            .write_all(&chunk)
-                            .map_err(|err| RuntimeError::Error(stream_error_value(err.to_string())))?;
+                        socket.write_all(&chunk).map_err(|err| {
+                            RuntimeError::Error(stream_error_value(err.to_string()))
+                        })?;
                     }
                     Ok(Value::Unit)
                 }),

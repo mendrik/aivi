@@ -61,8 +61,9 @@ pub(super) fn build_calendar_record() -> Value {
             let year = date.year() + years as i32;
             let max_day = days_in_month(year, date.month());
             let day = date.day().min(max_day);
-            let next = NaiveDate::from_ymd_opt(year, date.month(), day)
-                .ok_or_else(|| RuntimeError::Message("calendar.addYears invalid date".to_string()))?;
+            let next = NaiveDate::from_ymd_opt(year, date.month(), day).ok_or_else(|| {
+                RuntimeError::Message("calendar.addYears invalid date".to_string())
+            })?;
             Ok(date_to_value(next))
         }),
     );
@@ -115,7 +116,7 @@ fn days_in_month(year: i32, month: u32) -> u32 {
     } else {
         (year, month + 1)
     };
-    let first_next = NaiveDate::from_ymd_opt(next_year, next_month, 1)
-        .expect("valid next month date");
+    let first_next =
+        NaiveDate::from_ymd_opt(next_year, next_month, 1).expect("valid next month date");
     first_next.pred_opt().expect("previous day").day()
 }

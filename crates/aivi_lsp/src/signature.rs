@@ -72,7 +72,8 @@ impl Backend {
         if let Some(label) = Self::type_signature_label_in_module(current_module, ident) {
             return Some(label);
         }
-        if let Some(label) = Self::inferred_signature_label(&current_module.name.name, ident, inferred)
+        if let Some(label) =
+            Self::inferred_signature_label(&current_module.name.name, ident, inferred)
         {
             return Some(label);
         }

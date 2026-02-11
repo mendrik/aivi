@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::util::{builtin, builtin_constructor, expect_list, expect_record, expect_text, list_value};
+use super::util::{
+    builtin, builtin_constructor, expect_list, expect_record, expect_text, list_value,
+};
 use crate::runtime::{EffectValue, Runtime, RuntimeError, Value};
 
-fn table_parts(
-    value: Value,
-    ctx: &str,
-) -> Result<(String, Value, Arc<Vec<Value>>), RuntimeError> {
+fn table_parts(value: Value, ctx: &str) -> Result<(String, Value, Arc<Vec<Value>>), RuntimeError> {
     let fields = expect_record(value, ctx)?;
     let name = fields
         .get("name")

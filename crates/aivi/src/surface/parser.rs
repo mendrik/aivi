@@ -1414,11 +1414,7 @@ impl Parser {
         Some(self.build_set_literal_expr(entries, span))
     }
 
-    fn build_map_literal_expr(
-        &self,
-        entries: Vec<(bool, Expr, Option<Expr>)>,
-        span: Span,
-    ) -> Expr {
+    fn build_map_literal_expr(&self, entries: Vec<(bool, Expr, Option<Expr>)>, span: Span) -> Expr {
         let map_name = SpannedName {
             name: "Map".to_string(),
             span: span.clone(),
@@ -2155,8 +2151,7 @@ impl Parser {
 
                 let close_index = i + 1 + close_offset;
                 let expr_raw: String = raw_chars[i + 1..close_index].iter().collect();
-                let expr_start_col =
-                    token.span.start.column + 1 + open_index + 1; // opening quote + '{'
+                let expr_start_col = token.span.start.column + 1 + open_index + 1; // opening quote + '{'
                 let expr_line = token.span.start.line;
 
                 match self.parse_embedded_expr(&expr_raw, expr_line, expr_start_col) {
@@ -2195,7 +2190,9 @@ impl Parser {
             });
         }
 
-        let has_expr = parts.iter().any(|part| matches!(part, TextPart::Expr { .. }));
+        let has_expr = parts
+            .iter()
+            .any(|part| matches!(part, TextPart::Expr { .. }));
         if !has_expr {
             let mut out = String::new();
             for part in parts {
@@ -2209,12 +2206,7 @@ impl Parser {
         Expr::TextInterpolate { parts, span }
     }
 
-    fn parse_embedded_expr(
-        &mut self,
-        text: &str,
-        line: usize,
-        column: usize,
-    ) -> Option<Expr> {
+    fn parse_embedded_expr(&mut self, text: &str, line: usize, column: usize) -> Option<Expr> {
         let (cst_tokens, lex_diags) = lex(text);
         for diag in lex_diags {
             self.diagnostics.push(FileDiagnostic {

@@ -172,14 +172,8 @@ pub enum Literal {
 
 #[derive(Debug, Clone)]
 pub enum TextPart {
-    Text {
-        text: String,
-        span: Span,
-    },
-    Expr {
-        expr: Box<Expr>,
-        span: Span,
-    },
+    Text { text: String, span: Span },
+    Expr { expr: Box<Expr>, span: Span },
 }
 
 #[derive(Debug, Clone)]

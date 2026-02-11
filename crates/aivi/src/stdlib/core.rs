@@ -10,7 +10,7 @@ module aivi = {
 
   export text, regex, math, calendar, color
   export bigint, rational, decimal
-  export url, console, system, logger, database, file, clock, random, channel, concurrent, httpServer, http, https, sockets, streams, collections
+  export url, console, crypto, system, logger, database, file, clock, random, channel, concurrent, httpServer, http, https, sockets, streams, collections
   export linalg, signal, graph
 }
 "#;

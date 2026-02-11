@@ -211,7 +211,10 @@ fn is_ident_continue(ch: char) -> bool {
 fn match_symbol(chars: &[char], index: usize) -> Option<(String, usize)> {
     if index + 2 < chars.len() {
         for (needle, symbol) in syntax::SYMBOLS_3 {
-            if chars[index] == needle[0] && chars[index + 1] == needle[1] && chars[index + 2] == needle[2] {
+            if chars[index] == needle[0]
+                && chars[index + 1] == needle[1]
+                && chars[index + 2] == needle[2]
+            {
                 return Some(((*symbol).to_string(), 3));
             }
         }

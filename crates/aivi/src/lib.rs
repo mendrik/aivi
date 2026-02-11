@@ -40,13 +40,13 @@ pub use runtime::run_native;
 pub use rust_codegen::{compile_rust, compile_rust_lib};
 pub use rust_ir::{lower_kernel as lower_rust_ir, RustIrProgram};
 pub use rustc_backend::{build_with_rustc, emit_rustc_source};
+pub use stdlib::{embedded_stdlib_modules, embedded_stdlib_source};
 pub use surface::{
     parse_modules, parse_modules_from_tokens, BlockItem, ClassDecl, Def, DomainDecl, DomainItem,
     Expr, InstanceDecl, ListItem, Literal, MatchArm, Module, ModuleItem, PathSegment, Pattern,
     RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeCtor, TypeDecl,
     TypeExpr, TypeSig, UseDecl,
 };
-pub use stdlib::{embedded_stdlib_modules, embedded_stdlib_source};
 pub use typecheck::{check_types, infer_value_types};
 
 #[derive(Debug, thiserror::Error)]

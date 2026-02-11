@@ -32,11 +32,11 @@ fn address_from_value(value: Value, ctx: &str) -> Result<SocketAddr, RuntimeErro
             )))
         }
     };
-    let port = u16::try_from(port).map_err(|_| {
-        RuntimeError::Message(format!("{ctx} expects Address.port in 0..65535"))
-    })?;
+    let port = u16::try_from(port)
+        .map_err(|_| RuntimeError::Message(format!("{ctx} expects Address.port in 0..65535")))?;
     let addr = format!("{host}:{port}");
-    addr.parse().map_err(|_| RuntimeError::Message(format!("{ctx} invalid address")))
+    addr.parse()
+        .map_err(|_| RuntimeError::Message(format!("{ctx} invalid address")))
 }
 
 pub(super) fn connection_from_value(
@@ -45,9 +45,7 @@ pub(super) fn connection_from_value(
 ) -> Result<Arc<Mutex<TcpStream>>, RuntimeError> {
     match value {
         Value::Connection(handle) => Ok(handle),
-        _ => Err(RuntimeError::Message(format!(
-            "{ctx} expects a connection"
-        ))),
+        _ => Err(RuntimeError::Message(format!("{ctx} expects a connection"))),
     }
 }
 
@@ -63,9 +61,8 @@ fn list_int_to_bytes(value: Value, ctx: &str) -> Result<Vec<u8>, RuntimeError> {
     let mut out = Vec::with_capacity(items.len());
     for item in items.iter() {
         let value = expect_int(item.clone(), ctx)?;
-        let byte = u8::try_from(value).map_err(|_| {
-            RuntimeError::Message(format!("{ctx} expects bytes in 0..255"))
-        })?;
+        let byte = u8::try_from(value)
+            .map_err(|_| RuntimeError::Message(format!("{ctx} expects bytes in 0..255")))?;
         out.push(byte);
     }
     Ok(out)

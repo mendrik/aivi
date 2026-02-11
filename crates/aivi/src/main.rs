@@ -543,13 +543,23 @@ fn cmd_install(args: &[String]) -> Result<(), AiviError> {
             .current_dir(&root)
             .status()?;
         if !status.success() {
-            restore_install_manifest(&cargo_toml_path, &original, &cargo_lock_path, &original_lock);
+            restore_install_manifest(
+                &cargo_toml_path,
+                &original,
+                &cargo_lock_path,
+                &original_lock,
+            );
             return Err(AiviError::Cargo("cargo fetch failed".to_string()));
         }
     }
 
     if let Err(err) = ensure_aivi_dependency(&root, &dep) {
-        restore_install_manifest(&cargo_toml_path, &original, &cargo_lock_path, &original_lock);
+        restore_install_manifest(
+            &cargo_toml_path,
+            &original,
+            &cargo_lock_path,
+            &original_lock,
+        );
         return Err(err);
     }
 

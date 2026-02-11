@@ -5,19 +5,20 @@ use crate::surface::{parse_modules, Module};
 mod bigint;
 mod calendar;
 mod collections;
-mod console;
 mod color;
 mod complex;
 mod concurrency;
+mod console;
 mod core;
+mod crypto;
 mod database;
 mod decimal;
 mod duration;
 mod file;
 mod geometry;
 mod graph;
-mod linear_algebra;
 mod linalg_facade;
+mod linear_algebra;
 mod math;
 mod matrix;
 mod network_facade;
@@ -30,6 +31,7 @@ mod number_facade;
 mod prelude;
 mod probability;
 mod rational;
+mod quaternion;
 mod regex;
 mod signal;
 mod system;
@@ -134,6 +136,10 @@ const EMBEDDED_MODULES: &[EmbeddedModule] = &[
         source: console::SOURCE,
     },
     EmbeddedModule {
+        name: crypto::MODULE_NAME,
+        source: crypto::SOURCE,
+    },
+    EmbeddedModule {
         name: system::MODULE_NAME,
         source: system::SOURCE,
     },
@@ -160,6 +166,10 @@ const EMBEDDED_MODULES: &[EmbeddedModule] = &[
     EmbeddedModule {
         name: complex::MODULE_NAME,
         source: complex::SOURCE,
+    },
+    EmbeddedModule {
+        name: quaternion::MODULE_NAME,
+        source: quaternion::SOURCE,
     },
     EmbeddedModule {
         name: number_facade::MODULE_NAME,

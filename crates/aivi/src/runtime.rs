@@ -15,12 +15,12 @@ use crate::hir::{
 };
 use crate::AiviError;
 
-mod environment;
 mod builtins;
+mod environment;
 mod http;
-mod values;
 #[cfg(test)]
 mod tests;
+mod values;
 
 use self::builtins::register_builtins;
 use self::environment::{Env, RuntimeContext};
@@ -267,60 +267,57 @@ impl Runtime {
             }
             HirExpr::LitSigil {
                 tag, body, flags, ..
-            } => {
-                match tag.as_str() {
-                    "r" => {
-                        let mut builder = RegexBuilder::new(body);
-                        for flag in flags.chars() {
-                            match flag {
-                                'i' => {
-                                    builder.case_insensitive(true);
-                                }
-                                'm' => {
-                                    builder.multi_line(true);
-                                }
-                                's' => {
-                                    builder.dot_matches_new_line(true);
-                                }
-                                'x' => {
-                                    builder.ignore_whitespace(true);
-                                }
-                                _ => {}
+            } => match tag.as_str() {
+                "r" => {
+                    let mut builder = RegexBuilder::new(body);
+                    for flag in flags.chars() {
+                        match flag {
+                            'i' => {
+                                builder.case_insensitive(true);
                             }
+                            'm' => {
+                                builder.multi_line(true);
+                            }
+                            's' => {
+                                builder.dot_matches_new_line(true);
+                            }
+                            'x' => {
+                                builder.ignore_whitespace(true);
+                            }
+                            _ => {}
                         }
-                        let regex = builder.build().map_err(|err| {
-                            RuntimeError::Message(format!("invalid regex literal: {err}"))
-                        })?;
-                        Ok(Value::Regex(Arc::new(regex)))
                     }
-                    "u" => {
-                        let parsed = Url::parse(body).map_err(|err| {
-                            RuntimeError::Message(format!("invalid url literal: {err}"))
-                        })?;
-                        Ok(Value::Record(Arc::new(url_to_record(&parsed))))
-                    }
-                    "d" => {
-                        let date = NaiveDate::parse_from_str(body, "%Y-%m-%d")
-                            .map_err(|err| {
-                                RuntimeError::Message(format!("invalid date literal: {err}"))
-                            })?;
-                        Ok(Value::Record(Arc::new(date_to_record(date))))
-                    }
-                    "t" | "dt" => {
-                        let _ = chrono::DateTime::parse_from_rfc3339(body).map_err(|err| {
-                            RuntimeError::Message(format!("invalid datetime literal: {err}"))
-                        })?;
-                        Ok(Value::DateTime(body.clone()))
-                    }
-                    _ => {
-                        let mut map = HashMap::new();
-                        map.insert("tag".to_string(), Value::Text(tag.clone()));
-                        map.insert("body".to_string(), Value::Text(body.clone()));
-                        map.insert("flags".to_string(), Value::Text(flags.clone()));
-                        Ok(Value::Record(Arc::new(map)))
-                    }
+                    let regex = builder.build().map_err(|err| {
+                        RuntimeError::Message(format!("invalid regex literal: {err}"))
+                    })?;
+                    Ok(Value::Regex(Arc::new(regex)))
                 }
-            }
+                "u" => {
+                    let parsed = Url::parse(body).map_err(|err| {
+                        RuntimeError::Message(format!("invalid url literal: {err}"))
+                    })?;
+                    Ok(Value::Record(Arc::new(url_to_record(&parsed))))
+                }
+                "d" => {
+                    let date = NaiveDate::parse_from_str(body, "%Y-%m-%d").map_err(|err| {
+                        RuntimeError::Message(format!("invalid date literal: {err}"))
+                    })?;
+                    Ok(Value::Record(Arc::new(date_to_record(date))))
+                }
+                "t" | "dt" => {
+                    let _ = chrono::DateTime::parse_from_rfc3339(body).map_err(|err| {
+                        RuntimeError::Message(format!("invalid datetime literal: {err}"))
+                    })?;
+                    Ok(Value::DateTime(body.clone()))
+                }
+                _ => {
+                    let mut map = HashMap::new();
+                    map.insert("tag".to_string(), Value::Text(tag.clone()));
+                    map.insert("body".to_string(), Value::Text(body.clone()));
+                    map.insert("flags".to_string(), Value::Text(flags.clone()));
+                    Ok(Value::Record(Arc::new(map)))
+                }
+            },
             HirExpr::LitBool { value, .. } => Ok(Value::Bool(*value)),
             HirExpr::LitDateTime { text, .. } => Ok(Value::DateTime(text.clone())),
             HirExpr::Lambda { param, body, .. } => Ok(Value::Closure(Arc::new(ClosureValue {
@@ -1259,7 +1256,10 @@ fn date_to_record(date: NaiveDate) -> HashMap<String, Value> {
 
 fn url_to_record(url: &Url) -> HashMap<String, Value> {
     let mut map = HashMap::new();
-    map.insert("protocol".to_string(), Value::Text(url.scheme().to_string()));
+    map.insert(
+        "protocol".to_string(),
+        Value::Text(url.scheme().to_string()),
+    );
     map.insert(
         "host".to_string(),
         Value::Text(url.host_str().unwrap_or("").to_string()),

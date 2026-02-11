@@ -55,10 +55,7 @@ pub(super) fn build_graph_record() -> Value {
             }
             let mut adjacency: HashMap<i64, Vec<(i64, f64)>> = HashMap::new();
             for (from, to, weight) in edges {
-                adjacency
-                    .entry(from)
-                    .or_default()
-                    .push((to, weight));
+                adjacency.entry(from).or_default().push((to, weight));
             }
             for node in nodes {
                 adjacency.entry(node).or_default();
@@ -112,27 +109,15 @@ fn edge_from_value(value: Value, ctx: &str) -> Result<(i64, i64, f64), RuntimeEr
     let record = expect_record(value, ctx)?;
     let from = match record.get("from") {
         Some(value) => expect_int(value.clone(), ctx)?,
-        None => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects Edge.from"
-            )))
-        }
+        None => return Err(RuntimeError::Message(format!("{ctx} expects Edge.from"))),
     };
     let to = match record.get("to") {
         Some(value) => expect_int(value.clone(), ctx)?,
-        None => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects Edge.to"
-            )))
-        }
+        None => return Err(RuntimeError::Message(format!("{ctx} expects Edge.to"))),
     };
     let weight = match record.get("weight") {
         Some(value) => expect_float(value.clone(), ctx)?,
-        None => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects Edge.weight"
-            )))
-        }
+        None => return Err(RuntimeError::Message(format!("{ctx} expects Edge.weight"))),
     };
     Ok((from, to, weight))
 }
@@ -143,19 +128,11 @@ fn graph_from_value(
     let record = expect_record(value, ctx)?;
     let nodes_list = match record.get("nodes") {
         Some(value) => expect_list(value.clone(), ctx)?,
-        None => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects Graph.nodes"
-            )))
-        }
+        None => return Err(RuntimeError::Message(format!("{ctx} expects Graph.nodes"))),
     };
     let edges_list = match record.get("edges") {
         Some(value) => expect_list(value.clone(), ctx)?,
-        None => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects Graph.edges"
-            )))
-        }
+        None => return Err(RuntimeError::Message(format!("{ctx} expects Graph.edges"))),
     };
     let nodes = list_ints(&nodes_list, ctx)?;
     let mut edges = Vec::with_capacity(edges_list.len());

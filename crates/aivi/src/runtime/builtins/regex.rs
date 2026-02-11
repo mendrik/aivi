@@ -3,7 +3,7 @@ use std::sync::Arc;
 use regex::Regex;
 
 use super::util::{
-    builtin, expect_text, list_value, make_err, make_none, make_ok, make_some, expect_regex,
+    builtin, expect_regex, expect_text, list_value, make_err, make_none, make_ok, make_some,
 };
 use crate::runtime::Value;
 
@@ -47,7 +47,10 @@ pub(super) fn build_regex_record() -> Value {
                         }
                     }
                     let mut record = std::collections::HashMap::new();
-                    let (start, end) = captures.get(0).map(|m| (m.start(), m.end())).unwrap_or((0, 0));
+                    let (start, end) = captures
+                        .get(0)
+                        .map(|m| (m.start(), m.end()))
+                        .unwrap_or((0, 0));
                     record.insert("full".to_string(), Value::Text(full.to_string()));
                     record.insert("groups".to_string(), list_value(groups));
                     record.insert("start".to_string(), Value::Int(start as i64));
@@ -74,7 +77,10 @@ pub(super) fn build_regex_record() -> Value {
                         groups.push(make_none());
                     }
                 }
-                let (start, end) = captures.get(0).map(|m| (m.start(), m.end())).unwrap_or((0, 0));
+                let (start, end) = captures
+                    .get(0)
+                    .map(|m| (m.start(), m.end()))
+                    .unwrap_or((0, 0));
                 let mut record = std::collections::HashMap::new();
                 record.insert("full".to_string(), Value::Text(full.to_string()));
                 record.insert("groups".to_string(), list_value(groups));
@@ -141,7 +147,9 @@ pub(super) fn build_regex_record() -> Value {
             let replacement = expect_text(args.pop().unwrap(), "regex.replaceAll")?;
             let text = expect_text(args.pop().unwrap(), "regex.replaceAll")?;
             let regex = expect_regex(args.pop().unwrap(), "regex.replaceAll")?;
-            Ok(Value::Text(regex.replace_all(&text, replacement).to_string()))
+            Ok(Value::Text(
+                regex.replace_all(&text, replacement).to_string(),
+            ))
         }),
     );
     Value::Record(Arc::new(fields))

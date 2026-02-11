@@ -276,8 +276,7 @@ impl Backend {
                         .map(|idx| &expr_tokens[*idx]);
                     let next = significant.get(position + 1).map(|idx| &expr_tokens[*idx]);
 
-                    let Some(token_type) =
-                        Self::classify_semantic_token(prev, expr_token, next)
+                    let Some(token_type) = Self::classify_semantic_token(prev, expr_token, next)
                     else {
                         continue;
                     };
@@ -294,13 +293,7 @@ impl Backend {
                         .saturating_add(1) as u32;
 
                     Self::push_semantic_token(
-                        data,
-                        last_line,
-                        last_start,
-                        line,
-                        start,
-                        len,
-                        token_type,
+                        data, last_line, last_start, line, start, len, token_type,
                     );
                 }
             }
@@ -355,7 +348,12 @@ impl Backend {
                 .map(|idx| &tokens[*idx]);
             let next = significant.get(position + 1).map(|idx| &tokens[*idx]);
 
-            if Self::emit_interpolated_string_tokens(token, &mut data, &mut last_line, &mut last_start) {
+            if Self::emit_interpolated_string_tokens(
+                token,
+                &mut data,
+                &mut last_line,
+                &mut last_start,
+            ) {
                 continue;
             }
 
@@ -371,7 +369,15 @@ impl Backend {
                 .column
                 .saturating_sub(token.span.start.column)
                 .saturating_add(1) as u32;
-            Self::push_semantic_token(&mut data, &mut last_line, &mut last_start, line, start, len, token_type);
+            Self::push_semantic_token(
+                &mut data,
+                &mut last_line,
+                &mut last_start,
+                line,
+                start,
+                len,
+                token_type,
+            );
         }
 
         SemanticTokens {

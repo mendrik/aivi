@@ -31,7 +31,7 @@ def make_user = {
     // For now, let's just assert that it *can* handle multiline if we force it or if it detects it.
     // Actually, the user asked for "moving records into lines when they are too long".
     // Let's force a scenario where it naturally fits on one line vs multiple.
-    
+
     // Short record: keep on one line
     let short_input = r#"
 def point = { x = 1, y = 2 }
@@ -52,7 +52,7 @@ def big = {
   b = 2,
 }
 "#;
-     assert_eq!(format_text(multiline_input), multiline_expected);
+    assert_eq!(format_text(multiline_input), multiline_expected);
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn test_fmt_operators_spacing() {
 
 #[test]
 fn test_fmt_remove_extra_whitespace() {
-  let input = "let    x  =  1";
-  let expected = "let x = 1\n";
-  assert_eq!(format_text(input), expected);
+    let input = "let    x  =  1";
+    let expected = "let x = 1\n";
+    assert_eq!(format_text(input), expected);
 }

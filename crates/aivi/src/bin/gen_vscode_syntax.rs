@@ -43,8 +43,7 @@ fn regex_escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for ch in text.chars() {
         match ch {
-            '\\' | '^' | '$' | '.' | '|' | '?' | '*' | '+' | '(' | ')' | '[' | ']' | '{'
-            | '}' => {
+            '\\' | '^' | '$' | '.' | '|' | '?' | '*' | '+' | '(' | ')' | '[' | ']' | '{' | '}' => {
                 out.push('\\');
                 out.push(ch);
             }
@@ -76,7 +75,10 @@ fn operator_regex() -> String {
     ops.sort_by(|a, b| b.len().cmp(&a.len()).then_with(|| a.cmp(b)));
     ops.dedup();
 
-    let escaped = ops.into_iter().map(|op| regex_escape(&op)).collect::<Vec<_>>();
+    let escaped = ops
+        .into_iter()
+        .map(|op| regex_escape(&op))
+        .collect::<Vec<_>>();
     format!("({})", escaped.join("|"))
 }
 
@@ -228,19 +230,19 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
-	        "comment": {
-	          "patterns": [
-	            {
-	              "name": "comment.line.double-slash.aivi",
-	              "match": "//.*$"
-	            },
-	            {
-	              "name": "comment.block.aivi",
-	              "begin": r"/\*",
-	              "end": r"\*/"
-	            }
-	          ]
-	        },
+            "comment": {
+              "patterns": [
+                {
+                  "name": "comment.line.double-slash.aivi",
+                  "match": "//.*$"
+                },
+                {
+                  "name": "comment.block.aivi",
+                  "begin": r"/\*",
+                  "end": r"\*/"
+                }
+              ]
+            },
         "string": {
           "patterns": [
             {
@@ -300,22 +302,22 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
-	        "number": {
-	          "patterns": [
-	            {
-	              "name": "constant.numeric.aivi",
-	              "match": r"\b\d+(?:\.\d+)?\b"
-	            }
-	          ]
-	        },
-	        "decorator": {
-	          "patterns": [
-	            {
-	              "name": "meta.annotation.decorator.aivi",
-	              "match": r"@[a-z][A-Za-z0-9_]*\b"
-	            }
-	          ]
-	        },
+            "number": {
+              "patterns": [
+                {
+                  "name": "constant.numeric.aivi",
+                  "match": r"\b\d+(?:\.\d+)?\b"
+                }
+              ]
+            },
+            "decorator": {
+              "patterns": [
+                {
+                  "name": "meta.annotation.decorator.aivi",
+                  "match": r"@[a-z][A-Za-z0-9_]*\b"
+                }
+              ]
+            },
         "boolean": {
           "patterns": [
             {
@@ -344,14 +346,14 @@ fn aivi_tmlanguage() -> serde_json::Value {
             }
           ]
         },
-	        "type": {
-	          "patterns": [
-	            {
-	              "name": "entity.name.type.aivi",
-	              "match": r"\b[A-Z][A-Za-z0-9_]*\b"
-	            }
-	          ]
-	        },
+            "type": {
+              "patterns": [
+                {
+                  "name": "entity.name.type.aivi",
+                  "match": r"\b[A-Z][A-Za-z0-9_]*\b"
+                }
+              ]
+            },
         "operator": {
           "patterns": [
             {

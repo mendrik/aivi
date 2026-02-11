@@ -40,16 +40,16 @@ pub fn format_text(content: &str) -> String {
         }
 
         if kind == "comment" {
-             if !output.is_empty() && !output.ends_with('\n') && !output.ends_with(' ') {
-                 output.push(' ');
-             }
-             output.push_str(text);
-             newline_pending = true; // Force newline after comment
-             
-             last_kind = kind;
-             last_text = text;
-             last_line = line; // Use current line effectively
-             continue;
+            if !output.is_empty() && !output.ends_with('\n') && !output.ends_with(' ') {
+                output.push(' ');
+            }
+            output.push_str(text);
+            newline_pending = true; // Force newline after comment
+
+            last_kind = kind;
+            last_text = text;
+            last_line = line; // Use current line effectively
+            continue;
         }
 
         output.push_str(text);
@@ -64,12 +64,12 @@ pub fn format_text(content: &str) -> String {
                 newline_pending = true;
             }
         }
-        
+
         last_kind = kind;
         last_text = text;
         last_line = line;
     }
-    
+
     if !output.ends_with('\n') {
         output.push('\n');
     }
@@ -77,7 +77,12 @@ pub fn format_text(content: &str) -> String {
     output
 }
 
-fn should_add_space(last_kind: &str, last_text: &str, current_kind: &str, current_text: &str) -> bool {
+fn should_add_space(
+    last_kind: &str,
+    last_text: &str,
+    current_kind: &str,
+    current_text: &str,
+) -> bool {
     if last_kind == "" || current_text == "," || current_text == ";" || current_text == "." {
         return false;
     }
@@ -88,12 +93,12 @@ fn should_add_space(last_kind: &str, last_text: &str, current_kind: &str, curren
     if current_text == "}" {
         return last_text != "{";
     }
-    
+
     let last_is_keyword = is_keyword(last_text);
     let current_is_keyword = is_keyword(current_text);
-    
+
     if last_kind == "ident" && current_kind == "ident" {
-        return true; 
+        return true;
     }
     if last_is_keyword && current_kind == "ident" {
         return true;
@@ -104,10 +109,11 @@ fn should_add_space(last_kind: &str, last_text: &str, current_kind: &str, curren
     if last_is_keyword && current_is_keyword {
         return true;
     }
-    if last_kind == "number" && current_kind == "ident" { // e.g. 1 else
-         return true;
+    if last_kind == "number" && current_kind == "ident" {
+        // e.g. 1 else
+        return true;
     }
-    
+
     // Operators
     if is_op(current_text) {
         return true;
@@ -115,10 +121,10 @@ fn should_add_space(last_kind: &str, last_text: &str, current_kind: &str, curren
     if is_op(last_text) {
         return true;
     }
-    
+
     // After comma/colon
     if last_text == "," || last_text == ":" {
-        return true; 
+        return true;
     }
     if current_text == "=" {
         return true;
@@ -132,5 +138,22 @@ fn is_keyword(text: &str) -> bool {
 }
 
 fn is_op(text: &str) -> bool {
-    matches!(text, "=" | "+" | "-" | "*" | "/" | "->" | "=>" | "<-" | "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||")
+    matches!(
+        text,
+        "=" | "+"
+            | "-"
+            | "*"
+            | "/"
+            | "->"
+            | "=>"
+            | "<-"
+            | "=="
+            | "!="
+            | "<"
+            | ">"
+            | "<="
+            | ">="
+            | "&&"
+            | "||"
+    )
 }

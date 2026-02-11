@@ -164,12 +164,15 @@ pub(super) fn build_file_record() -> Value {
                         .duration_since(UNIX_EPOCH)
                         .map_err(|err| RuntimeError::Error(Value::Text(err.to_string())))?
                         .as_millis();
-                    let size = i64::try_from(metadata.len())
-                        .map_err(|_| RuntimeError::Error(Value::Text("file too large".to_string())))?;
-                    let created = i64::try_from(created_ms)
-                        .map_err(|_| RuntimeError::Error(Value::Text("timestamp overflow".to_string())))?;
-                    let modified = i64::try_from(modified_ms)
-                        .map_err(|_| RuntimeError::Error(Value::Text("timestamp overflow".to_string())))?;
+                    let size = i64::try_from(metadata.len()).map_err(|_| {
+                        RuntimeError::Error(Value::Text("file too large".to_string()))
+                    })?;
+                    let created = i64::try_from(created_ms).map_err(|_| {
+                        RuntimeError::Error(Value::Text("timestamp overflow".to_string()))
+                    })?;
+                    let modified = i64::try_from(modified_ms).map_err(|_| {
+                        RuntimeError::Error(Value::Text("timestamp overflow".to_string()))
+                    })?;
                     let mut stats = HashMap::new();
                     stats.insert("size".to_string(), Value::Int(size));
                     stats.insert("created".to_string(), Value::Int(created));
@@ -380,10 +383,7 @@ pub(super) fn build_system_record() -> Value {
         builtin("system.args", 1, |_, _| {
             let effect = EffectValue::Thunk {
                 func: Arc::new(move |_| {
-                    let args: Vec<Value> = std::env::args()
-                        .skip(1)
-                        .map(Value::Text)
-                        .collect();
+                    let args: Vec<Value> = std::env::args().skip(1).map(Value::Text).collect();
                     Ok(Value::List(Arc::new(args)))
                 }),
             };
@@ -395,11 +395,7 @@ pub(super) fn build_system_record() -> Value {
         builtin("system.exit", 1, |mut args, _| {
             let code = match args.pop().unwrap() {
                 Value::Int(value) => value,
-                _ => {
-                    return Err(RuntimeError::Message(
-                        "system.exit expects Int".to_string(),
-                    ))
-                }
+                _ => return Err(RuntimeError::Message("system.exit expects Int".to_string())),
             };
             let effect = EffectValue::Thunk {
                 func: Arc::new(move |_| std::process::exit(code as i32)),
@@ -459,11 +455,7 @@ fn build_env_record() -> Value {
 fn ansi_color(value: Value, is_bg: bool, ctx: &str) -> Result<i64, RuntimeError> {
     let name = match value {
         Value::Constructor { name, args } if args.is_empty() => name,
-        _ => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects AnsiColor"
-            )))
-        }
+        _ => return Err(RuntimeError::Message(format!("{ctx} expects AnsiColor"))),
     };
     let base = if is_bg { 40 } else { 30 };
     let code = match name.as_str() {
@@ -475,12 +467,14 @@ fn ansi_color(value: Value, is_bg: bool, ctx: &str) -> Result<i64, RuntimeError>
         "Magenta" => base + 5,
         "Cyan" => base + 6,
         "White" => base + 7,
-        "Default" => if is_bg { 49 } else { 39 },
-        _ => {
-            return Err(RuntimeError::Message(format!(
-                "{ctx} expects AnsiColor"
-            )))
+        "Default" => {
+            if is_bg {
+                49
+            } else {
+                39
+            }
         }
+        _ => return Err(RuntimeError::Message(format!("{ctx} expects AnsiColor"))),
     };
     Ok(code)
 }

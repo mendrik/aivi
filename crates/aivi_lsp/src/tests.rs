@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use aivi::{parse_modules, ModuleItem, Span};
-use tower_lsp::lsp_types::{
-    CodeActionOrCommand, DiagnosticSeverity, HoverContents, Position, Url,
-};
+use tower_lsp::lsp_types::{CodeActionOrCommand, DiagnosticSeverity, HoverContents, Position, Url};
 
 use crate::backend::Backend;
 use crate::state::IndexedModule;
@@ -60,9 +58,7 @@ fn find_symbol_span(text: &str, name: &str) -> Span {
         for item in module.items.iter() {
             if let Some(span) = match item {
                 ModuleItem::Def(def) if def.name.name == name => Some(def.name.span.clone()),
-                ModuleItem::TypeSig(sig) if sig.name.name == name => {
-                    Some(sig.name.span.clone())
-                }
+                ModuleItem::TypeSig(sig) if sig.name.name == name => Some(sig.name.span.clone()),
                 ModuleItem::TypeDecl(decl) if decl.name.name == name => {
                     Some(decl.name.span.clone())
                 }
@@ -282,8 +278,9 @@ module examples.compiler.app = {
     }
 
     let position = position_for(app_text, "1 2");
-    let help = Backend::build_signature_help_with_workspace(app_text, &app_uri, position, &workspace)
-        .expect("signature help");
+    let help =
+        Backend::build_signature_help_with_workspace(app_text, &app_uri, position, &workspace)
+            .expect("signature help");
 
     assert_eq!(help.active_signature, Some(0));
     assert_eq!(help.active_parameter, Some(0));
@@ -337,9 +334,8 @@ module examples.compiler.app = {
     }
 
     let position = position_for(app_text, "add 1 2");
-    let locations = Backend::build_references_with_workspace(
-        app_text, &app_uri, position, true, &workspace,
-    );
+    let locations =
+        Backend::build_references_with_workspace(app_text, &app_uri, position, true, &workspace);
 
     assert!(locations.iter().any(|loc| loc.uri == math_uri));
     assert!(locations.iter().any(|loc| loc.uri == app_uri));

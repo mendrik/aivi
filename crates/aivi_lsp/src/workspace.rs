@@ -74,10 +74,7 @@ impl Backend {
         out
     }
 
-    pub(super) async fn workspace_modules_for(
-        &self,
-        uri: &Url,
-    ) -> HashMap<String, IndexedModule> {
+    pub(super) async fn workspace_modules_for(&self, uri: &Url) -> HashMap<String, IndexedModule> {
         let (workspace_root, open_modules, disk_modules, disk_root) = {
             let state = self.state.lock().await;
             (

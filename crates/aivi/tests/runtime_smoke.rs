@@ -32,3 +32,17 @@ fn run_native_system_log_database_example() {
     let program = desugar_target("examples/18_system_log_database.aivi").expect("desugar");
     run_native(program).expect("run native");
 }
+
+#[test]
+fn run_native_crypto_example() {
+    let _root = set_workspace_root();
+    let program = desugar_target("examples/20_crypto.aivi").expect("desugar");
+    run_native(program).expect("run native");
+}
+
+#[test]
+fn run_native_quaternion_example() {
+    let _root = set_workspace_root();
+    let program = desugar_target("examples/21_quaternion.aivi").expect("desugar");
+    run_native(program).expect("run native");
+}
