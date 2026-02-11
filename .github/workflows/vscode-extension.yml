@@ -33,7 +33,7 @@ jobs:
       - name: Build
         run: pnpm run build
       - name: Package
-        run: pnpm exec vsce package --out aivi-vscode.vsix
+        run: pnpm exec vsce package --no-dependencies --out aivi-vscode.vsix
       - name: Upload VSIX
         uses: actions/upload-artifact@v4
         with:
