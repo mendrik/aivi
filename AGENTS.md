@@ -128,6 +128,7 @@ To validate the project end-to-end, run these from the repo root:
 2.  **Build all crates**: `cargo build --workspace`
 3.  **Build VSCode extension**: `cd vscode && pnpm install && pnpm build`
 4.  **Build docs site**: `cd specs && pnpm install && pnpm docs:build`
+5. On test failure run `cargo test -vv -- --nocapture --show-output` to see the output.
 
 ## 7. Safety Checklist
 

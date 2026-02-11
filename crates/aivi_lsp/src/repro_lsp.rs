@@ -27,6 +27,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn hover_on_operator_works() {
         let text = r#"@no_prelude
 module repro

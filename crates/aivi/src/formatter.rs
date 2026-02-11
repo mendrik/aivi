@@ -715,7 +715,14 @@ pub fn format_text_with_options(content: &str, options: FormatOptions) -> String
     }
 
     let mut result = rendered_lines.join("\n");
-    result.push('\n');
+    // Ensure single trailing newline
+    if !result.ends_with('\n') {
+        result.push('\n');
+    }
+    // Respect max_blank_lines at the end of file (trim excessive)
+    while result.ends_with("\n\n") {
+        result.pop();
+    }
     result
 }
 

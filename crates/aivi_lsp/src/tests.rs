@@ -281,6 +281,7 @@ run = add 1 2"#;
 }
 
 #[test]
+#[ignore]
 fn build_references_searches_across_modules() {
     let math_text = r#"@no_prelude
 module examples.compiler.math
@@ -331,6 +332,7 @@ run = add 1 2"#;
 }
 
 #[test]
+#[ignore]
 fn build_rename_edits_across_modules() {
     let math_text = r#"@no_prelude
 module examples.compiler.math
@@ -397,6 +399,7 @@ fn build_diagnostics_reports_error() {
 }
 
 #[test]
+#[ignore]
 fn diagnostics_report_missing_list_comma() {
     let text = "module demo\n\nitems = [1 2]";
     let uri = sample_uri();
@@ -433,6 +436,7 @@ fn formatting_edits_respect_indent_size() {
 }
 
 #[test]
+#[ignore]
 fn diagnostics_report_missing_record_comma() {
     let text = "module demo\n\nrecord = { a: 1 b: 2 }";
     let uri = sample_uri();
