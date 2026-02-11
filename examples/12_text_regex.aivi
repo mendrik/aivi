@@ -1,0 +1,29 @@
+module examples.stdlib_text_regex = {
+  export main
+
+  use aivi.console (print)
+  use aivi.text
+  use aivi.regex
+
+  main : Effect Text Unit
+  main = effect {
+    msg = "  Hello World  "
+    slug = msg |> trim |> toLower |> replaceAll " " "-"
+    _ <- print slug
+
+    compiled = compile "[a-z]+"
+    verdict = compiled ?
+      | Ok r => if test r "caa" then "match" else "no"
+      | Err _ => "bad"
+
+    _ <- print verdict
+
+    bytes = toBytes Utf8 "ping"
+    decoded = fromBytes Utf8 bytes
+    decoded ?
+      | Ok value => print value
+      | Err _ => print "decode failed"
+
+    pure Unit
+  }
+}

@@ -2,18 +2,25 @@
   "files": [
     {
       "path": "examples/hello.aivi",
-      "byte_count": 59,
-      "line_count": 4,
+      "byte_count": 164,
+      "line_count": 11,
       "lines": [
-        "main = effect {",
-        "  _ <- print \"Hello, world!\"",
-        "  pure Unit",
+        "module examples.hello = {",
+        "  export main",
+        "",
+        "  use aivi.console (print)",
+        "",
+        "  main : Effect Text Unit",
+        "  main = effect {",
+        "    _ <- print \"Hello, world!\"",
+        "    pure Unit",
+        "  }",
         "}"
       ],
       "tokens": [
         {
           "kind": "ident",
-          "text": "main",
+          "text": "module",
           "span": {
             "start": {
               "line": 1,
@@ -21,7 +28,7 @@
             },
             "end": {
               "line": 1,
-              "column": 4
+              "column": 6
             }
           }
         },
@@ -31,11 +38,67 @@
           "span": {
             "start": {
               "line": 1,
-              "column": 5
+              "column": 7
             },
             "end": {
               "line": 1,
-              "column": 5
+              "column": 7
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "examples",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 8
+            },
+            "end": {
+              "line": 1,
+              "column": 15
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": ".",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 16
+            },
+            "end": {
+              "line": 1,
+              "column": 16
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "hello",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 17
+            },
+            "end": {
+              "line": 1,
+              "column": 21
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 1,
+              "column": 22
+            },
+            "end": {
+              "line": 1,
+              "column": 22
             }
           }
         },
@@ -45,11 +108,11 @@
           "span": {
             "start": {
               "line": 1,
-              "column": 6
+              "column": 23
             },
             "end": {
               "line": 1,
-              "column": 6
+              "column": 23
             }
           }
         },
@@ -59,39 +122,11 @@
           "span": {
             "start": {
               "line": 1,
-              "column": 7
+              "column": 24
             },
             "end": {
               "line": 1,
-              "column": 7
-            }
-          }
-        },
-        {
-          "kind": "ident",
-          "text": "effect",
-          "span": {
-            "start": {
-              "line": 1,
-              "column": 8
-            },
-            "end": {
-              "line": 1,
-              "column": 13
-            }
-          }
-        },
-        {
-          "kind": "whitespace",
-          "text": " ",
-          "span": {
-            "start": {
-              "line": 1,
-              "column": 14
-            },
-            "end": {
-              "line": 1,
-              "column": 14
+              "column": 24
             }
           }
         },
@@ -101,11 +136,11 @@
           "span": {
             "start": {
               "line": 1,
-              "column": 15
+              "column": 25
             },
             "end": {
               "line": 1,
-              "column": 15
+              "column": 25
             }
           }
         },
@@ -125,7 +160,7 @@
         },
         {
           "kind": "ident",
-          "text": "_",
+          "text": "export",
           "span": {
             "start": {
               "line": 2,
@@ -133,7 +168,7 @@
             },
             "end": {
               "line": 2,
-              "column": 3
+              "column": 8
             }
           }
         },
@@ -143,39 +178,137 @@
           "span": {
             "start": {
               "line": 2,
-              "column": 4
+              "column": 9
             },
             "end": {
               "line": 2,
-              "column": 4
+              "column": 9
             }
           }
         },
         {
-          "kind": "symbol",
-          "text": "<-",
+          "kind": "ident",
+          "text": "main",
           "span": {
             "start": {
               "line": 2,
-              "column": 5
+              "column": 10
             },
             "end": {
               "line": 2,
+              "column": 13
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "  ",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 1
+            },
+            "end": {
+              "line": 4,
+              "column": 2
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "use",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 3
+            },
+            "end": {
+              "line": 4,
+              "column": 5
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 6
+            },
+            "end": {
+              "line": 4,
               "column": 6
             }
           }
         },
         {
+          "kind": "ident",
+          "text": "aivi",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 7
+            },
+            "end": {
+              "line": 4,
+              "column": 10
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": ".",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 11
+            },
+            "end": {
+              "line": 4,
+              "column": 11
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "console",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 12
+            },
+            "end": {
+              "line": 4,
+              "column": 18
+            }
+          }
+        },
+        {
           "kind": "whitespace",
           "text": " ",
           "span": {
             "start": {
-              "line": 2,
-              "column": 7
+              "line": 4,
+              "column": 19
             },
             "end": {
-              "line": 2,
-              "column": 7
+              "line": 4,
+              "column": 19
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "(",
+          "span": {
+            "start": {
+              "line": 4,
+              "column": 20
+            },
+            "end": {
+              "line": 4,
+              "column": 20
             }
           }
         },
@@ -184,40 +317,26 @@
           "text": "print",
           "span": {
             "start": {
-              "line": 2,
-              "column": 8
+              "line": 4,
+              "column": 21
             },
             "end": {
-              "line": 2,
-              "column": 12
+              "line": 4,
+              "column": 25
             }
           }
         },
         {
-          "kind": "whitespace",
-          "text": " ",
+          "kind": "symbol",
+          "text": ")",
           "span": {
             "start": {
-              "line": 2,
-              "column": 13
+              "line": 4,
+              "column": 26
             },
             "end": {
-              "line": 2,
-              "column": 13
-            }
-          }
-        },
-        {
-          "kind": "string",
-          "text": "\"Hello, world!\"",
-          "span": {
-            "start": {
-              "line": 2,
-              "column": 14
-            },
-            "end": {
-              "line": 2,
-              "column": 28
+              "line": 4,
+              "column": 26
             }
           }
         },
@@ -226,25 +345,25 @@
           "text": "  ",
           "span": {
             "start": {
-              "line": 3,
+              "line": 6,
               "column": 1
             },
             "end": {
-              "line": 3,
+              "line": 6,
               "column": 2
             }
           }
         },
         {
           "kind": "ident",
-          "text": "pure",
+          "text": "main",
           "span": {
             "start": {
-              "line": 3,
+              "line": 6,
               "column": 3
             },
             "end": {
-              "line": 3,
+              "line": 6,
               "column": 6
             }
           }
@@ -254,12 +373,96 @@
           "text": " ",
           "span": {
             "start": {
-              "line": 3,
+              "line": 6,
               "column": 7
             },
             "end": {
-              "line": 3,
+              "line": 6,
               "column": 7
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": ":",
+          "span": {
+            "start": {
+              "line": 6,
+              "column": 8
+            },
+            "end": {
+              "line": 6,
+              "column": 8
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 6,
+              "column": 9
+            },
+            "end": {
+              "line": 6,
+              "column": 9
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "Effect",
+          "span": {
+            "start": {
+              "line": 6,
+              "column": 10
+            },
+            "end": {
+              "line": 6,
+              "column": 15
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 6,
+              "column": 16
+            },
+            "end": {
+              "line": 6,
+              "column": 16
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "Text",
+          "span": {
+            "start": {
+              "line": 6,
+              "column": 17
+            },
+            "end": {
+              "line": 6,
+              "column": 20
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 6,
+              "column": 21
+            },
+            "end": {
+              "line": 6,
+              "column": 21
             }
           }
         },
@@ -268,12 +471,306 @@
           "text": "Unit",
           "span": {
             "start": {
-              "line": 3,
+              "line": 6,
+              "column": 22
+            },
+            "end": {
+              "line": 6,
+              "column": 25
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "  ",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 1
+            },
+            "end": {
+              "line": 7,
+              "column": 2
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "main",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 3
+            },
+            "end": {
+              "line": 7,
+              "column": 6
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 7
+            },
+            "end": {
+              "line": 7,
+              "column": 7
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "=",
+          "span": {
+            "start": {
+              "line": 7,
               "column": 8
             },
             "end": {
-              "line": 3,
-              "column": 11
+              "line": 7,
+              "column": 8
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 9
+            },
+            "end": {
+              "line": 7,
+              "column": 9
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "effect",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 10
+            },
+            "end": {
+              "line": 7,
+              "column": 15
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 16
+            },
+            "end": {
+              "line": 7,
+              "column": 16
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "{",
+          "span": {
+            "start": {
+              "line": 7,
+              "column": 17
+            },
+            "end": {
+              "line": 7,
+              "column": 17
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "    ",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 1
+            },
+            "end": {
+              "line": 8,
+              "column": 4
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "_",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 5
+            },
+            "end": {
+              "line": 8,
+              "column": 5
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 6
+            },
+            "end": {
+              "line": 8,
+              "column": 6
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "<-",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 7
+            },
+            "end": {
+              "line": 8,
+              "column": 8
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 9
+            },
+            "end": {
+              "line": 8,
+              "column": 9
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "print",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 10
+            },
+            "end": {
+              "line": 8,
+              "column": 14
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 15
+            },
+            "end": {
+              "line": 8,
+              "column": 15
+            }
+          }
+        },
+        {
+          "kind": "string",
+          "text": "\"Hello, world!\"",
+          "span": {
+            "start": {
+              "line": 8,
+              "column": 16
+            },
+            "end": {
+              "line": 8,
+              "column": 30
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "    ",
+          "span": {
+            "start": {
+              "line": 9,
+              "column": 1
+            },
+            "end": {
+              "line": 9,
+              "column": 4
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "pure",
+          "span": {
+            "start": {
+              "line": 9,
+              "column": 5
+            },
+            "end": {
+              "line": 9,
+              "column": 8
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": " ",
+          "span": {
+            "start": {
+              "line": 9,
+              "column": 9
+            },
+            "end": {
+              "line": 9,
+              "column": 9
+            }
+          }
+        },
+        {
+          "kind": "ident",
+          "text": "Unit",
+          "span": {
+            "start": {
+              "line": 9,
+              "column": 10
+            },
+            "end": {
+              "line": 9,
+              "column": 13
+            }
+          }
+        },
+        {
+          "kind": "whitespace",
+          "text": "  ",
+          "span": {
+            "start": {
+              "line": 10,
+              "column": 1
+            },
+            "end": {
+              "line": 10,
+              "column": 2
             }
           }
         },
@@ -282,11 +779,25 @@
           "text": "}",
           "span": {
             "start": {
-              "line": 4,
+              "line": 10,
+              "column": 3
+            },
+            "end": {
+              "line": 10,
+              "column": 3
+            }
+          }
+        },
+        {
+          "kind": "symbol",
+          "text": "}",
+          "span": {
+            "start": {
+              "line": 11,
               "column": 1
             },
             "end": {
-              "line": 4,
+              "line": 11,
               "column": 1
             }
           }

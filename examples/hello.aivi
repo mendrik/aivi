@@ -1,4 +1,10 @@
-main = effect {
-  _ <- print "Hello, world!"
-  pure Unit
+module examples.hello = {
+  export main
+
+  use aivi.console (print)
+
+  main : Effect Text Unit
+  main = effect {
+    print "Hello, world!"
+  }
 }
