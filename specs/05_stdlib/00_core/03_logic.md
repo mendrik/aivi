@@ -8,8 +8,8 @@ module aivi.logic
 
 See also:
 
-- Syntax: classes and instances (`02_syntax/03_types`)
-- Syntax: effects as monads (`02_syntax/09_effects`)
+- Syntax: classes and instances ([The Type System](../../02_syntax/03_types.md))
+- Syntax: effects as monads ([Effects](../../02_syntax/09_effects.md))
 - Fantasy Land upstream spec (naming + laws): https://github.com/fantasyland/fantasy-land
 
 ## 1. Equality and Ordering
@@ -171,7 +171,7 @@ instance Monoid Text = Semigroup Text & {
 
 ### `Effect` sequencing is `chain`/`bind`
 
-`effect { ... }` is surface syntax for repeated sequencing (see `02_syntax/09_effects`):
+`effect { ... }` is surface syntax for repeated sequencing (see [Effects](../../02_syntax/09_effects.md)):
 
 ```aivi
 // Sugar

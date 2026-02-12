@@ -260,7 +260,7 @@ Literal        := "True"
 - `{ ... }` is reserved for record-shaped forms (`RecordLit`, `RecordType`, `RecordPat`, `PatchLit`, and module/domain bodies).
 - Multi-statement expression blocks use `do { ... }`, so the parser never needs to guess whether `{ ... }` is a record literal or a block.
 - `.field` is shorthand for `x => x.field` (a unary accessor function).
-- `_` is *not* a value. It only appears in expressions as part of the placeholder-lambda sugar (see `specs/04_desugaring/02_functions.md`).
+- `_` is *not* a value. It only appears in expressions as part of the placeholder-lambda sugar (see [Desugaring: Functions](../04_desugaring/02_functions.md)).
 - `RawSigilLit` content (`SigilText` / `SigilRegexText`) is lexed as raw text until the matching delimiter; `~map{}` and `~set[]` are parsed as structured literals (`MapLit` / `SetLit`).
 - `RecordSpread` (`...expr`) merges fields left-to-right; later fields override earlier ones.
 
@@ -294,7 +294,7 @@ ValueBinding   := lowerIdent "=" FunArms Sep ;
 FunArms        := "|" Arm { Sep "|" Arm } ;
 ```
 
-This form desugars to a single-argument function that performs a `case` on its input (see `specs/04_desugaring/04_patterns.md`).
+This form desugars to a single-argument function that performs a `case` on its input (see [Desugaring: Patterns](../04_desugaring/04_patterns.md)).
 
 If you want multi-argument matching, match on a tuple:
 

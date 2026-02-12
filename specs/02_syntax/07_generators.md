@@ -88,7 +88,7 @@ The recommended model is:
 - keep `Generator` pure, and
 - represent async / I/O-backed streams as an `Effect` that *produces* a generator, or via a dedicated `Stream` type in the standard library.
 
-This aligns with `specs/OPEN_QUESTIONS.md` (“generators should be pure; use `Effect` for async pull”).
+This aligns with the general design principle: generators stay pure; use `Effect` for async pull.
 ## 7.5 Expressive Sequence Logic
 
 Generators provide a powerful, declarative way to build complex sequences without intermediate collections or mutation.

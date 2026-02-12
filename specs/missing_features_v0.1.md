@@ -10,19 +10,19 @@ This document lists features, modules, and behaviors described in the **AIVI Lan
 
 | Feature | Spec Section | Implementation Status | Notes |
 | :--- | :--- | :--- | :--- |
-| **Generators** | `02_syntax/07_generators` | **Implemented** | Desugared to Church-encoded lambdas in `kernel.rs`. `generate` blocks supported. `loop`/`recurse` inside generators partial. |
-| **Decorators** | `02_syntax/14_decorators` | **Implemented (Syntax)** | Parsed and validated; only standard decorators allowed. |
-| **User-defined Domains** | `02_syntax/06_domains` | **Implemented** | `DomainDecl` exists in CST/HIR. |
-| **Patching** | `02_syntax/05_patching` | **Implemented** | `Patch` alias exists; desugaring logic present. |
-| **`or` fallback** | `02_syntax/09_effects` | **Implemented** | Fallback-only sugar for `Effect` (after `<-` in `effect {}`) and `Result` (expression form). |
+| **Generators** | [Generators](02_syntax/07_generators.md) | **Implemented** | Desugared to Church-encoded lambdas in `kernel.rs`. `generate` blocks supported. `loop`/`recurse` inside generators partial. |
+| **Decorators** | [Decorators](02_syntax/14_decorators.md) | **Implemented (Syntax)** | Parsed and validated; only standard decorators allowed. |
+| **User-defined Domains** | [Domains, Units, and Deltas](02_syntax/06_domains.md) | **Implemented** | `DomainDecl` exists in CST/HIR. |
+| **Patching** | [Patching Records](02_syntax/05_patching.md) | **Implemented** | `Patch` alias exists; desugaring logic present. |
+| **`or` fallback** | [Effects: `or` fallback](02_syntax/09_effects.md#fallback-with-or-fallback-only) | **Implemented** | Fallback-only sugar for `Effect` (after `<-` in `effect {}`) and `Result` (expression form). |
 
 ## 2. Type System
 
 | Feature | Spec Section | Status | Notes |
 | :--- | :--- | :--- | :--- |
-| **Higher-Kinded Types** | `02_syntax/03_types` | **Structurally Implemented** | `Kind` enum (Star/Arrow) and builtins (`List: *->*`, `Effect: *->*->*`) exist in `checker.rs`. Complex inference scenarios may vary. |
-| **Row Polymorphism** | `02_syntax/03_types` | **Implemented** | Open records and row extension/restriction logic present in `checker.rs`. |
-| **Effect Typing** | `02_syntax/09_effects` | **Implemented** | `Effect E A` is a first-class type; `attempt`/`pure`/`fail` are built-ins. |
+| **Higher-Kinded Types** | [The Type System](02_syntax/03_types.md) | **Structurally Implemented** | `Kind` enum (Star/Arrow) and builtins (`List: *->*`, `Effect: *->*->*`) exist in `checker.rs`. Complex inference scenarios may vary. |
+| **Row Polymorphism** | [The Type System](02_syntax/03_types.md) | **Implemented** | Open records and row extension/restriction logic present in `checker.rs`. |
+| **Effect Typing** | [Effects](02_syntax/09_effects.md) | **Implemented** | `Effect E A` is a first-class type; `attempt`/`pure`/`fail` are built-ins. |
 
 ## 3. Standard Library Status
 
