@@ -1,8 +1,9 @@
 use aivi::{
-    check_modules, check_types, collect_mcp_manifest, compile_rust, desugar_target,
+    check_modules, check_types, collect_mcp_manifest, compile_rust, compile_rust_lib,
+    compile_rust_native, compile_rust_native_lib, desugar_target,
     embedded_stdlib_source, format_target, kernel_target, load_module_diagnostics, load_modules,
     parse_target, render_diagnostics, run_native, rust_ir_target, serve_mcp_stdio_with_policy,
-    write_scaffold, AiviError, CargoDepSpec, McpPolicy, ProjectKind,
+    write_scaffold, AiviError, CargoDepSpec, Codegen, McpPolicy, ProjectKind,
 };
 use sha2::{Digest, Sha256};
 use std::env;
@@ -161,7 +162,11 @@ fn run() -> Result<(), AiviError> {
                         print_help();
                         return Ok(());
                     };
-                    if opts.target != "rust" && opts.target != "rustc" {
+                    if opts.target != "rust"
+                        && opts.target != "rust-embed"
+                        && opts.target != "rust-native"
+                        && opts.target != "rustc"
+                    {
                         return Err(AiviError::InvalidCommand(format!(
                             "unsupported target {}",
                             opts.target
@@ -169,12 +174,19 @@ fn run() -> Result<(), AiviError> {
                     }
                     let _modules = load_checked_modules_with_progress(&opts.input)?;
                     let program = desugar_target(&opts.input)?;
-                    if opts.target == "rust" {
+                    if opts.target == "rust" || opts.target == "rust-embed" {
                         let rust = compile_rust(program)?;
                         let out_dir = opts
                             .output
                             .unwrap_or_else(|| PathBuf::from("target/aivi-gen"));
-                        write_rust_project(&out_dir, &rust)?;
+                        write_rust_project_embed(&out_dir, &rust)?;
+                        println!("{}", out_dir.display());
+                    } else if opts.target == "rust-native" {
+                        let rust = compile_rust_native(program)?;
+                        let out_dir = opts
+                            .output
+                            .unwrap_or_else(|| PathBuf::from("target/aivi-gen"));
+                        write_rust_project_native(&out_dir, &rust)?;
                         println!("{}", out_dir.display());
                     } else {
                         let out = opts
@@ -220,7 +232,7 @@ fn run() -> Result<(), AiviError> {
 
 fn print_help() {
     println!(
-        "aivi\n\nUSAGE:\n  aivi <COMMAND>\n\nCOMMANDS:\n  init <name> [--bin|--lib] [--edition 2024] [--language-version 0.1] [--force]\n  new <name> ... (alias of init)\n  search <query>\n  install <spec> [--require-aivi] [--no-fetch]\n  build [--release] [-- <cargo args...>]\n  run [--release] [-- <cargo args...>]\n  clean [--all]\n\n  parse <path|dir/...>\n  check <path|dir/...>\n  fmt <path>\n  desugar <path|dir/...>\n  kernel <path|dir/...>\n  rust-ir <path|dir/...>\n  lsp\n  build <path|dir/...> [--target rust|rustc] [--out <dir|path>] [-- <rustc args...>]\n  run <path|dir/...> [--target native]\n  mcp serve <path|dir/...> [--allow-effects]\n\n  -h, --help"
+        "aivi\n\nUSAGE:\n  aivi <COMMAND>\n\nCOMMANDS:\n  init <name> [--bin|--lib] [--edition 2024] [--language-version 0.1] [--force]\n  new <name> ... (alias of init)\n  search <query>\n  install <spec> [--require-aivi] [--no-fetch]\n  build [--release] [-- <cargo args...>]\n  run [--release] [-- <cargo args...>]\n  clean [--all]\n\n  parse <path|dir/...>\n  check <path|dir/...>\n  fmt <path>\n  desugar <path|dir/...>\n  kernel <path|dir/...>\n  rust-ir <path|dir/...>\n  lsp\n  build <path|dir/...> [--target rust|rust-embed|rust-native|rustc] [--out <dir|path>] [-- <rustc args...>]\n  run <path|dir/...> [--target native]\n  mcp serve <path|dir/...> [--allow-effects]\n\n  -h, --help"
     );
 }
 
@@ -404,13 +416,24 @@ impl Drop for Spinner {
     }
 }
 
-fn write_rust_project(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
+fn write_rust_project_embed(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let aivi_path = normalize_path(&manifest_dir);
     let cargo_toml = format!(
         "[package]\nname = \"aivi-gen\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\naivi = {{ path = \"{}\" }}\nserde_json = \"1.0\"\n",
         aivi_path
     );
+    let src_dir = out_dir.join("src");
+    std::fs::create_dir_all(&src_dir)?;
+    std::fs::write(out_dir.join("Cargo.toml"), cargo_toml)?;
+    std::fs::write(src_dir.join("main.rs"), main_rs)?;
+    Ok(())
+}
+
+fn write_rust_project_native(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
+    let cargo_toml =
+        "[package]\nname = \"aivi-gen\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n"
+            .to_string();
     let src_dir = out_dir.join("src");
     std::fs::create_dir_all(&src_dir)?;
     std::fs::write(out_dir.join("Cargo.toml"), cargo_toml)?;
@@ -869,9 +892,15 @@ fn generate_project_rust(project_root: &Path, cfg: &aivi::AiviToml) -> Result<()
     let src_out = gen_dir.join("src");
     std::fs::create_dir_all(&src_out)?;
 
-    let (out_path, rust) = match cfg.project.kind {
-        ProjectKind::Bin => (src_out.join("main.rs"), aivi::compile_rust(program)?),
-        ProjectKind::Lib => (src_out.join("lib.rs"), aivi::compile_rust_lib(program)?),
+    let (out_path, rust) = match (cfg.project.kind, cfg.build.codegen) {
+        (ProjectKind::Bin, Codegen::Embed) => (src_out.join("main.rs"), compile_rust(program)?),
+        (ProjectKind::Lib, Codegen::Embed) => (src_out.join("lib.rs"), compile_rust_lib(program)?),
+        (ProjectKind::Bin, Codegen::Native) => {
+            (src_out.join("main.rs"), compile_rust_native(program)?)
+        }
+        (ProjectKind::Lib, Codegen::Native) => {
+            (src_out.join("lib.rs"), compile_rust_native_lib(program)?)
+        }
     };
     std::fs::write(&out_path, rust)?;
     write_build_stamp(project_root, cfg, &gen_dir, &entry_path)?;

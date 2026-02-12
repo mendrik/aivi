@@ -25,6 +25,9 @@ pub struct RustIrDef {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum Builtin {
+    Unit,
+    True,
+    False,
     Pure,
     Bind,
     Print,
@@ -495,6 +498,9 @@ fn lower_match_arm(_arm: KernelMatchArm) -> Result<RustIrMatchArm, AiviError> {
 
 fn resolve_builtin(name: &str) -> Option<Builtin> {
     match name {
+        "Unit" => Some(Builtin::Unit),
+        "True" => Some(Builtin::True),
+        "False" => Some(Builtin::False),
         "pure" => Some(Builtin::Pure),
         "bind" => Some(Builtin::Bind),
         "print" => Some(Builtin::Print),

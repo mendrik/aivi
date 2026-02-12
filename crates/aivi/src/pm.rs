@@ -34,6 +34,8 @@ pub struct AiviTomlBuild {
     pub rust_edition: String,
     #[serde(default = "default_cargo_profile")]
     pub cargo_profile: String,
+    #[serde(default = "default_codegen")]
+    pub codegen: Codegen,
 }
 
 impl Default for AiviTomlBuild {
@@ -42,8 +44,18 @@ impl Default for AiviTomlBuild {
             gen_dir: default_gen_dir(),
             rust_edition: default_rust_edition(),
             cargo_profile: default_cargo_profile(),
+            codegen: default_codegen(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Codegen {
+    /// Emit Rust that embeds AIVI HIR as JSON and runs via the interpreter runtime.
+    Embed,
+    /// Emit standalone Rust logic (experimental; limited language/builtins support).
+    Native,
 }
 
 fn default_gen_dir() -> String {
@@ -56,6 +68,10 @@ fn default_rust_edition() -> String {
 
 fn default_cargo_profile() -> String {
     "dev".to_string()
+}
+
+fn default_codegen() -> Codegen {
+    Codegen::Embed
 }
 
 pub fn read_aivi_toml(path: &Path) -> Result<AiviToml, AiviError> {
@@ -95,7 +111,7 @@ pub fn write_scaffold(
         ProjectKind::Bin => {
             let entry_file = "main.aivi";
             let aivi_toml = format!(
-                "[project]\nkind = \"bin\"\nentry = \"{entry_file}\"\nlanguage_version = \"{language_version}\"\n\n[build]\ngen_dir = \"target/aivi-gen\"\nrust_edition = \"{edition}\"\ncargo_profile = \"dev\"\n"
+                "[project]\nkind = \"bin\"\nentry = \"{entry_file}\"\nlanguage_version = \"{language_version}\"\n\n[build]\ngen_dir = \"target/aivi-gen\"\nrust_edition = \"{edition}\"\ncargo_profile = \"dev\"\ncodegen = \"native\"\n"
             );
             let cargo_toml = format!(
                 "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"{edition}\"\n\n[package.metadata.aivi]\nlanguage_version = \"{language_version}\"\nkind = \"bin\"\nentry = \"src/{entry_file}\"\n\n[[bin]]\nname = \"{name}\"\npath = \"target/aivi-gen/src/main.rs\"\n\n[dependencies]\n{}\nserde_json = \"1.0\"\n",
@@ -107,7 +123,7 @@ pub fn write_scaffold(
         ProjectKind::Lib => {
             let entry_file = "lib.aivi";
             let aivi_toml = format!(
-                "[project]\nkind = \"lib\"\nentry = \"{entry_file}\"\nlanguage_version = \"{language_version}\"\n\n[build]\ngen_dir = \"target/aivi-gen\"\nrust_edition = \"{edition}\"\ncargo_profile = \"dev\"\n"
+                "[project]\nkind = \"lib\"\nentry = \"{entry_file}\"\nlanguage_version = \"{language_version}\"\n\n[build]\ngen_dir = \"target/aivi-gen\"\nrust_edition = \"{edition}\"\ncargo_profile = \"dev\"\ncodegen = \"native\"\n"
             );
             let cargo_toml = format!(
                 "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"{edition}\"\n\n[package.metadata.aivi]\nlanguage_version = \"{language_version}\"\nkind = \"lib\"\nentry = \"src/{entry_file}\"\n\n[lib]\npath = \"target/aivi-gen/src/lib.rs\"\n\n[dependencies]\n{}\nserde_json = \"1.0\"\n",

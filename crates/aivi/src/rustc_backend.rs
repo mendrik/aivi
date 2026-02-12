@@ -12,7 +12,7 @@ pub fn build_with_rustc(
     out: &Path,
     rustc_args: &[String],
 ) -> Result<(), AiviError> {
-    let kernel = kernel::lower_hir(program);
+    let kernel = kernel::lower_hir(strip_stdlib_modules(program));
     let rust_ir = rust_ir::lower_kernel(kernel)?;
     let source = emit_rustc_source(rust_ir)?;
 
@@ -45,6 +45,11 @@ pub fn build_with_rustc(
     Ok(())
 }
 
+fn strip_stdlib_modules(mut program: HirProgram) -> HirProgram {
+    program.modules.retain(|m| !m.name.starts_with("aivi"));
+    program
+}
+
 pub fn emit_rustc_source(program: RustIrProgram) -> Result<String, AiviError> {
     let mut modules = program.modules.into_iter();
     let Some(first) = modules.next() else {
@@ -54,24 +59,53 @@ pub fn emit_rustc_source(program: RustIrProgram) -> Result<String, AiviError> {
     for module in modules {
         defs.extend(module.defs);
     }
-    emit_module(RustIrModule {
-        name: first.name,
-        defs,
-    })
+    emit_module(
+        RustIrModule {
+            name: first.name,
+            defs,
+        },
+        EmitKind::Bin,
+    )
 }
 
-fn emit_module(module: RustIrModule) -> Result<String, AiviError> {
-    if !module.defs.iter().any(|d| d.name == "main") {
+pub fn emit_rustc_source_lib(program: RustIrProgram) -> Result<String, AiviError> {
+    let mut modules = program.modules.into_iter();
+    let Some(first) = modules.next() else {
+        return Err(AiviError::Codegen("no modules to build".to_string()));
+    };
+    let mut defs = first.defs;
+    for module in modules {
+        defs.extend(module.defs);
+    }
+    emit_module(
+        RustIrModule {
+            name: first.name,
+            defs,
+        },
+        EmitKind::Lib,
+    )
+}
+
+#[derive(Clone, Copy)]
+enum EmitKind {
+    Bin,
+    Lib,
+}
+
+fn emit_module(module: RustIrModule, kind: EmitKind) -> Result<String, AiviError> {
+    let public_api = matches!(kind, EmitKind::Lib);
+    if matches!(kind, EmitKind::Bin) && !module.defs.iter().any(|d| d.name == "main") {
         return Err(AiviError::Codegen(
             "rustc backend expects a main definition".to_string(),
         ));
     }
+    let value_vis = if public_api { "pub " } else { "" };
     let mut out = String::new();
     out.push_str("use std::collections::HashMap;\n");
     out.push_str("use std::rc::Rc;\n");
     out.push_str("use std::io::Write;\n\n");
     out.push_str("#[derive(Clone)]\n");
-    out.push_str("enum Value {\n");
+    out.push_str(&format!("{value_vis}enum Value {{\n"));
     out.push_str("    Unit,\n");
     out.push_str("    Bool(bool),\n");
     out.push_str("    Int(i64),\n");
@@ -84,6 +118,10 @@ fn emit_module(module: RustIrModule) -> Result<String, AiviError> {
     out.push_str("    Closure(Rc<dyn Fn(Value) -> Result<Value, String>>),\n");
     out.push_str("    Effect(Rc<dyn Fn() -> Result<Value, String>>),\n");
     out.push_str("}\n\n");
+
+    // Avoid `Ok(...)` type inference issues in generated code by fixing the error type.
+    out.push_str("type R = Result<Value, String>;\n");
+    out.push_str("fn ok(value: Value) -> R { Ok(value) }\n\n");
 
     out.push_str("fn format_value(value: &Value) -> String {\n");
     out.push_str("    match value {\n");
@@ -242,60 +280,68 @@ fn emit_module(module: RustIrModule) -> Result<String, AiviError> {
     out.push_str("}\n\n");
 
     for def in &module.defs {
-        out.push_str(&emit_def_sig(def));
+        out.push_str(&emit_def_sig(def, public_api));
         out.push_str("{\n");
         out.push_str("    ");
         out.push_str(&emit_expr(&def.expr, 1)?);
         out.push_str("\n}\n\n");
     }
 
-    let main_fn = rust_global_fn_name("main");
-    out.push_str("fn main() {\n");
-    out.push_str(&format!(
-        "    let result = {}().and_then(run_effect);\n",
-        main_fn
-    ));
-    out.push_str("    match result {\n");
-    out.push_str("        Ok(_) => {}\n");
-    out.push_str("        Err(err) => {\n");
-    out.push_str("            eprintln!(\"{err}\");\n");
-    out.push_str("            std::process::exit(1);\n");
-    out.push_str("        }\n");
-    out.push_str("    }\n");
-    out.push_str("}\n");
+    if matches!(kind, EmitKind::Bin) {
+        let main_fn = rust_global_fn_name("main");
+        out.push_str("fn main() {\n");
+        out.push_str(&format!(
+            "    let result = {}().and_then(run_effect);\n",
+            main_fn
+        ));
+        out.push_str("    match result {\n");
+        out.push_str("        Ok(_) => {}\n");
+        out.push_str("        Err(err) => {\n");
+        out.push_str("            eprintln!(\"{err}\");\n");
+        out.push_str("            std::process::exit(1);\n");
+        out.push_str("        }\n");
+        out.push_str("    }\n");
+        out.push_str("}\n");
+    }
 
     Ok(out)
 }
 
-fn emit_def_sig(def: &RustIrDef) -> String {
+fn emit_def_sig(def: &RustIrDef, public_api: bool) -> String {
+    let def_vis = if public_api { "pub " } else { "" };
     format!(
-        "fn {}() -> Result<Value, String> ",
+        "{def_vis}fn {}() -> Result<Value, String> ",
         rust_global_fn_name(&def.name)
     )
 }
 
 fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
     Ok(match expr {
-        RustIrExpr::Local { name, .. } => format!("Ok({})", rust_local_name(name)),
+        RustIrExpr::Local { name, .. } => format!("ok({})", rust_local_name(name)),
         RustIrExpr::Global { name, .. } => format!("{}()", rust_global_fn_name(name)),
-        RustIrExpr::Builtin { builtin, .. } => {
-            return Err(AiviError::Codegen(format!(
-                "builtin {builtin:?} used as a value is not supported by the rustc backend yet"
-            )))
-        }
+        RustIrExpr::Builtin { builtin, .. } => match builtin {
+            Builtin::Unit => "ok(Value::Unit)".to_string(),
+            Builtin::True => "ok(Value::Bool(true))".to_string(),
+            Builtin::False => "ok(Value::Bool(false))".to_string(),
+            other => {
+                return Err(AiviError::Codegen(format!(
+                    "builtin {other:?} used as a value is not supported by the rustc backend yet"
+                )))
+            }
+        },
 
         RustIrExpr::LitNumber { text, .. } => {
             if let Ok(value) = text.parse::<i64>() {
-                format!("Ok(Value::Int({value}))")
+                format!("ok(Value::Int({value}))")
             } else if let Ok(value) = text.parse::<f64>() {
-                format!("Ok(Value::Float({value}))")
+                format!("ok(Value::Float({value}))")
             } else {
                 return Err(AiviError::Codegen(format!(
                     "unsupported numeric literal {text}"
                 )));
             }
         }
-        RustIrExpr::LitString { text, .. } => format!("Ok(Value::Text({:?}.to_string()))", text),
+        RustIrExpr::LitString { text, .. } => format!("ok(Value::Text({:?}.to_string()))", text),
         RustIrExpr::TextInterpolate { parts, .. } => {
             let ind = "    ".repeat(indent);
             let ind2 = "    ".repeat(indent + 1);
@@ -319,7 +365,7 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
                 }
             }
             out.push_str(&ind2);
-            out.push_str("Ok(Value::Text(s))\n");
+            out.push_str("ok(Value::Text(s))\n");
             out.push_str(&ind);
             out.push('}');
             out
@@ -331,12 +377,12 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
             let ind2 = "    ".repeat(indent + 1);
             let ind3 = "    ".repeat(indent + 2);
             format!(
-                "{{\n{ind2}let mut map = HashMap::new();\n{ind3}map.insert(\"tag\".to_string(), Value::Text({tag:?}.to_string()));\n{ind3}map.insert(\"body\".to_string(), Value::Text({body:?}.to_string()));\n{ind3}map.insert(\"flags\".to_string(), Value::Text({flags:?}.to_string()));\n{ind2}Ok(Value::Record(map))\n{ind}}}"
+                "{{\n{ind2}let mut map = HashMap::new();\n{ind3}map.insert(\"tag\".to_string(), Value::Text({tag:?}.to_string()));\n{ind3}map.insert(\"body\".to_string(), Value::Text({body:?}.to_string()));\n{ind3}map.insert(\"flags\".to_string(), Value::Text({flags:?}.to_string()));\n{ind2}ok(Value::Record(map))\n{ind}}}"
             )
         }
-        RustIrExpr::LitBool { value, .. } => format!("Ok(Value::Bool({value}))"),
+        RustIrExpr::LitBool { value, .. } => format!("ok(Value::Bool({value}))"),
         RustIrExpr::LitDateTime { text, .. } => {
-            format!("Ok(Value::DateTime({:?}.to_string()))", text)
+            format!("ok(Value::DateTime({:?}.to_string()))", text)
         }
 
         RustIrExpr::Lambda { param, body, .. } => {
@@ -345,7 +391,7 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
             let ind = "    ".repeat(indent);
             let ind2 = "    ".repeat(indent + 1);
             format!(
-                "Ok(Value::Closure(Rc::new(move |{param_name}: Value| {{\n{ind2}{body_code}\n{ind}}})))"
+                "ok(Value::Closure(Rc::new(move |{param_name}: Value| {{\n{ind2}{body_code}\n{ind}}})))"
             )
         }
         RustIrExpr::App { func, arg, .. } => {
@@ -396,14 +442,14 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
                 s.push_str(" out }");
                 s
             };
-            format!("Ok(Value::List({concat}))")
+            format!("ok(Value::List({concat}))")
         }
         RustIrExpr::Tuple { items, .. } => {
             let mut rendered = Vec::new();
             for item in items {
                 rendered.push(format!("({})?", emit_expr(item, indent)?));
             }
-            format!("Ok(Value::Tuple(vec![{}]))", rendered.join(", "))
+            format!("ok(Value::Tuple(vec![{}]))", rendered.join(", "))
         }
         RustIrExpr::Record { fields, .. } => emit_record(fields, indent)?,
         RustIrExpr::Patch { target, fields, .. } => {
@@ -463,6 +509,9 @@ fn emit_builtin_call(
     indent: usize,
 ) -> Result<String, AiviError> {
     match builtin {
+        Builtin::Unit | Builtin::True | Builtin::False => Err(AiviError::Codegen(format!(
+            "{builtin:?} is not callable"
+        ))),
         Builtin::Pure => {
             if args.len() != 1 {
                 return Err(AiviError::Codegen("pure expects 1 arg".to_string()));

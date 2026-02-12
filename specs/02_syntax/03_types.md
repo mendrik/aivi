@@ -189,4 +189,8 @@ instance E: Monad (Result E *) = { ... } // E: binds the error parameter for the
 ## 3.6 Implementation Details
 
 > [!NOTE] Rust Codegen
-> The current `rust_codegen` implementation relies on embedding the HIR and running it via the `aivi` interpreter runtime embedded in the binary. It does not yet produce native Rust code corresponding to AIVI logic.
+> AIVI provides two Rust backends in v0.1:
+> 1. **Embed (legacy/default)**: embeds the HIR as JSON and runs it via the interpreter runtime.
+> 2. **Native (experimental)**: emits standalone Rust logic. This backend is currently partial (limited builtins/stdlib coverage; no `match` yet).
+>
+> For projects, select the backend via `aivi.toml` using `[build].codegen = "embed" | "native"`.

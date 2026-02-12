@@ -31,6 +31,7 @@ language_version = "0.1"  # Targeted Aivi version
 gen_dir = "target/aivi-gen" # Where generated Rust code is placed
 rust_edition = "2024"       # Rust edition for generated code
 cargo_profile = "dev"       # Default cargo profile
+codegen = "native"          # "native" (standalone Rust) or "embed" (HIR+interpreter)
 ```
 
 ## `Cargo.toml` Integration
@@ -68,3 +69,13 @@ When you run `aivi build`:
 3.  **Rust Compilation**: `cargo build` is invoked on the generated Rust project in `target/aivi-gen`.
 
 This architecture allows Aivi to leverage the full power of the Rust ecosystem, including optimized compilation, linking, and native interoperability.
+
+## Codegen Backends (v0.1)
+
+AIVI v0.1 supports two Rust codegen modes for projects:
+
+- `codegen = "embed"`: Generates Rust that embeds the program (HIR) and executes it with the interpreter runtime.
+  This is the most complete backend today.
+- `codegen = "native"`: Generates standalone Rust logic (experimental; partial feature/builtin coverage).
+
+Select the backend in `aivi.toml` under `[build]`.

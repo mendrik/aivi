@@ -2,7 +2,9 @@
 
 This document lists features, modules, and behaviors described in the **AIVI Language Specification** vs. the **v0.1 Rust Implementation**.
 
-> **Note to Users:** AIVI v0.1 is an interpreted language embedding a CST-to-Kernel pipeline. Native code generation (Rust/WASM) via `rust_codegen` is currently a harness for the interpreter, not a true transpiler.
+> **Note to Users:** AIVI v0.1 is primarily an interpreted language embedding a CST-to-Kernel pipeline.
+> Native Rust code generation exists as an **experimental** backend that emits standalone Rust logic for a limited subset of AIVI
+> (see **Native Codegen** below). The interpreter remains the most complete backend today.
 
 ## 1. Syntax & Language Features
 
@@ -35,7 +37,7 @@ This document lists features, modules, and behaviors described in the **AIVI Lan
 
 | Component | Status | Notes |
 | :--- | :--- | :--- |
-| **Native Codegen** | **Emulated** | `aivi build` embeds the program + interpreter into a Rust binary. It does **not** generate standalone Rust logic yet. |
+| **Native Codegen** | **Experimental (Partial)** | `aivi build` can emit standalone Rust logic via `[build].codegen = "native"`. Current limitations include incomplete builtins/stdlib coverage and missing `match` support in the native backend. |
 | **Package Manager** | **Missing** | `aivi.toml` reading exists (`pm.rs`), but full dependency resolution/publishing is minimal. |
 | **LSP** | **Implemented** | `aivi_lsp` crate exists with diagnostics, formatting, and definition lookup. |
 
@@ -56,6 +58,6 @@ If you are using AIVI v0.1 today, you are using a **high-integrity interpreter**
     *   It is **not yet** generating optimized WASM for high-performance compute, though the type system allows expressing it.
 
 3.  **The "Rust" Target**:
-    *   When you run `aivi build`, you get a Rust binary.
-    *   However, inside that binary is your HIR program as JSON, and the AIVI runtime.
-    *   This provides a self-contained executable but not the performance benefits of native Rust compilation *yet*.
+    *   When you run `aivi build`, you get a Rust binary (via `cargo`).
+    *   With `codegen = "embed"`, the binary contains your HIR program as JSON and runs it via the interpreter runtime.
+    *   With `codegen = "native"`, the generated Rust corresponds to the AIVI logic directly (experimental; partial coverage).

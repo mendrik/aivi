@@ -33,11 +33,13 @@ pub use mcp::{
 };
 pub use pm::{
     collect_aivi_sources, edit_cargo_toml_dependencies, read_aivi_toml, write_scaffold, AiviToml,
-    CargoDepSpec, CargoDepSpecParseError, CargoManifestEdits, ProjectKind,
+    CargoDepSpec, CargoDepSpecParseError, CargoManifestEdits, Codegen, ProjectKind,
 };
 pub use resolver::check_modules;
 pub use runtime::run_native;
-pub use rust_codegen::{compile_rust, compile_rust_lib};
+pub use rust_codegen::{
+    compile_rust, compile_rust_lib, compile_rust_native, compile_rust_native_lib,
+};
 pub use rust_ir::{lower_kernel as lower_rust_ir, RustIrProgram};
 pub use rustc_backend::{build_with_rustc, emit_rustc_source};
 pub use stdlib::{embedded_stdlib_modules, embedded_stdlib_source};
