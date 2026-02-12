@@ -13,7 +13,7 @@ A high-integrity functional language targeting WebAssembly.
 
 ### Roadmap
 
-- [Roadmap](roadmap/README.md)
+- [Missing Features & Gap Analysis (v0.1)](missing_features_v0.1.md)
 
 ### Syntax
 
