@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::sync::Arc;
 
 use super::calendar::build_calendar_record;
 use super::collections::build_collections_record;
@@ -53,6 +54,124 @@ pub(crate) fn register_builtins(env: &Env) {
             let with_step = runtime.apply(gen, step)?;
             let result = runtime.apply(with_step, init)?;
             Ok(result)
+        }),
+    );
+
+    env.set(
+        "map".to_string(),
+        builtin("map", 2, |mut args, runtime| {
+            let container = args.pop().unwrap();
+            let func = args.pop().unwrap();
+            match container {
+                Value::List(items) => {
+                    let mut out = Vec::with_capacity(items.len());
+                    for item in items.iter().cloned() {
+                        out.push(runtime.apply(func.clone(), item)?);
+                    }
+                    Ok(Value::List(Arc::new(out)))
+                }
+                Value::Constructor { name, args } if name == "None" && args.is_empty() => {
+                    Ok(Value::Constructor {
+                        name: "None".to_string(),
+                        args: Vec::new(),
+                    })
+                }
+                Value::Constructor { name, args } if name == "Some" && args.len() == 1 => {
+                    let mapped = runtime.apply(func, args[0].clone())?;
+                    Ok(Value::Constructor {
+                        name: "Some".to_string(),
+                        args: vec![mapped],
+                    })
+                }
+                Value::Constructor { name, args } if name == "Ok" && args.len() == 1 => {
+                    let mapped = runtime.apply(func, args[0].clone())?;
+                    Ok(Value::Constructor {
+                        name: "Ok".to_string(),
+                        args: vec![mapped],
+                    })
+                }
+                Value::Constructor { name, args } if name == "Err" && args.len() == 1 => Ok(
+                    Value::Constructor {
+                        name: "Err".to_string(),
+                        args,
+                    },
+                ),
+                other => Err(RuntimeError::Message(format!(
+                    "map expects List/Option/Result, got {}",
+                    format_value(&other)
+                ))),
+            }
+        }),
+    );
+
+    env.set(
+        "chain".to_string(),
+        builtin("chain", 2, |mut args, runtime| {
+            let container = args.pop().unwrap();
+            let func = args.pop().unwrap();
+            match container {
+                Value::List(items) => {
+                    let mut out = Vec::new();
+                    for item in items.iter().cloned() {
+                        let value = runtime.apply(func.clone(), item)?;
+                        match value {
+                            Value::List(inner) => out.extend(inner.iter().cloned()),
+                            other => {
+                                return Err(RuntimeError::Message(format!(
+                                    "chain on List expects f : A -> List B, got {}",
+                                    format_value(&other)
+                                )))
+                            }
+                        }
+                    }
+                    Ok(Value::List(Arc::new(out)))
+                }
+                Value::Constructor { name, args } if name == "None" && args.is_empty() => Ok(
+                    Value::Constructor {
+                        name: "None".to_string(),
+                        args: Vec::new(),
+                    },
+                ),
+                Value::Constructor { name, args } if name == "Some" && args.len() == 1 => {
+                    runtime.apply(func, args[0].clone())
+                }
+                Value::Constructor { name, args } if name == "Ok" && args.len() == 1 => {
+                    runtime.apply(func, args[0].clone())
+                }
+                Value::Constructor { name, args } if name == "Err" && args.len() == 1 => Ok(
+                    Value::Constructor {
+                        name: "Err".to_string(),
+                        args,
+                    },
+                ),
+                other => Err(RuntimeError::Message(format!(
+                    "chain expects List/Option/Result, got {}",
+                    format_value(&other)
+                ))),
+            }
+        }),
+    );
+
+    env.set(
+        "assertEq".to_string(),
+        builtin("assertEq", 2, |mut args, _| {
+            let right = args.pop().unwrap();
+            let left = args.pop().unwrap();
+            let ok = super::super::values_equal(&left, &right);
+            let effect = EffectValue::Thunk {
+                func: std::sync::Arc::new(move |_| {
+                    if ok {
+                        Ok(Value::Unit)
+                    } else {
+                        Err(RuntimeError::Error(Value::Text(format!(
+                            "assertEq failed: left={}, right={}",
+                            format_value(&left),
+                            format_value(&right)
+                        ))))
+                    }
+                }),
+            };
+            Ok(Value::Effect(std::sync::Arc::new(effect)))
         }),
     );
 

@@ -293,6 +293,20 @@ impl Parser {
                 continue;
             }
 
+            if self.match_keyword("type") {
+                for decorator in decorators {
+                    self.emit_diag(
+                        "E1507",
+                        "decorators are not supported on type declarations yet",
+                        decorator.span,
+                    );
+                }
+                if let Some(item) = self.parse_type_decl_or_alias() {
+                    items.push(item);
+                }
+                continue;
+            }
+
             if let Some(item) = self.parse_type_or_def(decorators) {
                 items.push(item);
                 continue;
@@ -489,6 +503,47 @@ impl Parser {
             params.push(param);
         }
         self.expect_symbol("=", "expected '=' in type declaration");
+
+        // Disambiguation: treat `T = ...` as an ADT only when there's a `|`
+        // constructor separator in the constructor list. Otherwise parse it as a type alias.
+        //
+        // This avoids mis-parsing row/type operators like:
+        //   UserName = Pick (name) User
+        // as an ADT with a `Pick` constructor.
+        let rhs_start = self.pos;
+        let mut scan = self.pos;
+        let mut saw_bar = false;
+        while scan < self.tokens.len() {
+            let token = &self.tokens[scan];
+            if token.kind == TokenKind::Symbol && token.text == "|" {
+                saw_bar = true;
+                break;
+            }
+            if token.kind == TokenKind::Newline {
+                // If the next non-newline token isn't a `|`, assume the type
+                // declaration ends here (and thus has no constructor bars).
+                let mut lookahead = scan + 1;
+                while lookahead < self.tokens.len()
+                    && self.tokens[lookahead].kind == TokenKind::Newline
+                {
+                    lookahead += 1;
+                }
+                if lookahead >= self.tokens.len() {
+                    break;
+                }
+                if !(self.tokens[lookahead].kind == TokenKind::Symbol
+                    && self.tokens[lookahead].text == "|")
+                {
+                    break;
+                }
+            }
+            scan += 1;
+        }
+        if !saw_bar {
+            self.pos = rhs_start;
+            return None;
+        }
+
         let mut ctors = Vec::new();
         while let Some(ctor_name) = self.consume_ident() {
             let mut args = Vec::new();
@@ -2096,14 +2151,31 @@ impl Parser {
         }
         if self.consume_symbol("{") {
             let mut fields = Vec::new();
+            self.consume_newlines();
             while !self.check_symbol("}") && self.pos < self.tokens.len() {
+                self.consume_newlines();
+                if self.check_symbol("}") {
+                    break;
+                }
                 if let Some(name) = self.consume_ident() {
+                    self.consume_newlines();
                     self.expect_symbol(":", "expected ':' in record type");
+                    self.consume_newlines();
                     if let Some(ty) = self.parse_type_expr() {
                         fields.push((name, ty));
                     }
+                } else {
+                    // Recovery: skip unexpected tokens inside record types.
+                    self.pos += 1;
+                    continue;
                 }
-                if !self.consume_symbol(",") {
+                self.consume_newlines();
+                if self.consume_symbol(",") {
+                    self.consume_newlines();
+                    continue;
+                }
+                // Newline-separated fields are allowed (FieldSep includes Sep).
+                if self.check_symbol("}") {
                     break;
                 }
             }

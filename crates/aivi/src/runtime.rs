@@ -97,6 +97,10 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
     let globals = Env::new(None);
     register_builtins(&globals);
     for (name, exprs) in grouped {
+        // Builtins are the "runtime stdlib" today; don't let parsed source overwrite them.
+        if globals.get(&name).is_some() {
+            continue;
+        }
         if exprs.len() == 1 {
             let thunk = ThunkValue {
                 expr: Arc::new(exprs.into_iter().next().unwrap()),
@@ -831,9 +835,13 @@ impl Runtime {
         let local_env = Env::new(Some(env));
         let mut cleanups: Vec<Value> = Vec::new();
         let mut result: Result<Value, RuntimeError> = Ok(Value::Unit);
+        let trace_effect = std::env::var("AIVI_TRACE_EFFECT").is_ok_and(|v| v == "1");
 
         for (index, item) in items.iter().enumerate() {
             let last = index + 1 == items.len();
+            if trace_effect {
+                eprintln!("[AIVI_TRACE_EFFECT] step {} / {}", index + 1, items.len());
+            }
             if let Err(err) = self.check_cancelled() {
                 result = Err(err);
                 break;

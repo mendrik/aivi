@@ -303,6 +303,19 @@ fn lower_expr(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
     // Placeholder-lambda sugar: rewrite `_` occurrences into a lambda at the
     // smallest expression scope that still contains `_`.
     let expr = desugar_placeholder_lambdas(expr);
+    if let Expr::Ident(name) = &expr {
+        if name.name == "_" {
+            let param = "_arg0".to_string();
+            return HirExpr::Lambda {
+                id: id_gen.next(),
+                param: param.clone(),
+                body: Box::new(HirExpr::Var {
+                    id: id_gen.next(),
+                    name: param,
+                }),
+            };
+        }
+    }
 
     if let Expr::Binary {
         op, left, right, ..
@@ -829,7 +842,16 @@ fn contains_placeholder(expr: &Expr) -> bool {
 
 fn desugar_placeholder_lambdas(expr: Expr) -> Expr {
     let expr = match expr {
-        Expr::Ident(_) | Expr::Literal(_) | Expr::Raw { .. } | Expr::FieldSection { .. } => expr,
+        Expr::Ident(name) => {
+            // Don't desugar a placeholder `_` at the leaf; let the smallest
+            // enclosing expression scope capture it. A bare `_` is handled in
+            // `lower_expr`.
+            if name.name == "_" {
+                return Expr::Ident(name);
+            }
+            Expr::Ident(name)
+        }
+        Expr::Literal(_) | Expr::Raw { .. } | Expr::FieldSection { .. } => expr,
         Expr::TextInterpolate { parts, span } => Expr::TextInterpolate {
             parts: parts
                 .into_iter()

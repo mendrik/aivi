@@ -1,7 +1,10 @@
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Instant;
 
-use aivi::{desugar_target, run_native};
+fn aivi_bin() -> &'static str {
+    env!("CARGO_BIN_EXE_aivi")
+}
 
 fn set_workspace_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -13,67 +16,55 @@ fn set_workspace_root() -> PathBuf {
     workspace_root.to_path_buf()
 }
 
+fn run_native_via_cli(input: &str) {
+    let _root = set_workspace_root();
+    let output = Command::new(aivi_bin())
+        .args(["run", input, "--target", "native"])
+        .output()
+        .expect("spawn aivi run");
+    assert!(
+        output.status.success(),
+        "aivi run failed for {input}\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+}
+
 #[test]
 fn run_native_concurrency_example() {
-    let _root = set_workspace_root();
-    let program = desugar_target("examples/11_concurrency.aivi").expect("desugar");
-    run_native(program).expect("run native");
+    run_native_via_cli("examples/11_concurrency.aivi");
 }
 
 #[test]
 fn run_native_effects_core_ops_example() {
-    let _root = set_workspace_root();
-    let program = desugar_target("examples/08_effects_core_ops.aivi").expect("desugar");
-    run_native(program).expect("run native");
+    run_native_via_cli("examples/08_effects_core_ops.aivi");
 }
 
 #[test]
 fn run_native_system_log_database_example() {
-    let _root = set_workspace_root();
-    let program = desugar_target("examples/18_system_log_database.aivi").expect("desugar");
-    run_native(program).expect("run native");
+    run_native_via_cli("examples/18_system_log_database.aivi");
 }
 
 #[test]
 fn run_native_crypto_example() {
-    let _root = set_workspace_root();
-    let program = desugar_target("examples/20_crypto.aivi").expect("desugar");
-    run_native(program).expect("run native");
+    run_native_via_cli("examples/20_crypto.aivi");
 }
 
 #[test]
 fn run_native_quaternion_example() {
-    let _root = set_workspace_root();
-    eprintln!("[DEBUG_LOG] quaternion: desugar start");
+    eprintln!("[DEBUG_LOG] quaternion: run start");
     let t0 = Instant::now();
-    let program = desugar_target("examples/21_quaternion.aivi").expect("desugar");
-    eprintln!("[DEBUG_LOG] quaternion: desugar done in {:?}", t0.elapsed());
-
-    eprintln!("[DEBUG_LOG] quaternion: run_native start");
-    let t1 = Instant::now();
-    run_native(program).expect("run native");
-    eprintln!(
-        "[DEBUG_LOG] quaternion: run_native done in {:?}",
-        t1.elapsed()
-    );
+    run_native_via_cli("examples/21_quaternion.aivi");
+    eprintln!("[DEBUG_LOG] quaternion: run done in {:?}", t0.elapsed());
 }
 
 #[test]
 fn run_native_fantasyland_law_tests() {
-    let _root = set_workspace_root();
-    eprintln!("[DEBUG_LOG] fantasyland laws: desugar start");
+    eprintln!("[DEBUG_LOG] fantasyland laws: run start");
     let t0 = Instant::now();
-    let program = desugar_target("examples/22_fantasyland_laws.aivi").expect("desugar");
+    run_native_via_cli("examples/22_fantasyland_laws.aivi");
     eprintln!(
-        "[DEBUG_LOG] fantasyland laws: desugar done in {:?}",
+        "[DEBUG_LOG] fantasyland laws: run done in {:?}",
         t0.elapsed()
-    );
-
-    eprintln!("[DEBUG_LOG] fantasyland laws: run_native start");
-    let t1 = Instant::now();
-    run_native(program).expect("run native");
-    eprintln!(
-        "[DEBUG_LOG] fantasyland laws: run_native done in {:?}",
-        t1.elapsed()
     );
 }

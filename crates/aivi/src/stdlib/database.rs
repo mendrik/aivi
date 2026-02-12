@@ -45,14 +45,12 @@ ins : A -> Delta A
 ins value = Insert value
 
 upd : Pred A -> Patch A -> Delta A
-upd pred patch = Update pred patch
+upd pred patchFn = Update pred patchFn
 
 del : Pred A -> Delta A
 del pred = Delete pred
 
 domain Database over Table A = {
-  type Delta = Delta A
-
   (+) : Table A -> Delta A -> Effect DbError (Table A)
   (+) table delta = applyDelta table delta
 
