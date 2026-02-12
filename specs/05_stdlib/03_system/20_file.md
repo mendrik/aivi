@@ -14,11 +14,16 @@ Direct file access is dangerous (locks, missing files, permissions). AIVI wraps 
 ```aivi
 use aivi.file (readText, stat)
 
-// Safe reading
-content = readText "config.json"
+main = effect {
+  // Safe reading
+  contentRes <- readText "config.json"
+  contentRes ?
+    | Ok content => print content
+    | Err _ => print "missing config"
 
-// Metadata inspection
-match stat "large_video.mp4" {
+  // Metadata inspection
+  infoRes <- stat "large_video.mp4"
+  infoRes ?
     | Ok info => print "File size: {info.size} bytes"
     | Err _   => print "File not found"
 }

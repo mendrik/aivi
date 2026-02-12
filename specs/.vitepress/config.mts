@@ -133,6 +133,7 @@ export default defineConfig({
               { text: 'Regex', link: '/05_stdlib/00_core/24_regex' },
               { text: 'Testing', link: '/05_stdlib/00_core/27_testing' },
               { text: 'Collections', link: '/05_stdlib/00_core/28_collections' },
+              { text: 'I18n', link: '/05_stdlib/00_core/29_i18n' },
             ]
           },
           {
@@ -154,6 +155,7 @@ export default defineConfig({
             text: 'Time',
             collapsed: true,
             items: [
+              { text: 'Instant', link: '/05_stdlib/02_chronos/01_instant' },
               { text: 'Calendar', link: '/05_stdlib/02_chronos/02_calendar' },
               { text: 'Duration', link: '/05_stdlib/02_chronos/03_duration' },
               { text: 'TimeZone', link: '/05_stdlib/02_chronos/04_timezone' },
@@ -170,6 +172,7 @@ export default defineConfig({
               { text: 'Crypto', link: '/05_stdlib/03_system/22_crypto' },
               { text: 'System', link: '/05_stdlib/03_system/25_system' },
               { text: 'Log', link: '/05_stdlib/03_system/26_log' },
+              { text: 'Concurrency', link: '/05_stdlib/03_system/30_concurrency' },
             ]
           },
           {
@@ -188,6 +191,7 @@ export default defineConfig({
             text: 'UI',
             collapsed: true,
             items: [
+              { text: 'Layout', link: '/05_stdlib/04_ui/01_layout' },
               { text: 'Color', link: '/05_stdlib/04_ui/04_color' },
             ]
           }
@@ -233,6 +237,7 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Concurrency', link: '/06_runtime/01_concurrency' },
+          { text: 'Package Manager (Cargo-backed)', link: '/06_runtime/03_package_manager' },
         ]
       },
       {

@@ -6,6 +6,12 @@ The `aivi.logic` module defines the standard algebraic hierarchy for AIVI, based
 module aivi.logic
 ```
 
+See also:
+
+- Syntax: classes and instances (`02_syntax/03_types`)
+- Syntax: effects as monads (`02_syntax/09_effects`)
+- Fantasy Land upstream spec (naming + laws): https://github.com/fantasyland/fantasy-land
+
 ## 1. Equality and Ordering
 
 ### Setoid
@@ -71,14 +77,14 @@ class Category (F * *) = {
 ### Functor
 ```aivi
 class Functor (F *) = {
-  map: (A -> B) -> F A -> F B
+  map: F A -> (A -> B) -> F B
 }
 ```
 
 ### Apply
 ```aivi
 class Apply (F *) = Functor (F *) & {
-  ap: F (A -> B) -> F A -> F B
+  ap: F A -> F (A -> B) -> F B
 }
 ```
 
@@ -92,7 +98,7 @@ class Applicative (F *) = Apply (F *) & {
 ### Chain
 ```aivi
 class Chain (F *) = Apply (F *) & {
-  chain: (A -> F B) -> F A -> F B
+  chain: F A -> (A -> F B) -> F B
 }
 ```
 
@@ -106,14 +112,14 @@ class Monad (M *) = Applicative (M *) & Chain (M *)
 ### Foldable
 ```aivi
 class Foldable (F *) = {
-  reduce: (B -> A -> B) -> B -> F A -> B
+  reduce: F A -> (B -> A -> B) -> B -> B
 }
 ```
 
 ### Traversable
 ```aivi
 class Traversable (T *) = {
-  traverse: (A -> F B) -> T A -> F (T B)
+  traverse: T A -> (A -> F B) -> F (T B)
 }
 ```
 
@@ -122,13 +128,59 @@ class Traversable (T *) = {
 ### Bifunctor
 ```aivi
 class Bifunctor (F * *) = {
-  bimap: (A -> C) -> (B -> D) -> F A B -> F C D
+  bimap: F A B -> (A -> C) -> (B -> D) -> F C D
 }
 ```
 
 ### Profunctor
 ```aivi
 class Profunctor (F * *) = {
-  promap: (A -> B) -> (C -> D) -> F B C -> F A D
+  promap: F B C -> (A -> B) -> (C -> D) -> F A D
 }
+```
+
+## Examples
+
+### `Functor` for `Option`
+
+```aivi
+use aivi.logic
+
+instance Functor (Option *) = {
+  map: opt f =>
+    opt ?
+      | None => None
+      | Some x => Some (f x)
+}
+```
+
+### `Monoid` for `Text`
+
+```aivi
+use aivi.logic
+use aivi.text as text
+
+instance Semigroup Text = {
+  concat: a b => text.concat [a, b]
+}
+
+instance Monoid Text = Semigroup Text & {
+  empty: ""
+}
+```
+
+### `Effect` sequencing is `chain`/`bind`
+
+`effect { ... }` is surface syntax for repeated sequencing (see `02_syntax/09_effects`):
+
+```aivi
+// Sugar
+val = effect {
+  x <- fetch
+  y <- decode x
+  pure y
+}
+
+// Desugared shape (conceptually)
+val2 = (fetch |> bind) (x => (decode x |> bind) (y => pure y))
 ```

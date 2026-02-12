@@ -167,11 +167,29 @@ class Functor (F *) = {
 ```
 
 ```aivi
-class Monad (M *) =
-  Functor (M *) & { // The & operator denotes class inheritance/aggregation
-    pure: A -> M A
-    flatMap: M A -> (A -> M B) -> M B
+class Apply (F *) =
+  Functor (F *) & {
+    ap: F A -> F (A -> B) -> F B
   }
+```
+
+```aivi
+class Applicative (F *) =
+  Apply (F *) & {
+    of: A -> F A
+  }
+```
+
+```aivi
+class Chain (F *) =
+  Apply (F *) & {
+    chain: F A -> (A -> F B) -> F B
+  }
+```
+
+```aivi
+class Monad (M *) =
+  Applicative (M *) & Chain (M *)
 ```
 
 `A & B` in type position denotes **record/type composition** (an intersection-like merge). It is primarily used for class inheritance and trait aggregation in v0.1.

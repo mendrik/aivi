@@ -141,6 +141,10 @@ pub fn load_module_diagnostics(target: &str) -> Result<Vec<FileDiagnostic>, Aivi
 }
 
 pub fn desugar_target(target: &str) -> Result<HirProgram, AiviError> {
+    let diagnostics = load_module_diagnostics(target)?;
+    if !diagnostics.is_empty() {
+        return Err(AiviError::Diagnostics);
+    }
     let paths = workspace::expand_target(target)?;
     let mut modules = Vec::new();
     for path in &paths {
