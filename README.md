@@ -1,14 +1,14 @@
 # AIVI (draft language spec)
 
-> [!IMPORTANT]
-> AIVI is a fictional language spec-in-progress that may or may not turn into a real thing.
-> Feedback is welcome — especially from language experts who spot problems with the current definition.
+> [!NOTE]
+> **AIVI v0.1** is currently an interpreted language embedding a CST-to-Kernel pipeline.
+> See [Missing Features](specs/missing_features_v0.1.md) for current implementation status.
 
-AIVI is a high-integrity functional language aimed at WebAssembly. This repo primarily contains the **language specification** and standard-library sketches.
+AIVI is a high-integrity functional language aimed at WebAssembly. This repo contains the **v0.1 Rust implementation** (interpreter) and the language specification.
 
 - Read the spec entrypoint: `specs/README.md`
 - Browse the docs index: [Full specification](https://mendrik.github.io/aivi/)
-- Build the docs site: `pnpm docs:dev` / `pnpm docs:build`
+- Build the docs site: `cd specs && pnpm docs:dev` / `pnpm docs:build`
 
 ## Syntax sketch (very early)
 

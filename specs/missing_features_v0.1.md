@@ -11,7 +11,7 @@ This document lists features, modules, and behaviors described in the **AIVI Lan
 | **Generators** | `02_syntax/07_generators` | **Missing / Partial** | `Generator` type exists in `checker.rs`, but full `yield`/resumption semantics in runtime need verification. |
 | **Decorators** | `02_syntax/14_decorators` | **Missing** | Not present in parser/cst. |
 | **User-defined Domains** | `02_syntax/06_domains` | **Implemented** | `DomainDecl` exists in CST/HIR. |
-| **Patching (<|)** | `02_syntax/05_patching` | **Implemented** | `Patch` alias exists; desugaring logic present. |
+| **Patching** | `02_syntax/05_patching` | **Implemented** | `Patch` alias exists; desugaring logic present. |
 
 ## 2. Type System
 
