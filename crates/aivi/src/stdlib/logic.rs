@@ -123,7 +123,7 @@ instance Chain (Option *) = {
 }
 
 instance Monad (Option *) = {
-  __monad: Unit
+  __monad: {}
 }
 
 // Result
@@ -155,48 +155,6 @@ instance Chain (Result E *) = {
 }
 
 instance Monad (Result E *) = {
-  __monad: Unit
-}
-
-// List
-
-append = xs ys =>
-  xs ?
-    | []        => ys
-    | [h, ...t] => [h, ...append t ys]
-
-mapList = f xs =>
-  xs ?
-    | []        => []
-    | [h, ...t] => [f h, ...mapList f t]
-
-concatMap = f xs =>
-  xs ?
-    | []        => []
-    | [h, ...t] => append (f h) (concatMap f t)
-
-apList = fs xs =>
-  fs ?
-    | []        => []
-    | [f, ...t] => append (mapList f xs) (apList t xs)
-
-instance Functor (List *) = {
-  map: f xs => mapList f xs
-}
-
-instance Apply (List *) = {
-  ap: apList
-}
-
-instance Applicative (List *) = {
-  of: x => [x]
-}
-
-instance Chain (List *) = {
-  chain: f xs => concatMap f xs
-}
-
-instance Monad (List *) = {
-  __monad: Unit
+  __monad: {}
 }
 "#;

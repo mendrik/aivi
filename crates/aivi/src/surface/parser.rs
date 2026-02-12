@@ -608,7 +608,11 @@ impl Parser {
         self.expect_symbol("=", "expected '=' in instance declaration");
         self.expect_symbol("{", "expected '{' to start instance body");
         let mut defs = Vec::new();
-        while !self.check_symbol("}") && self.pos < self.tokens.len() {
+        while self.pos < self.tokens.len() {
+            self.consume_newlines();
+            if self.check_symbol("}") {
+                break;
+            }
             if let Some(def) = self.parse_instance_def() {
                 defs.push(def);
                 continue;
@@ -2535,6 +2539,18 @@ impl Parser {
                 start: Position { line: 1, column: 1 },
                 end: Position { line: 1, column: 1 },
             };
+        }
+        if self.pos > self.tokens.len() {
+            return self.tokens.last().map(|t| t.span.clone()).unwrap_or(Span {
+                start: Position { line: 1, column: 1 },
+                end: Position { line: 1, column: 1 },
+            });
+        }
+        if self.pos >= self.tokens.len() {
+            return self.tokens.last().map(|t| t.span.clone()).unwrap_or(Span {
+                start: Position { line: 1, column: 1 },
+                end: Position { line: 1, column: 1 },
+            });
         }
         self.tokens[self.pos - 1].span.clone()
     }

@@ -2,8 +2,8 @@
   "files": [
     {
       "path": "examples/hello.aivi",
-      "byte_count": 144,
-      "line_count": 10,
+      "byte_count": 132,
+      "line_count": 9,
       "lines": [
         "module examples.hello",
         "export main",
@@ -13,7 +13,6 @@
         "main : Effect Text Unit",
         "main = effect {",
         "  _ <- print \"Hello, world!\"",
-        "  pure Unit",
         "}"
       ],
       "tokens": [
@@ -592,71 +591,15 @@
           }
         },
         {
-          "kind": "whitespace",
-          "text": "  ",
-          "span": {
-            "start": {
-              "line": 9,
-              "column": 1
-            },
-            "end": {
-              "line": 9,
-              "column": 2
-            }
-          }
-        },
-        {
-          "kind": "ident",
-          "text": "pure",
-          "span": {
-            "start": {
-              "line": 9,
-              "column": 3
-            },
-            "end": {
-              "line": 9,
-              "column": 6
-            }
-          }
-        },
-        {
-          "kind": "whitespace",
-          "text": " ",
-          "span": {
-            "start": {
-              "line": 9,
-              "column": 7
-            },
-            "end": {
-              "line": 9,
-              "column": 7
-            }
-          }
-        },
-        {
-          "kind": "ident",
-          "text": "Unit",
-          "span": {
-            "start": {
-              "line": 9,
-              "column": 8
-            },
-            "end": {
-              "line": 9,
-              "column": 11
-            }
-          }
-        },
-        {
           "kind": "symbol",
           "text": "}",
           "span": {
             "start": {
-              "line": 10,
+              "line": 9,
               "column": 1
             },
             "end": {
-              "line": 10,
+              "line": 9,
               "column": 1
             }
           }

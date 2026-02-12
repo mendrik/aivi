@@ -18,6 +18,6 @@ echoServer port = effect {
 handle : Socket -> Effect Text Unit
 handle socket = effect {
   msg <- read socket
-  _ <- write socket msg
+  _   <- write socket msg
   handle socket
 }

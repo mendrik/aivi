@@ -144,10 +144,11 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
     };
     let effect = match main_value {
         Value::Effect(effect) => Value::Effect(effect),
-        _ => {
-            return Err(AiviError::Runtime(
-                "main must be an Effect value".to_string(),
-            ))
+        other => {
+            return Err(AiviError::Runtime(format!(
+                "main must be an Effect value, got {}",
+                format_value(&other)
+            )))
         }
     };
 
@@ -452,9 +453,10 @@ impl Runtime {
                 args.push(arg);
                 Ok(Value::Constructor { name, args })
             }
-            _ => Err(RuntimeError::Message(
-                "attempted to call a non-function".to_string(),
-            )),
+            other => Err(RuntimeError::Message(format!(
+                "attempted to call a non-function: {}",
+                format_value(&other)
+            ))),
         }
     }
 

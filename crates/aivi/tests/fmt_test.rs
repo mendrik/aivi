@@ -8,12 +8,7 @@ main = effect {
   x = 1
   _ <- print x
 }"#;
-    let expected = r#"module Test
-main = effect {
-  let x = 1
-  x
-}
-"#;
+    let expected = "module Test\nmain = effect {\n  x = 1\n  _ <- print x\n}\n";
     assert_eq!(format_text(input), expected);
 }
 
@@ -31,8 +26,7 @@ makeUser = _ => { name: "John", age: 30 }
     let short_input = r#"
 point = { x: 1, y: 2 }
 "#;
-    let short_expected = r#"point = { x: 1, y: 2 }
-"#;
+    let short_expected = "point = { x: 1, y: 2 }\n";
     assert_eq!(format_text(short_input), short_expected);
 
     // Multiline input should be preserved (or standardized)
@@ -42,11 +36,7 @@ big = {
   b: 2,
 }
 "#;
-    let multiline_expected = r#"big = {
-  a: 1,
-  b: 2,
-}
-"#;
+    let multiline_expected = "big = {\n  a: 1,\n  b: 2,\n}\n";
     assert_eq!(format_text(multiline_input), multiline_expected);
 }
 

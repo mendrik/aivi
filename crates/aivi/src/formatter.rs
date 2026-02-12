@@ -717,6 +717,15 @@ pub fn format_text_with_options(content: &str, options: FormatOptions) -> String
         rendered_lines.push(out);
     }
 
+    // Strip leading blank lines to keep output stable when inputs start with a newline.
+    let first_non_blank = rendered_lines
+        .iter()
+        .position(|line| !line.is_empty())
+        .unwrap_or(rendered_lines.len());
+    if first_non_blank > 0 {
+        rendered_lines.drain(0..first_non_blank);
+    }
+
     let mut result = rendered_lines.join("\n");
     // Ensure single trailing newline
     if !result.ends_with('\n') {
