@@ -41,11 +41,23 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
+      - name: Compute BASE_PATH
+        id: base
+        shell: bash
+        run: |
+          # If we publish a custom domain (CNAME present), the site lives at `/`.
+          # Otherwise (project pages), use GitHub Pages' computed base path (usually `/<repo>/`).
+          if [ -f specs/public/CNAME ]; then
+            echo "base_path=/" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_path=${{ steps.pages.outputs.base_path }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build Documentation
         run: pnpm run docs:build
         working-directory: specs
         env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          BASE_PATH: ${{ steps.base.outputs.base_path }}
 
       - name: Upload Build Artifacts
         uses: actions/upload-pages-artifact@v3
