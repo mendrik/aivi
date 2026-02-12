@@ -17,26 +17,26 @@ systemLocale = effect {
   lang  <- env.get "LANG"
 
   tagOpt =
-    lcAll ?
-      | Some t => Some t
-      | None =>
-        lcMsg ?
-          | Some t => Some t
-          | None   => lang
+  lcAll ?
+    | Some t => Some t
+    | None   =>
+  lcMsg ?
+    | Some t => Some t
+    | None   => lang
 
   tag =
-    tagOpt ?
-      | Some t => t
-      | None   => defaultLocale.tag
+  tagOpt ?
+    | Some t => t
+    | None   => defaultLocale.tag
 
   baseTag =
-    (split "." tag) ?
-      | [] => tag
-      | [x, ..._] => x
+  (split "." tag) ?
+    | []        => tag
+    | [x, ..._] => x
   cleanTag =
-    (split "@" baseTag) ?
-      | [] => baseTag
-      | [x, ..._] => x
+  (split "@" baseTag) ?
+    | []        => baseTag
+    | [x, ..._] => x
 
   parseLocale cleanTag ?
     | Ok loc => pure loc
@@ -46,16 +46,16 @@ systemLocale = effect {
 loadBundle : Locale -> Effect Text Bundle
 loadBundle locale = effect {
   path =
-    if locale.tag == "de-DE" then "examples/i18n/app.de-DE.properties" else "examples/i18n/app.en-US.properties"
+  if locale.tag == "de-DE" then "examples/i18n/app.de-DE.properties" else "examples/i18n/app.en-US.properties"
 
-  h <- open path
+  h        <- open path
   propsRes <- readAll h
 
   propsRes ?
     | Ok props =>
-      bundleFromProperties locale props ?
-        | Ok b  => pure b
-        | Err e => fail e
+  bundleFromProperties locale props ?
+    | Ok b  => pure b
+    | Err e => fail e
     | Err e => fail e
 }
 
@@ -64,7 +64,6 @@ main = effect {
   locale <- systemLocale
   bundle <- loadBundle locale
 
-  _ <- print (t bundle (~k"app.welcome") { name: "Alice" })
-  _ <- print (t bundle (~k"app.lastLogin") { when: ~dt(2026-02-12T15:30:00Z) })
-  pure Unit
+  print (t bundle (~k"app.welcome") { name: "Alice" })
+  print (t bundle (~k"app.lastLogin") { when: ~dt(2026-02-12T15:30:00Z) })
 }
