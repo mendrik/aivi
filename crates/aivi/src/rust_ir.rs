@@ -47,6 +47,10 @@ pub enum RustIrExpr {
         id: u32,
         builtin: BuiltinName,
     },
+    ConstructorValue {
+        id: u32,
+        name: String,
+    },
 
     LitNumber {
         id: u32,
@@ -216,12 +220,23 @@ pub enum RustIrLiteral {
 pub enum RustIrBlockKind {
     Plain,
     Effect,
+    Generate,
+    Resource,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum RustIrBlockItem {
     Bind {
         pattern: RustIrPattern,
+        expr: RustIrExpr,
+    },
+    Filter {
+        expr: RustIrExpr,
+    },
+    Yield {
+        expr: RustIrExpr,
+    },
+    Recurse {
         expr: RustIrExpr,
     },
     Expr {
@@ -278,6 +293,8 @@ fn lower_expr(
                 RustIrExpr::Builtin { id, builtin }
             } else if globals.iter().any(|g| g == &name) {
                 RustIrExpr::Global { id, name }
+            } else if is_constructor_name(&name) {
+                RustIrExpr::ConstructorValue { id, name }
             } else {
                 return Err(AiviError::Codegen(format!("unbound variable {name}")));
             }
@@ -484,9 +501,8 @@ fn lower_block_kind(kind: KernelBlockKind) -> Result<RustIrBlockKind, AiviError>
     match kind {
         KernelBlockKind::Plain => Ok(RustIrBlockKind::Plain),
         KernelBlockKind::Effect => Ok(RustIrBlockKind::Effect),
-        KernelBlockKind::Generate | KernelBlockKind::Resource => Err(AiviError::Codegen(
-            "generate/resource blocks are not supported by the rustc backend yet".to_string(),
-        )),
+        KernelBlockKind::Generate => Ok(RustIrBlockKind::Generate),
+        KernelBlockKind::Resource => Ok(RustIrBlockKind::Resource),
     }
 }
 
@@ -498,28 +514,60 @@ fn lower_block_item(
     match item {
         KernelBlockItem::Bind { pattern, expr } => {
             let pat = lower_pattern(pattern)?;
-            match &pat {
-                RustIrPattern::Var { name, .. } => locals.push(name.clone()),
-                RustIrPattern::Wildcard { .. } => {}
-                _ => {
-                    return Err(AiviError::Codegen(
-                        "only wildcard/variable patterns are supported in block binds".to_string(),
-                    ))
-                }
+            let expr = lower_expr(expr, globals, locals)?;
+            let mut binders = Vec::new();
+            collect_rust_ir_pattern_binders(&pat, &mut binders);
+            for name in binders {
+                locals.push(name);
             }
             Ok(RustIrBlockItem::Bind {
                 pattern: pat,
-                expr: lower_expr(expr, globals, locals)?,
+                expr,
             })
         }
+        KernelBlockItem::Filter { expr } => Ok(RustIrBlockItem::Filter {
+            expr: lower_expr(expr, globals, locals)?,
+        }),
+        KernelBlockItem::Yield { expr } => Ok(RustIrBlockItem::Yield {
+            expr: lower_expr(expr, globals, locals)?,
+        }),
+        KernelBlockItem::Recurse { expr } => Ok(RustIrBlockItem::Recurse {
+            expr: lower_expr(expr, globals, locals)?,
+        }),
         KernelBlockItem::Expr { expr } => Ok(RustIrBlockItem::Expr {
             expr: lower_expr(expr, globals, locals)?,
         }),
-        KernelBlockItem::Filter { .. }
-        | KernelBlockItem::Yield { .. }
-        | KernelBlockItem::Recurse { .. } => Err(AiviError::Codegen(
-            "generator/resource block items are not supported by the rustc backend yet".to_string(),
-        )),
+    }
+}
+
+fn collect_rust_ir_pattern_binders(pattern: &RustIrPattern, out: &mut Vec<String>) {
+    match pattern {
+        RustIrPattern::Wildcard { .. } => {}
+        RustIrPattern::Var { name, .. } => out.push(name.clone()),
+        RustIrPattern::Literal { .. } => {}
+        RustIrPattern::Constructor { args, .. } => {
+            for arg in args {
+                collect_rust_ir_pattern_binders(arg, out);
+            }
+        }
+        RustIrPattern::Tuple { items, .. } => {
+            for item in items {
+                collect_rust_ir_pattern_binders(item, out);
+            }
+        }
+        RustIrPattern::List { items, rest, .. } => {
+            for item in items {
+                collect_rust_ir_pattern_binders(item, out);
+            }
+            if let Some(rest) = rest.as_deref() {
+                collect_rust_ir_pattern_binders(rest, out);
+            }
+        }
+        RustIrPattern::Record { fields, .. } => {
+            for field in fields {
+                collect_rust_ir_pattern_binders(&field.pattern, out);
+            }
+        }
     }
 }
 
@@ -636,6 +684,13 @@ fn collect_pattern_binders(pattern: &KernelPattern, out: &mut Vec<String>) {
             }
         }
     }
+}
+
+fn is_constructor_name(name: &str) -> bool {
+    name.chars()
+        .next()
+        .map(|ch| ch.is_ascii_uppercase())
+        .unwrap_or(false)
 }
 
 fn resolve_builtin(name: &str) -> Option<BuiltinName> {

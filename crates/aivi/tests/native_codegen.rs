@@ -41,6 +41,8 @@ main = effect {
     let output = Command::new("cargo")
         .arg("run")
         .arg("--quiet")
+        .arg("--offline")
+        .env("RUSTFLAGS", "-Awarnings")
         .current_dir(dir.path())
         .output()
         .expect("cargo run");

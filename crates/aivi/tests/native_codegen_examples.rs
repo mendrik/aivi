@@ -83,6 +83,7 @@ fn native_codegen_examples_compile_with_rustc() {
         let output = match Command::new("cargo")
             .arg("build")
             .arg("--quiet")
+            .arg("--offline")
             .current_dir(dir.path())
             .output()
         {

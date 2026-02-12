@@ -79,7 +79,9 @@ pub enum EffectValue {
 }
 
 pub struct ResourceValue {
-    pub items: Arc<Vec<()>>,
+    pub acquire: Mutex<
+        Option<Box<dyn FnOnce(&mut Runtime) -> Result<(Value, Value), RuntimeError> + Send>>,
+    >,
 }
 
 pub struct ThunkValue {
@@ -246,6 +248,7 @@ impl CancelToken {
 pub struct Runtime {
     pub ctx: Arc<RuntimeContext>,
     pub cancel: Arc<CancelToken>,
+    cancel_mask: usize,
     rng_state: u64,
 }
 
@@ -254,6 +257,7 @@ impl Runtime {
         Self {
             ctx: Arc::new(RuntimeContext {}),
             cancel: CancelToken::root(),
+            cancel_mask: 0,
             rng_state: seed_rng_state(),
         }
     }
@@ -262,15 +266,26 @@ impl Runtime {
         Self {
             ctx,
             cancel,
+            cancel_mask: 0,
             rng_state: seed_rng_state(),
         }
     }
 
     pub fn check_cancelled(&self) -> Result<(), RuntimeError> {
+        if self.cancel_mask > 0 {
+            return Ok(());
+        }
         if self.cancel.is_cancelled() {
             return Err("execution cancelled".to_string());
         }
         Ok(())
+    }
+
+    pub fn uncancelable<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.cancel_mask = self.cancel_mask.saturating_add(1);
+        let out = f(self);
+        self.cancel_mask = self.cancel_mask.saturating_sub(1);
+        out
     }
 
     pub fn apply(&mut self, func: Value, arg: Value) -> R {
@@ -278,7 +293,11 @@ impl Runtime {
         match func {
             Value::Closure(closure) => (closure.func)(arg, self),
             Value::Builtin(builtin) => self.apply_builtin(builtin, arg),
-            Value::MultiClause(_) => Err("multiclause call is not supported yet".to_string()),
+            Value::MultiClause(clauses) => self.apply_multi_clause(clauses, arg),
+            Value::Constructor { name, mut args } => {
+                args.push(arg);
+                Ok(Value::Constructor { name, args })
+            }
             other => Err(format!("expected function, got {}", format_value(&other))),
         }
     }
@@ -301,6 +320,53 @@ impl Runtime {
         }
     }
 
+    pub fn acquire_resource(
+        &mut self,
+        resource: Arc<ResourceValue>,
+    ) -> Result<(Value, Value), RuntimeError> {
+        let mut guard = resource.acquire.lock().expect("resource acquire lock");
+        let Some(acquire_fn) = guard.take() else {
+            return Err("resource already acquired".to_string());
+        };
+        drop(guard);
+        acquire_fn(self)
+    }
+
+    pub fn generator_to_vec(&mut self, gen: Value) -> Result<Vec<Value>, RuntimeError> {
+        let step = Value::Builtin(BuiltinValue {
+            imp: Arc::new(BuiltinImpl {
+                name: "<gen_to_list_step>".to_string(),
+                arity: 2,
+                func: Arc::new(|mut args, _runtime| {
+                    let x = args.pop().unwrap();
+                    let acc = args.pop().unwrap();
+                    let mut list = match acc {
+                        Value::List(items) => (*items).clone(),
+                        other => {
+                            return Err(format!(
+                                "generator_to_vec expects List accumulator, got {}",
+                                format_value(&other)
+                            ))
+                        }
+                    };
+                    list.push(x);
+                    Ok(Value::List(Arc::new(list)))
+                }),
+            }),
+            args: Vec::new(),
+        });
+        let z = Value::List(Arc::new(Vec::new()));
+        let with_step = self.apply(gen, step)?;
+        let result = self.apply(with_step, z)?;
+        match result {
+            Value::List(items) => Ok((*items).clone()),
+            other => Err(format!(
+                "generator_to_vec expects generator to fold to List, got {}",
+                format_value(&other)
+            )),
+        }
+    }
+
     fn apply_builtin(&mut self, builtin: BuiltinValue, arg: Value) -> R {
         let mut args = builtin.args.clone();
         args.push(arg);
@@ -319,6 +385,41 @@ impl Runtime {
         (builtin.imp.func)(args, self)
     }
 
+    fn apply_multi_clause(&mut self, clauses: Vec<Value>, arg: Value) -> R {
+        let mut results = Vec::new();
+        let mut match_failures = 0usize;
+        let mut last_error: Option<String> = None;
+        for clause in clauses {
+            match self.apply(clause.clone(), arg.clone()) {
+                Ok(value) => results.push(value),
+                Err(message) if is_match_failure_message(&message) => {
+                    match_failures += 1;
+                }
+                Err(err) => {
+                    last_error = Some(err);
+                }
+            }
+        }
+        if !results.is_empty() {
+            let mut callable = results
+                .iter()
+                .filter(|value| is_callable(value))
+                .cloned()
+                .collect::<Vec<_>>();
+            if !callable.is_empty() {
+                if callable.len() == 1 {
+                    return Ok(callable.remove(0));
+                }
+                return Ok(Value::MultiClause(callable));
+            }
+            return Ok(results.remove(0));
+        }
+        if match_failures > 0 && last_error.is_none() {
+            return Err("non-exhaustive match".to_string());
+        }
+        Err(last_error.unwrap_or_else(|| "no matching clause".to_string()))
+    }
+
     pub fn rng_next_u64(&mut self) -> u64 {
         // xorshift64*
         let mut x = self.rng_state;
@@ -328,6 +429,17 @@ impl Runtime {
         self.rng_state = x;
         x.wrapping_mul(0x2545F4914F6CDD1D)
     }
+}
+
+fn is_callable(value: &Value) -> bool {
+    matches!(
+        value,
+        Value::Closure(_) | Value::Builtin(_) | Value::MultiClause(_) | Value::Constructor { .. }
+    )
+}
+
+fn is_match_failure_message(message: &str) -> bool {
+    message == "non-exhaustive match"
 }
 
 fn seed_rng_state() -> u64 {

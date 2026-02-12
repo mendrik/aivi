@@ -329,6 +329,10 @@ fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, AiviError> {
                 )))
             }
         },
+        RustIrExpr::ConstructorValue { name, .. } => format!(
+            "ok(Value::Constructor {{ name: {:?}.to_string(), args: Vec::new() }})",
+            name
+        ),
 
         RustIrExpr::LitNumber { text, .. } => {
             if let Ok(value) = text.parse::<i64>() {
@@ -667,6 +671,9 @@ fn emit_block(
     match kind {
         RustIrBlockKind::Plain => emit_plain_block(items, indent),
         RustIrBlockKind::Effect => emit_effect_block(items, indent),
+        RustIrBlockKind::Generate | RustIrBlockKind::Resource => Err(AiviError::Codegen(
+            "generate/resource blocks are not supported by the rustc backend yet".to_string(),
+        )),
     }
 }
 
@@ -708,6 +715,13 @@ fn emit_plain_block(items: &[RustIrBlockItem], indent: usize) -> Result<String, 
                 s.push_str(&ind2);
                 s.push_str(&format!("let _ = ({} )?;\n", emit_expr(expr, indent + 1)?));
             }
+            RustIrBlockItem::Filter { .. }
+            | RustIrBlockItem::Yield { .. }
+            | RustIrBlockItem::Recurse { .. } => {
+                return Err(AiviError::Codegen(
+                    "filter/yield/recurse are not supported by the rustc backend yet".to_string(),
+                ))
+            }
         }
     }
 
@@ -738,6 +752,13 @@ fn emit_plain_block(items: &[RustIrBlockItem], indent: usize) -> Result<String, 
         RustIrBlockItem::Expr { expr } => {
             s.push_str(&ind2);
             s.push_str(&format!("({} )?\n", emit_expr(expr, indent + 1)?));
+        }
+        RustIrBlockItem::Filter { .. }
+        | RustIrBlockItem::Yield { .. }
+        | RustIrBlockItem::Recurse { .. } => {
+            return Err(AiviError::Codegen(
+                "filter/yield/recurse are not supported by the rustc backend yet".to_string(),
+            ))
         }
     }
 
@@ -790,6 +811,13 @@ fn emit_effect_block(items: &[RustIrBlockItem], indent: usize) -> Result<String,
                     s.push_str(&ind3);
                     s.push_str(&format!("let _ = run_effect(({} )?)?;\n", expr_code));
                 }
+            }
+            RustIrBlockItem::Filter { .. }
+            | RustIrBlockItem::Yield { .. }
+            | RustIrBlockItem::Recurse { .. } => {
+                return Err(AiviError::Codegen(
+                    "filter/yield/recurse are not supported by the rustc backend yet".to_string(),
+                ))
             }
         }
     }
