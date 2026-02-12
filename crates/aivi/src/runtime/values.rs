@@ -8,7 +8,6 @@ use im::{HashMap as ImHashMap, HashSet as ImHashSet, Vector as ImVector};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use regex::Regex;
-use rudo_gc::{GcMutex, Trace, Visitor};
 use rust_decimal::Decimal;
 
 use crate::hir::{HirBlockItem, HirExpr};
@@ -94,7 +93,7 @@ pub(super) struct ResourceValue {
 pub(super) struct ThunkValue {
     pub(super) expr: Arc<HirExpr>,
     pub(super) env: Env,
-    pub(super) cached: GcMutex<Option<Value>>,
+    pub(super) cached: Mutex<Option<Value>>,
     pub(super) in_progress: AtomicBool,
 }
 
@@ -213,90 +212,5 @@ impl Ord for KeyValue {
 impl PartialOrd for KeyValue {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-unsafe impl Trace for Value {
-    fn trace(&self, visitor: &mut impl Visitor) {
-        match self {
-            Value::Map(entries) => {
-                for value in entries.values() {
-                    value.trace(visitor);
-                }
-            }
-            Value::Set(_) => {}
-            Value::Queue(items) => {
-                for value in items.iter() {
-                    value.trace(visitor);
-                }
-            }
-            Value::Deque(items) => {
-                for value in items.iter() {
-                    value.trace(visitor);
-                }
-            }
-            Value::Heap(_) => {}
-            Value::List(items) => items.trace(visitor),
-            Value::Tuple(items) => items.trace(visitor),
-            Value::Record(fields) => fields.trace(visitor),
-            Value::Constructor { args, .. } => args.trace(visitor),
-            Value::Closure(closure) => closure.trace(visitor),
-            Value::Builtin(builtin) => builtin.trace(visitor),
-            Value::Effect(effect) => effect.trace(visitor),
-            Value::Resource(resource) => resource.trace(visitor),
-            Value::Thunk(thunk) => thunk.trace(visitor),
-            Value::MultiClause(clauses) => clauses.trace(visitor),
-            Value::Unit
-            | Value::Bool(_)
-            | Value::Int(_)
-            | Value::Float(_)
-            | Value::Text(_)
-            | Value::DateTime(_)
-            | Value::Bytes(_)
-            | Value::Regex(_)
-            | Value::BigInt(_)
-            | Value::Rational(_)
-            | Value::Decimal(_)
-            | Value::ChannelSend(_)
-            | Value::ChannelRecv(_)
-            | Value::FileHandle(_)
-            | Value::Listener(_)
-            | Value::Connection(_)
-            | Value::Stream(_)
-            | Value::HttpServer(_)
-            | Value::WebSocket(_) => {}
-        }
-    }
-}
-
-unsafe impl Trace for BuiltinValue {
-    fn trace(&self, visitor: &mut impl Visitor) {
-        self.args.trace(visitor);
-    }
-}
-
-unsafe impl Trace for ClosureValue {
-    fn trace(&self, visitor: &mut impl Visitor) {
-        self.env.trace(visitor);
-    }
-}
-
-unsafe impl Trace for EffectValue {
-    fn trace(&self, visitor: &mut impl Visitor) {
-        match self {
-            EffectValue::Block { env, .. } => env.trace(visitor),
-            EffectValue::Thunk { .. } => {}
-        }
-    }
-}
-
-unsafe impl Trace for ResourceValue {
-    fn trace(&self, _visitor: &mut impl Visitor) {}
-}
-
-unsafe impl Trace for ThunkValue {
-    fn trace(&self, visitor: &mut impl Visitor) {
-        self.env.trace(visitor);
-        self.cached.trace(visitor);
     }
 }

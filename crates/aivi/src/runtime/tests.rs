@@ -1,7 +1,7 @@
 use std::sync::mpsc;
+use std::sync::Mutex;
 use std::time::Duration;
 
-use rudo_gc::GcMutex;
 use uuid::Uuid;
 
 use super::values::KeyValue;
@@ -66,7 +66,7 @@ v = "user: { { name: \"A\" }.name }"
             let thunk = ThunkValue {
                 expr: Arc::new(exprs.into_iter().next().unwrap()),
                 env: globals.clone(),
-                cached: GcMutex::new(None),
+                cached: Mutex::new(None),
                 in_progress: AtomicBool::new(false),
             };
             globals.set(name, Value::Thunk(Arc::new(thunk)));
@@ -76,7 +76,7 @@ v = "user: { { name: \"A\" }.name }"
                 let thunk = ThunkValue {
                     expr: Arc::new(expr),
                     env: globals.clone(),
-                    cached: GcMutex::new(None),
+                    cached: Mutex::new(None),
                     in_progress: AtomicBool::new(false),
                 };
                 clauses.push(Value::Thunk(Arc::new(thunk)));

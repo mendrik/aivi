@@ -1,32 +1,30 @@
 use std::collections::HashMap;
-
-use rudo_gc::{Gc, GcMutex, Trace};
+use std::sync::{Arc, Mutex};
 
 use super::values::Value;
 
-#[derive(Clone, Trace)]
+#[derive(Clone)]
 pub(super) struct Env {
-    inner: Gc<EnvInner>,
+    inner: Arc<EnvInner>,
 }
 
-#[derive(Trace)]
 struct EnvInner {
     parent: Option<Env>,
-    values: GcMutex<HashMap<String, Value>>,
+    values: Mutex<HashMap<String, Value>>,
 }
 
 impl Env {
     pub(super) fn new(parent: Option<Env>) -> Self {
         Self {
-            inner: Gc::new(EnvInner {
+            inner: Arc::new(EnvInner {
                 parent,
-                values: GcMutex::new(HashMap::new()),
+                values: Mutex::new(HashMap::new()),
             }),
         }
     }
 
     pub(super) fn get(&self, name: &str) -> Option<Value> {
-        if let Some(value) = self.inner.values.lock().get(name) {
+        if let Some(value) = self.inner.values.lock().expect("env lock").get(name) {
             return Some(value.clone());
         }
         self.inner
@@ -36,7 +34,11 @@ impl Env {
     }
 
     pub(super) fn set(&self, name: String, value: Value) {
-        self.inner.values.lock().insert(name, value);
+        self.inner
+            .values
+            .lock()
+            .expect("env lock")
+            .insert(name, value);
     }
 }
 

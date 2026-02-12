@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{Datelike, NaiveDate};
 use regex::RegexBuilder;
 use url::Url;
-
-use rudo_gc::GcMutex;
 
 use crate::hir::{
     HirBlockItem, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirPathSegment, HirPattern,
@@ -105,7 +103,7 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
             let thunk = ThunkValue {
                 expr: Arc::new(exprs.into_iter().next().unwrap()),
                 env: globals.clone(),
-                cached: GcMutex::new(None),
+                cached: Mutex::new(None),
                 in_progress: AtomicBool::new(false),
             };
             globals.set(name, Value::Thunk(Arc::new(thunk)));
@@ -115,7 +113,7 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
                 let thunk = ThunkValue {
                     expr: Arc::new(expr),
                     env: globals.clone(),
-                    cached: GcMutex::new(None),
+                    cached: Mutex::new(None),
                     in_progress: AtomicBool::new(false),
                 };
                 clauses.push(Value::Thunk(Arc::new(thunk)));
@@ -215,7 +213,7 @@ impl Runtime {
     }
 
     fn eval_thunk(&mut self, thunk: Arc<ThunkValue>) -> Result<Value, RuntimeError> {
-        let cached = thunk.cached.lock();
+        let cached = thunk.cached.lock().expect("thunk cache lock");
         if let Some(value) = cached.clone() {
             return Ok(value);
         }
@@ -226,7 +224,7 @@ impl Runtime {
             ));
         }
         let value = self.eval_expr(&thunk.expr, &thunk.env)?;
-        let mut cached = thunk.cached.lock();
+        let mut cached = thunk.cached.lock().expect("thunk cache lock");
         *cached = Some(value.clone());
         thunk.in_progress.store(false, Ordering::SeqCst);
         Ok(value)
