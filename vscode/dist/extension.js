@@ -18014,30 +18014,61 @@ __export(extension_exports, {
 module.exports = __toCommonJS(extension_exports);
 var vscode = __toESM(require("vscode"));
 var fs = __toESM(require("node:fs"));
+var import_node_child_process = require("node:child_process");
 var import_node = __toESM(require_node3());
 var client;
 function activate(context) {
+  const outputChannel = vscode.window.createOutputChannel("AIVI Language Server");
   const isWindows = process.platform === "win32";
   const serverExe = isWindows ? "aivi-lsp.exe" : "aivi-lsp";
   const bundledServerPath = context.asAbsolutePath(`bin/${serverExe}`);
-  if (!isWindows && fs.existsSync(bundledServerPath)) {
+  const config = vscode.workspace.getConfiguration("aivi");
+  const configuredCommand = config.get("server.command");
+  const configuredArgs = config.get("server.args") ?? [];
+  const hasCommand = (cmd) => {
+    const res = (0, import_node_child_process.spawnSync)(cmd, ["--version"], { stdio: "ignore" });
+    return !res.error;
+  };
+  let serverCommand;
+  let serverArgs;
+  if (configuredCommand && configuredCommand.trim().length > 0) {
+    serverCommand = configuredCommand;
+    serverArgs = configuredArgs;
+  } else if (hasCommand("aivi")) {
+    serverCommand = "aivi";
+    serverArgs = ["lsp"];
+  } else {
+    serverCommand = fs.existsSync(bundledServerPath) ? bundledServerPath : "aivi-lsp";
+    serverArgs = [];
+  }
+  if (!isWindows && serverCommand === bundledServerPath && fs.existsSync(bundledServerPath)) {
     try {
       fs.chmodSync(bundledServerPath, 493);
     } catch (err) {
-      console.warn(`Failed to chmod aivi-lsp: ${String(err)}`);
+      outputChannel.appendLine(`Failed to chmod aivi-lsp: ${String(err)}`);
     }
   }
   const serverOptions = {
-    command: fs.existsSync(bundledServerPath) ? bundledServerPath : "aivi-lsp",
-    args: []
+    command: serverCommand,
+    args: serverArgs
   };
+  const fileWatchers = [
+    vscode.workspace.createFileSystemWatcher("**/*.aivi"),
+    vscode.workspace.createFileSystemWatcher("**/aivi.toml"),
+    vscode.workspace.createFileSystemWatcher("**/Cargo.toml"),
+    vscode.workspace.createFileSystemWatcher("**/specs/**/*"),
+    vscode.workspace.createFileSystemWatcher("**/.gemini/skills/**/*")
+  ];
+  for (const watcher of fileWatchers) {
+    context.subscriptions.push(watcher);
+  }
   const clientOptions = {
     documentSelector: [{ language: "aivi" }],
     synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.aivi"),
+      fileEvents: fileWatchers,
       configurationSection: "aivi"
     },
-    outputChannel: vscode.window.createOutputChannel("AIVI Language Server"),
+    outputChannel,
     middleware: {
       provideDocumentFormattingEdits: (document, options, token, next) => next(document, options, token),
       provideDocumentRangeFormattingEdits: (document, range, options, token, next) => next(document, range, options, token)
@@ -18045,6 +18076,16 @@ function activate(context) {
   };
   client = new import_node.LanguageClient("aivi", "Aivi Language Server", serverOptions, clientOptions);
   client.start();
+  context.subscriptions.push(
+    vscode.commands.registerCommand("aivi.restartServer", async () => {
+      outputChannel.appendLine("Restarting AIVI Language Server...");
+      const prev = client;
+      client = void 0;
+      await prev?.stop();
+      client = new import_node.LanguageClient("aivi", "Aivi Language Server", serverOptions, clientOptions);
+      client.start();
+    })
+  );
   context.subscriptions.push(
     new vscode.Disposable(() => {
       void client?.stop();

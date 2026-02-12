@@ -6,11 +6,15 @@ use aivi::{embedded_stdlib_modules, parse_modules};
 use tower_lsp::lsp_types::Url;
 
 use crate::backend::Backend;
-use crate::state::{DocumentState, IndexedModule};
+use crate::state::{DiskIndex, DocumentState, IndexedModule};
 
 impl Backend {
-    pub(super) fn build_workspace_index(root: &Path) -> HashMap<String, IndexedModule> {
-        let mut modules = HashMap::new();
+    pub(super) fn build_disk_index(root: &Path) -> DiskIndex {
+        let mut index = DiskIndex {
+            root: root.to_path_buf(),
+            modules_by_uri: HashMap::new(),
+            module_index: HashMap::new(),
+        };
         for path in Self::collect_aivi_paths(root) {
             let Ok(text) = fs::read_to_string(&path) else {
                 continue;
@@ -19,8 +23,11 @@ impl Backend {
             let Ok(uri) = Url::from_file_path(&path) else {
                 continue;
             };
+            let mut module_names = Vec::new();
             for module in file_modules {
-                modules
+                module_names.push(module.name.name.clone());
+                index
+                    .module_index
                     .entry(module.name.name.clone())
                     .or_insert_with(|| IndexedModule {
                         uri: uri.clone(),
@@ -28,9 +35,10 @@ impl Backend {
                         text: Some(text.clone()),
                     });
             }
+            index.modules_by_uri.insert(uri, module_names);
         }
 
-        modules
+        index
     }
 
     fn collect_aivi_paths(root: &Path) -> Vec<PathBuf> {
@@ -45,6 +53,11 @@ impl Backend {
                     | ".idea"
                     | ".junie"
                     | ".gemini"
+                    | ".pnpm-store"
+                    | ".ai"
+                    | ".aiassistant"
+                    | "specs"
+                    | "vscode"
             )
         }
 
@@ -75,35 +88,164 @@ impl Backend {
         out
     }
 
+    fn project_root_for_path(path: &Path, workspace_folders: &[PathBuf]) -> Option<PathBuf> {
+        // Prefer an AIVI project root defined by `aivi.toml` (per `specs/07_tools/04_packaging.md`).
+        for ancestor in path.ancestors() {
+            if ancestor.join("aivi.toml").is_file() {
+                return Some(ancestor.to_path_buf());
+            }
+        }
+
+        // Fall back to whichever workspace folder contains the file.
+        for folder in workspace_folders {
+            if path.starts_with(folder) {
+                return Some(folder.clone());
+            }
+        }
+
+        // Final fallback: the file's parent directory (or the path itself if it's already a dir).
+        if path.is_dir() {
+            Some(path.to_path_buf())
+        } else {
+            path.parent().map(|p| p.to_path_buf())
+        }
+    }
+
+    pub(super) async fn invalidate_disk_index_for_path(&self, path: &Path) {
+        let workspace_folders = {
+            let state = self.state.lock().await;
+            state.workspace_folders.clone()
+        };
+        let Some(root) = Self::project_root_for_path(path, &workspace_folders) else {
+            return;
+        };
+        let mut state = self.state.lock().await;
+        state.disk_indexes.remove(&root);
+    }
+
+    pub(super) async fn refresh_disk_index_file(&self, path: &Path) {
+        let workspace_folders = {
+            let state = self.state.lock().await;
+            state.workspace_folders.clone()
+        };
+        let Some(root) = Self::project_root_for_path(path, &workspace_folders) else {
+            return;
+        };
+
+        let Ok(uri) = Url::from_file_path(path) else {
+            return;
+        };
+
+        let Ok(text) = fs::read_to_string(path) else {
+            // If the file can't be read (deleted, permissions), just invalidate and rebuild later.
+            self.invalidate_disk_index_for_path(path).await;
+            return;
+        };
+        let (file_modules, _) = parse_modules(path, &text);
+
+        let mut state = self.state.lock().await;
+        let Some(index) = state.disk_indexes.get_mut(&root) else {
+            // We'll rebuild lazily on demand.
+            return;
+        };
+
+        if let Some(existing) = index.modules_by_uri.remove(&uri) {
+            for module_name in existing {
+                // Only remove if it belonged to this file; duplicates from other files should stay.
+                if let Some(existing_module) = index.module_index.get(&module_name) {
+                    if existing_module.uri == uri {
+                        index.module_index.remove(&module_name);
+                    }
+                }
+            }
+        }
+
+        let mut module_names = Vec::new();
+        for module in file_modules {
+            let module_name = module.name.name.clone();
+            module_names.push(module_name.clone());
+
+            match index.module_index.get(&module_name) {
+                Some(existing_module) if existing_module.uri != uri => {
+                    // Duplicate module name from another file; keep first-seen mapping.
+                    continue;
+                }
+                _ => {
+                    index.module_index.insert(
+                        module_name,
+                        IndexedModule {
+                            uri: uri.clone(),
+                            module,
+                            text: Some(text.clone()),
+                        },
+                    );
+                }
+            }
+        }
+        index.modules_by_uri.insert(uri, module_names);
+    }
+
+    pub(super) async fn remove_from_disk_index(&self, uri: &Url) {
+        let path = PathBuf::from(Self::path_from_uri(uri));
+        let workspace_folders = {
+            let state = self.state.lock().await;
+            state.workspace_folders.clone()
+        };
+        let Some(root) = Self::project_root_for_path(&path, &workspace_folders) else {
+            return;
+        };
+
+        let mut state = self.state.lock().await;
+        let Some(index) = state.disk_indexes.get_mut(&root) else {
+            return;
+        };
+
+        if let Some(existing) = index.modules_by_uri.remove(uri) {
+            for module_name in existing {
+                if let Some(existing_module) = index.module_index.get(&module_name) {
+                    if existing_module.uri == *uri {
+                        index.module_index.remove(&module_name);
+                    }
+                }
+            }
+        }
+    }
+
     pub(super) async fn workspace_modules_for(&self, uri: &Url) -> HashMap<String, IndexedModule> {
-        let (workspace_root, open_modules, disk_modules, disk_root) = {
+        let (workspace_folders, open_modules) = {
             let state = self.state.lock().await;
             (
-                state.workspace_root.clone(),
+                state.workspace_folders.clone(),
                 state.open_module_index.clone(),
-                state.disk_module_index.clone(),
-                state.disk_index_root.clone(),
             )
         };
 
-        let fallback_root = PathBuf::from(Self::path_from_uri(uri))
-            .parent()
-            .map(|p| p.to_path_buf());
-        let root = workspace_root.or(fallback_root);
+        let file_path = PathBuf::from(Self::path_from_uri(uri));
+        let root = Self::project_root_for_path(&file_path, &workspace_folders);
 
         let disk_modules = if let Some(root) = root {
-            let needs_rebuild = disk_root.as_ref() != Some(&root) || disk_modules.is_empty();
-            if needs_rebuild {
-                let indexed = Self::build_workspace_index(&root);
-                let mut state = self.state.lock().await;
-                state.disk_index_root = Some(root.clone());
-                state.disk_module_index = indexed.clone();
-                indexed
+            let existing = {
+                let state = self.state.lock().await;
+                state.disk_indexes.get(&root).cloned()
+            };
+            let index = if let Some(existing) = existing {
+                existing
             } else {
-                disk_modules
-            }
+                let root_clone = root.clone();
+                let built = tokio::task::spawn_blocking(move || Self::build_disk_index(&root_clone))
+                    .await
+                    .ok();
+                if let Some(built) = built {
+                    let mut state = self.state.lock().await;
+                    state.disk_indexes.insert(root.clone(), built.clone());
+                    built
+                } else {
+                    DiskIndex::default()
+                }
+            };
+            index.module_index
         } else {
-            disk_modules
+            HashMap::new()
         };
 
         let mut merged = disk_modules;

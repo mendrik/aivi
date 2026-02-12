@@ -11,13 +11,15 @@ use tower_lsp::lsp_types::{
     CodeActionOrCommand, CodeActionParams, CompletionParams, CompletionResponse,
     DeclarationCapability, DidChangeConfigurationParams, DocumentFormattingParams,
     DocumentRangeFormattingParams, DocumentSymbolParams, DocumentSymbolResponse,
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability,
-    ImplementationProviderCapability, InitializeParams, InitializeResult, InitializedParams,
-    Location, OneOf, ReferenceParams, RenameParams, SemanticTokensFullOptions,
+    DidChangeWatchedFilesParams, FileChangeType, GotoDefinitionParams, GotoDefinitionResponse,
+    Hover, HoverParams, HoverProviderCapability, ImplementationProviderCapability,
+    InitializeParams, InitializeResult, InitializedParams, Location, OneOf, ReferenceParams,
+    RenameParams, SemanticTokensFullOptions,
     SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
     SemanticTokensServerCapabilities, ServerCapabilities, SignatureHelp, SignatureHelpOptions,
     SignatureHelpParams, TextDocumentPositionParams, TextDocumentSyncCapability,
     TextDocumentSyncKind, TextEdit, WorkspaceEdit,
+    Url,
 };
 use tower_lsp::{LanguageServer, LspService, Server};
 
@@ -39,22 +41,39 @@ struct AiviConfig {
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
-        let root = params
-            .root_uri
-            .and_then(|uri| uri.to_file_path().ok())
-            .or_else(|| {
-                params
-                    .workspace_folders
-                    .as_ref()
-                    .and_then(|folders| folders.first())
-                    .and_then(|folder| folder.uri.to_file_path().ok())
-            });
-        if let Some(root) = root.clone() {
-            let indexed = Self::build_workspace_index(&root);
+        let mut workspace_folders: Vec<std::path::PathBuf> = Vec::new();
+        if let Some(folders) = params.workspace_folders.as_ref() {
+            for folder in folders {
+                if let Ok(path) = folder.uri.to_file_path() {
+                    workspace_folders.push(path);
+                }
+            }
+        }
+        if workspace_folders.is_empty() {
+            if let Some(root) = params.root_uri.and_then(|uri| uri.to_file_path().ok()) {
+                workspace_folders.push(root);
+            }
+        }
+
+        {
             let mut state = self.state.lock().await;
-            state.workspace_root = Some(root.clone());
-            state.disk_index_root = Some(root);
-            state.disk_module_index = indexed;
+            state.workspace_root = workspace_folders.first().cloned();
+            state.workspace_folders = workspace_folders.clone();
+        }
+
+        // Indexing can be expensive; build caches in the background.
+        for root in workspace_folders {
+            let state = Arc::clone(&self.state);
+            tokio::spawn(async move {
+                let root_clone = root.clone();
+                let built =
+                    tokio::task::spawn_blocking(move || Backend::build_disk_index(&root_clone))
+                        .await
+                        .ok();
+                let Some(built) = built else { return };
+                let mut locked = state.lock().await;
+                locked.disk_indexes.insert(root, built);
+            });
         }
 
         Ok(InitializeResult {
@@ -156,8 +175,11 @@ impl LanguageServer for Backend {
         let text = params.text_document.text;
         let version = params.text_document.version;
         self.update_document(uri.clone(), text).await;
+        let workspace = self.workspace_modules_for(&uri).await;
         if let Some(diagnostics) = self
-            .with_document_text(&uri, |content| Self::build_diagnostics(content, &uri))
+            .with_document_text(&uri, |content| {
+                Self::build_diagnostics_with_workspace(content, &uri, &workspace)
+            })
             .await
         {
             self.client
@@ -171,8 +193,11 @@ impl LanguageServer for Backend {
         let version = params.text_document.version;
         if let Some(change) = params.content_changes.into_iter().next() {
             self.update_document(uri.clone(), change.text).await;
+            let workspace = self.workspace_modules_for(&uri).await;
             if let Some(diagnostics) = self
-                .with_document_text(&uri, |content| Self::build_diagnostics(content, &uri))
+                .with_document_text(&uri, |content| {
+                    Self::build_diagnostics_with_workspace(content, &uri, &workspace)
+                })
                 .await
             {
                 self.client
@@ -186,6 +211,38 @@ impl LanguageServer for Backend {
         let uri = params.text_document.uri;
         self.remove_document(&uri).await;
         self.client.publish_diagnostics(uri, Vec::new(), None).await;
+    }
+
+    async fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams) {
+        // Prefer client-side watchers (VS Code `FileSystemWatcher`) for reliability across OSes.
+        // Keep the on-disk module index in sync so cross-file navigation stays fresh.
+        for change in params.changes {
+            let Ok(path) = change.uri.to_file_path() else {
+                continue;
+            };
+            match change.typ {
+                FileChangeType::CREATED | FileChangeType::CHANGED => {
+                    if path.extension().and_then(|e| e.to_str()) == Some("aivi") {
+                        self.refresh_disk_index_file(&path).await;
+                    } else if path.file_name().and_then(|n| n.to_str()) == Some("aivi.toml") {
+                        // Project boundary changed; lazily rebuild on demand.
+                        self.invalidate_disk_index_for_path(&path).await;
+                    }
+                }
+                FileChangeType::DELETED => {
+                    if path.extension().and_then(|e| e.to_str()) == Some("aivi") {
+                        // Remove file modules from any existing disk index.
+                        let Ok(uri) = Url::from_file_path(&path) else {
+                            continue;
+                        };
+                        self.remove_from_disk_index(&uri).await;
+                    } else {
+                        self.invalidate_disk_index_for_path(&path).await;
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     async fn document_symbol(

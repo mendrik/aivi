@@ -1,32 +1,91 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use aivi::parse_modules;
+use aivi::{check_modules, check_types, parse_modules};
 use tower_lsp::lsp_types::{
     CodeAction, CodeActionKind, CodeActionOrCommand, Diagnostic, DiagnosticSeverity,
-    NumberOrString, Position, Range, TextEdit, Url, WorkspaceEdit,
+    DiagnosticRelatedInformation, Location, NumberOrString, Position, Range, TextEdit, Url,
+    WorkspaceEdit,
 };
 
 use crate::backend::Backend;
+use crate::state::IndexedModule;
 
 impl Backend {
     pub(super) fn build_diagnostics(text: &str, uri: &Url) -> Vec<Diagnostic> {
+        Self::build_diagnostics_with_workspace(text, uri, &HashMap::new())
+    }
+
+    pub(super) fn build_diagnostics_with_workspace(
+        text: &str,
+        uri: &Url,
+        workspace_modules: &HashMap<String, IndexedModule>,
+    ) -> Vec<Diagnostic> {
         let path = PathBuf::from(Self::path_from_uri(uri));
-        let (_, diagnostics) = parse_modules(&path, text);
-        diagnostics
+        let (file_modules, parse_diags) = parse_modules(&path, text);
+
+        // Always surface lex/parse diagnostics first; semantic checking on malformed syntax is
+        // best-effort and must never crash the server.
+        let mut out: Vec<Diagnostic> = parse_diags
             .into_iter()
-            .map(|file_diag| Diagnostic {
-                range: Self::span_to_range(file_diag.diagnostic.span),
-                severity: Some(DiagnosticSeverity::ERROR),
-                code: Some(NumberOrString::String(file_diag.diagnostic.code)),
-                code_description: None,
-                source: Some("aivi".to_string()),
-                message: file_diag.diagnostic.message,
-                related_information: None,
-                tags: None,
-                data: None,
-            })
-            .collect()
+            .map(|file_diag| Self::file_diag_to_lsp(uri, file_diag))
+            .collect();
+
+        // Build a module set for resolver + typechecker: workspace modules + this file's modules.
+        let mut module_map = HashMap::new();
+        for indexed in workspace_modules.values() {
+            module_map.insert(indexed.module.name.name.clone(), indexed.module.clone());
+        }
+        for module in file_modules {
+            module_map.insert(module.name.name.clone(), module);
+        }
+        let modules: Vec<aivi::Module> = module_map.into_values().collect();
+
+        let semantic_diags = std::panic::catch_unwind(|| {
+            let mut diags = check_modules(&modules);
+            diags.extend(check_types(&modules));
+            diags
+        })
+        .unwrap_or_default();
+
+        for file_diag in semantic_diags {
+            // LSP publishes per-document diagnostics; keep only the ones for this file.
+            if PathBuf::from(&file_diag.path) != path {
+                continue;
+            }
+            out.push(Self::file_diag_to_lsp(uri, file_diag));
+        }
+
+        out
+    }
+
+    fn file_diag_to_lsp(uri: &Url, file_diag: aivi::FileDiagnostic) -> Diagnostic {
+        let related_information = (!file_diag.diagnostic.labels.is_empty()).then(|| {
+            file_diag
+                .diagnostic
+                .labels
+                .into_iter()
+                .map(|label| DiagnosticRelatedInformation {
+                    location: Location {
+                        uri: uri.clone(),
+                        range: Self::span_to_range(label.span),
+                    },
+                    message: label.message,
+                })
+                .collect()
+        });
+
+        Diagnostic {
+            range: Self::span_to_range(file_diag.diagnostic.span),
+            severity: Some(DiagnosticSeverity::ERROR),
+            code: Some(NumberOrString::String(file_diag.diagnostic.code)),
+            code_description: None,
+            source: Some("aivi".to_string()),
+            message: file_diag.diagnostic.message,
+            related_information,
+            tags: None,
+            data: None,
+        }
     }
 
     pub(super) fn end_position(text: &str) -> Position {

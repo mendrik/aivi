@@ -2,7 +2,7 @@
   "name": "aivi-vscode",
   "displayName": "AIVI Language Support",
   "description": "Syntax highlighting and formatting for the AIVI language (from the AIVI specs).",
-  "version": "0.1.40",
+  "version": "0.1.41",
   "publisher": "aivi",
   "packageManager": "pnpm@9.15.4",
   "repository": {
@@ -32,9 +32,16 @@
     "README.md"
   ],
   "activationEvents": [
-    "onLanguage:aivi"
+    "onLanguage:aivi",
+    "onCommand:aivi.restartServer"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "aivi.restartServer",
+        "title": "AIVI: Restart Language Server"
+      }
+    ],
     "languages": [
       {
         "id": "aivi",
@@ -81,6 +88,19 @@
     "configuration": {
       "title": "AIVI",
       "properties": {
+        "aivi.server.command": {
+          "type": "string",
+          "default": "",
+          "description": "Override the language server command. If unset, the extension prefers `aivi lsp` and falls back to the bundled `aivi-lsp`."
+        },
+        "aivi.server.args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Extra arguments for `aivi.server.command`."
+        },
         "aivi.format.indentSize": {
           "type": "number",
           "default": 2,
