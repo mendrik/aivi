@@ -37,8 +37,10 @@ pub struct McpPolicy {
     pub allow_effectful_tools: bool,
 }
 
-fn has_decorator(decorators: &[crate::surface::SpannedName], name: &str) -> bool {
-    decorators.iter().any(|decorator| decorator.name == name)
+fn has_decorator(decorators: &[crate::surface::Decorator], name: &str) -> bool {
+    decorators
+        .iter()
+        .any(|decorator| decorator.name.name == name)
 }
 
 fn qualified_name(module: &str, binding: &str) -> String {
@@ -718,8 +720,15 @@ mod tests {
             uses: Vec::new(),
             items: vec![
                 ModuleItem::TypeSig(TypeSig {
-                    decorators: vec![crate::surface::SpannedName {
-                        name: "mcp_tool".to_string(),
+                    decorators: vec![crate::surface::Decorator {
+                        name: crate::surface::SpannedName {
+                            name: "mcp_tool".to_string(),
+                            span: Span {
+                                start: Position { line: 1, column: 1 },
+                                end: Position { line: 1, column: 1 },
+                            },
+                        },
+                        arg: None,
                         span: Span {
                             start: Position { line: 1, column: 1 },
                             end: Position { line: 1, column: 1 },
@@ -744,8 +753,15 @@ mod tests {
                     },
                 }),
                 ModuleItem::Def(Def {
-                    decorators: vec![crate::surface::SpannedName {
-                        name: "mcp_resource".to_string(),
+                    decorators: vec![crate::surface::Decorator {
+                        name: crate::surface::SpannedName {
+                            name: "mcp_resource".to_string(),
+                            span: Span {
+                                start: Position { line: 1, column: 1 },
+                                end: Position { line: 1, column: 1 },
+                            },
+                        },
+                        arg: None,
                         span: Span {
                             start: Position { line: 1, column: 1 },
                             end: Position { line: 1, column: 1 },

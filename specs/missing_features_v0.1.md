@@ -9,7 +9,7 @@ This document lists features, modules, and behaviors described in the **AIVI Lan
 | Feature | Spec Section | Implementation Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Generators** | `02_syntax/07_generators` | **Implemented** | Desugared to Church-encoded lambdas in `kernel.rs`. `generate` blocks supported. `loop`/`recurse` inside generators partial. |
-| **Decorators** | `02_syntax/14_decorators` | **Missing** | Not present in parser/cst. |
+| **Decorators** | `02_syntax/14_decorators` | **Implemented (Syntax)** | Parsed and validated; only standard decorators allowed. |
 | **User-defined Domains** | `02_syntax/06_domains` | **Implemented** | `DomainDecl` exists in CST/HIR. |
 | **Patching** | `02_syntax/05_patching` | **Implemented** | `Patch` alias exists; desugaring logic present. |
 
@@ -59,4 +59,3 @@ If you are using AIVI v0.1 today, you are using a **high-integrity interpreter**
     *   When you run `aivi build`, you get a Rust binary.
     *   However, inside that binary is your HIR program as JSON, and the AIVI runtime.
     *   This provides a self-contained executable but not the performance benefits of native Rust compilation *yet*.
-

@@ -455,10 +455,10 @@ impl Backend {
             }
         }
         for annotation in module.annotations.iter() {
-            if annotation.name == ident {
+            if annotation.name.name == ident {
                 locations.push(Location::new(
                     uri.clone(),
-                    Self::span_to_range(annotation.span.clone()),
+                    Self::span_to_range(annotation.name.span.clone()),
                 ));
             }
         }

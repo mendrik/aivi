@@ -7,6 +7,13 @@ pub struct SpannedName {
 }
 
 #[derive(Debug, Clone)]
+pub struct Decorator {
+    pub name: SpannedName,
+    pub arg: Option<Expr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
 pub struct UseDecl {
     pub module: SpannedName,
     pub items: Vec<SpannedName>,
@@ -16,7 +23,7 @@ pub struct UseDecl {
 
 #[derive(Debug, Clone)]
 pub struct Def {
-    pub decorators: Vec<SpannedName>,
+    pub decorators: Vec<Decorator>,
     pub name: SpannedName,
     pub params: Vec<Pattern>,
     pub expr: Expr,
@@ -25,7 +32,7 @@ pub struct Def {
 
 #[derive(Debug, Clone)]
 pub struct TypeSig {
-    pub decorators: Vec<SpannedName>,
+    pub decorators: Vec<Decorator>,
     pub name: SpannedName,
     pub ty: TypeExpr,
     pub span: Span,
@@ -111,7 +118,7 @@ pub struct Module {
     pub exports: Vec<SpannedName>,
     pub uses: Vec<UseDecl>,
     pub items: Vec<ModuleItem>,
-    pub annotations: Vec<SpannedName>,
+    pub annotations: Vec<Decorator>,
     pub span: Span,
     pub path: String,
 }

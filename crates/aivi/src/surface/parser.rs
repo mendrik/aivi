@@ -44,7 +44,7 @@ fn inject_prelude_imports(modules: &mut [Module]) {
         if module
             .annotations
             .iter()
-            .any(|annotation| annotation.name == "no_prelude")
+            .any(|decorator| decorator.name.name == "no_prelude")
         {
             continue;
         }
@@ -123,7 +123,7 @@ impl Parser {
     fn parse_modules(&mut self) -> Vec<Module> {
         let mut modules = Vec::new();
         while self.pos < self.tokens.len() {
-            let annotations = self.consume_annotations();
+            let annotations = self.consume_decorators();
             if self.peek_keyword("module") {
                 self.pos += 1;
                 if let Some(module) = self.parse_module(annotations) {
@@ -147,36 +147,60 @@ impl Parser {
         modules
     }
 
-    fn consume_annotations(&mut self) -> Vec<SpannedName> {
-        let mut annotations = Vec::new();
+    fn consume_decorators(&mut self) -> Vec<Decorator> {
+        let mut decorators = Vec::new();
         loop {
             self.consume_newlines();
             if !self.consume_symbol("@") {
                 break;
             }
+            let at_span = self.previous_span();
             let Some(name) = self.consume_ident() else {
                 self.emit_diag(
                     "E1503",
                     "expected decorator name after `@`",
-                    self.previous_span(),
+                    at_span.clone(),
                 );
                 break;
             };
+            let arg_starts_same_line = self
+                .tokens
+                .get(self.pos)
+                .is_some_and(|next| next.span.start.line == name.span.end.line);
+            let arg = if arg_starts_same_line && self.is_expr_start() {
+                let checkpoint = self.pos;
+                let arg = self.parse_expr();
+                if arg.is_none() {
+                    self.pos = checkpoint;
+                    self.emit_diag(
+                        "E1510",
+                        "expected decorator argument expression",
+                        merge_span(at_span.clone(), name.span.clone()),
+                    );
+                }
+                arg
+            } else {
+                None
+            };
+            let span = match &arg {
+                Some(arg) => merge_span(at_span.clone(), expr_span(arg)),
+                None => merge_span(at_span.clone(), name.span.clone()),
+            };
             if let Some(next) = self.tokens.get(self.pos) {
-                if next.span.start.line == name.span.end.line {
+                if next.span.start.line == span.end.line {
                     self.emit_diag(
                         "E1504",
-                        "decorators must be written on their own line (decorator arguments are not supported here)",
-                        merge_span(name.span.clone(), next.span.clone()),
+                        "decorators must be written on their own line",
+                        merge_span(span.clone(), next.span.clone()),
                     );
                 }
             }
-            annotations.push(name);
+            decorators.push(Decorator { name, arg, span });
         }
-        annotations
+        decorators
     }
 
-    fn parse_module(&mut self, annotations: Vec<SpannedName>) -> Option<Module> {
+    fn parse_module(&mut self, annotations: Vec<Decorator>) -> Option<Module> {
         let module_kw = self.previous_span();
         let name = self.parse_dotted_name()?;
         self.consume_newlines();
@@ -217,7 +241,7 @@ impl Parser {
                 self.pos += 1;
                 continue;
             }
-            let decorators = self.consume_annotations();
+            let decorators = self.consume_decorators();
             self.validate_item_decorators(&decorators);
             if !explicit_body && self.peek_keyword("module") {
                 let span = self.peek_span().unwrap_or_else(|| self.previous_span());
@@ -327,15 +351,7 @@ impl Parser {
             self.previous_span()
         };
         let span = merge_span(module_kw.clone(), end_span);
-        for annotation in &annotations {
-            if annotation.name != "no_prelude" {
-                self.emit_diag(
-                    "E1506",
-                    &format!("unknown module decorator `@{}`", annotation.name),
-                    annotation.span.clone(),
-                );
-            }
-        }
+        self.validate_module_decorators(&annotations);
         Some(Module {
             name,
             exports,
@@ -404,22 +420,64 @@ impl Parser {
         })
     }
 
-    fn validate_item_decorators(&mut self, decorators: &[SpannedName]) {
+    fn validate_module_decorators(&mut self, decorators: &[Decorator]) {
         for decorator in decorators {
-            if !matches!(
-                decorator.name.as_str(),
-                "static" | "inline" | "deprecated" | "mcp_tool" | "mcp_resource" | "test"
-            ) {
+            if decorator.name.name != "no_prelude" {
                 self.emit_diag(
                     "E1506",
-                    &format!("unknown decorator `@{}`", decorator.name),
+                    &format!("unknown module decorator `@{}`", decorator.name.name),
+                    decorator.span.clone(),
+                );
+                continue;
+            }
+            if decorator.arg.is_some() {
+                self.emit_diag(
+                    "E1512",
+                    "`@no_prelude` does not take an argument",
                     decorator.span.clone(),
                 );
             }
         }
     }
 
-    fn parse_type_or_def(&mut self, decorators: Vec<SpannedName>) -> Option<ModuleItem> {
+    fn validate_item_decorators(&mut self, decorators: &[Decorator]) {
+        for decorator in decorators {
+            let name = decorator.name.name.as_str();
+            if !matches!(
+                name,
+                "static" | "inline" | "deprecated" | "mcp_tool" | "mcp_resource" | "test"
+            ) {
+                self.emit_diag(
+                    "E1506",
+                    &format!("unknown decorator `@{}`", decorator.name.name),
+                    decorator.span.clone(),
+                );
+                continue;
+            }
+            match name {
+                "deprecated" => {
+                    if decorator.arg.is_none() {
+                        self.emit_diag(
+                            "E1511",
+                            "`@deprecated` expects an argument (e.g. `@deprecated \"message\"`)",
+                            decorator.span.clone(),
+                        );
+                    }
+                }
+                _ => {
+                    if decorator.arg.is_some() {
+                        self.emit_diag(
+                            "E1513",
+                            &format!("`@{name}` does not take an argument"),
+                            decorator.span.clone(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    fn parse_type_or_def(&mut self, decorators: Vec<Decorator>) -> Option<ModuleItem> {
         let checkpoint = self.pos;
         if self.consume_name().is_some() {
             if self.check_symbol(":") {
@@ -435,7 +493,7 @@ impl Parser {
         None
     }
 
-    fn parse_type_sig(&mut self, decorators: Vec<SpannedName>) -> Option<TypeSig> {
+    fn parse_type_sig(&mut self, decorators: Vec<Decorator>) -> Option<TypeSig> {
         let name = self.consume_name()?;
         let start = name.span.clone();
         self.expect_symbol(":", "expected ':' for type signature");
@@ -451,7 +509,7 @@ impl Parser {
         })
     }
 
-    fn parse_def_or_type(&mut self, decorators: Vec<SpannedName>) -> Option<ModuleItem> {
+    fn parse_def_or_type(&mut self, decorators: Vec<Decorator>) -> Option<ModuleItem> {
         let checkpoint = self.pos;
         let name = self.consume_name()?;
         if name
@@ -746,7 +804,7 @@ impl Parser {
             if self.check_symbol("}") {
                 break;
             }
-            let decorators = self.consume_annotations();
+            let decorators = self.consume_decorators();
             self.validate_item_decorators(&decorators);
             if self.match_keyword("type") {
                 for decorator in &decorators {
@@ -792,7 +850,7 @@ impl Parser {
         })
     }
 
-    fn parse_literal_def(&mut self, decorators: Vec<SpannedName>) -> Option<Def> {
+    fn parse_literal_def(&mut self, decorators: Vec<Decorator>) -> Option<Def> {
         let start = self.pos;
         let number = self.consume_number()?;
         let suffix = self.consume_ident();
@@ -982,7 +1040,7 @@ impl Parser {
         })
     }
 
-    fn parse_def(&mut self, decorators: Vec<SpannedName>) -> Option<Def> {
+    fn parse_def(&mut self, decorators: Vec<Decorator>) -> Option<Def> {
         self.consume_newlines();
         let name = self.consume_name()?;
         let mut params = Vec::new();
