@@ -18,6 +18,20 @@ Compiler checks:
 
 ## 8.2 Multi-clause functions
 
+This is **not** a pipeline (`|>`). A leading `|` introduces an arm of a **unary** function that pattern-matches on its single (implicit) argument.
+
+```aivi
+// Multi-clause unary function (matches on the implicit argument)
+greet =
+  | None => "hi"
+  | Some name => "hi {name}"
+
+// Equivalent explicit form
+greet2 = u => u ?
+  | None => "hi"
+  | Some name => "hi {name}"
+```
+
 ```aivi
 sum =
   | []        => 0
