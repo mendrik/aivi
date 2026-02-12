@@ -132,3 +132,4 @@ Prioritize quick fixes for:
 
 ## Reference
 - `references/specs/**` is the baseline. :contentReference[oaicite:16]{index=16}
+- `references/lessons-from-ts.md` is a good source of inspiration.

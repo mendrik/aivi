@@ -1,75 +1,58 @@
-module examples.logic.fantasyland
-export Option, isNone, main
+module examples.fantasy_land
+export Option, isNone
 
-// Option type definition (ADT)
+class Setoid A = {
+  equals: A -> A -> Bool
+}
 
-Option A =
-  | None
+class Functor (F *) = {
+  map: (A -> B) -> F A -> F B
+}
+
+class Apply (F *) = {
+  ap: F (A -> B) -> F A -> F B
+}
+
+class Applicative (F *) = {
+  of: A -> F A
+}
+
+class Chain (F *) = {
+  chain: (A -> F B) -> F A -> F B
+}
+
+Option A = None
   | Some A
 
-// Equality for Option
-
-instance Eq A: Setoid (Option A) = {
-  equals: a b =>
-    (a, b) ?
-      | (None, None)     => True
-      | (Some x, Some y) => equals x y
-      | _                => False
+instance Setoid (Option A) = {
+  equals: a b => (a, b) ?
+    | (None, None)     => True
+    | (Some x, Some y) => equals x y
+    | _                => False
 }
-
-// Functor for Option
 
 instance Functor (Option *) = {
-  map: f opt =>
-    opt ?
-      | None   => None
-      | Some x => Some (f x)
+  map: f opt => opt ?
+    | None   => None
+    | Some x => Some (f x)
 }
-
-// Apply for Option
 
 instance Apply (Option *) = {
-  ap: fOpt opt =>
-    (fOpt, opt) ?
-      | (Some f, Some x) => Some (f x)
-      | _                => None
+  ap: f_opt opt => (f_opt, opt) ?
+    | (Some f, Some x) => Some (f x)
+    | _                 => None
 }
-
-// Applicative for Option
 
 instance Applicative (Option *) = {
-  of: Some
+  of: x => Some x
 }
-
-// Chain for Option
 
 instance Chain (Option *) = {
-  chain: f opt =>
-    opt ?
-      | None   => None
-      | Some x => f x
+  chain: f opt => opt ?
+    | None   => None
+    | Some x => f x
 }
 
-// Monad for Option
-
-instance Monad (Option *) = {
-  __monad: Unit
-}
-
-// Usage example
-
-main = effect {
-  // Functor map
-  five = Some 4 |> map (_ + 1)
-
-  // Chain (flatMap)
-  total = five |> chain (x => Some (x * 2))
-
-  _ <- print total
-  pure Unit
-}
-
-isNone = opt =>
-  opt ?
-    | None   => True
-    | Some _ => False
+isNone = opt => opt ?
+  | None   => True
+  | Some _ => False

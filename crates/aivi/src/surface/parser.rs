@@ -558,6 +558,7 @@ impl Parser {
                 break;
             }
         }
+        self.consume_newlines();
         self.expect_symbol("=", "expected '=' in class declaration");
         self.expect_symbol("{", "expected '{' to start class body");
         let mut members = Vec::new();
@@ -569,7 +570,9 @@ impl Parser {
                     continue;
                 }
             };
+            self.consume_newlines();
             self.expect_symbol(":", "expected ':' in class member");
+            self.consume_newlines();
             let ty = self.parse_type_expr().unwrap_or(TypeExpr::Unknown {
                 span: member_name.span.clone(),
             });
@@ -601,6 +604,7 @@ impl Parser {
                 break;
             }
         }
+        self.consume_newlines();
         self.expect_symbol("=", "expected '=' in instance declaration");
         self.expect_symbol("{", "expected '{' to start instance body");
         let mut defs = Vec::new();
@@ -653,6 +657,7 @@ impl Parser {
         let over = self.parse_type_expr().unwrap_or(TypeExpr::Unknown {
             span: name.span.clone(),
         });
+        self.consume_newlines();
         self.expect_symbol("=", "expected '=' in domain declaration");
         self.expect_symbol("{", "expected '{' to start domain body");
         let mut items = Vec::new();
@@ -896,15 +901,20 @@ impl Parser {
     }
 
     fn parse_def(&mut self, decorators: Vec<SpannedName>) -> Option<Def> {
+        self.consume_newlines();
         let name = self.consume_name()?;
         let mut params = Vec::new();
-        while !self.check_symbol("=") && self.pos < self.tokens.len() {
+        while {
+            self.consume_newlines();
+            !self.check_symbol("=") && self.pos < self.tokens.len()
+        } {
             if let Some(pattern) = self.parse_pattern() {
                 params.push(pattern);
                 continue;
             }
             break;
         }
+        self.consume_newlines();
         self.expect_symbol("=", "expected '=' in definition");
         self.consume_newlines();
         let expr = self.parse_expr().unwrap_or(Expr::Raw {
@@ -1493,7 +1503,8 @@ impl Parser {
                 if let Some(expr) = self.parse_expr() {
                     entries.push((true, expr, None));
                 }
-            } else if let Some(key) = self.parse_expr() {
+            } else if let Some(key) = self.parse_primary() {
+                self.consume_newlines();
                 self.expect_symbol("=>", "expected '=>' in map literal");
                 let value = self.parse_expr().unwrap_or(Expr::Raw {
                     text: String::new(),
@@ -2172,6 +2183,7 @@ impl Parser {
     }
 
     fn consume_name(&mut self) -> Option<SpannedName> {
+        self.consume_newlines();
         if let Some(name) = self.consume_ident() {
             return Some(name);
         }

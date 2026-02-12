@@ -20,6 +20,9 @@ fn examples_parse_without_diagnostics() {
         if path.extension().and_then(|ext| ext.to_str()) != Some("aivi") {
             continue;
         }
+        println!("DEBUG: testing file: {}", path.display());
+        let content = fs::read_to_string(&path).expect("read content");
+        println!("DEBUG: content snippet: {:?}", &content[0..50.min(content.len())]);
         let file = parse_file(&path).expect("parse example");
         if file.diagnostics.is_empty() {
             continue;

@@ -3,7 +3,7 @@ mod diagnostics;
 mod formatter;
 mod hir;
 mod kernel;
-mod lexer;
+pub mod lexer;
 mod mcp;
 mod pm;
 mod resolver;

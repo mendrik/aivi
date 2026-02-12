@@ -1,19 +1,23 @@
 module examples.net_sockets_streams
-export main, echoStream, sendAll
+export main, echoServer
 
-use aivi.console (print)
-use aivi.net.sockets (Connection)
-use aivi.net.streams (Stream, StreamError)
-use aivi.net.sockets as sockets
-use aivi.net.streams as streams
-
-echoStream : Connection -> Stream (List Int)
-echoStream conn = streams.chunks 1024 (streams.fromSocket conn)
-
-sendAll : Connection -> Stream (List Int) -> Effect StreamError Unit
-sendAll conn stream = streams.toSocket conn stream
+use aivi.net (listen, accept, read, write)
 
 main : Effect Text Unit
 main = effect {
-  _ <- print "sockets/streams helpers ready; wire them to a live Connection."
+  _ <- echoServer 8080
+}
+
+echoServer : Int -> Effect Text Unit
+echoServer port = effect {
+  server <- listen port
+  socket <- accept server
+  handle socket
+}
+
+handle : Socket -> Effect Text Unit
+handle socket = effect {
+  msg <- read socket
+  _ <- write socket msg
+  handle socket
 }

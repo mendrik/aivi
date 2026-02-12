@@ -7,21 +7,18 @@ domain Calendar over Date = {
   type Delta = Day Int
     | Week Int
 
-  (+) : Date -> Delta -> Date
-  (+) d (Day n) = addDays d n
-  (+) d (Week n) = addDays d (n * 7)
+  plus = d => delta => delta ?
+    | Day n  => addDays d n
+    | Week n => addDays d (n * 7)
 
-  1d = Day 1
-  1w = Week 1
+  d1 = Day 1
+  w1 = Week 1
 
-  addDays : Date -> Int -> Date
-  addDays d n = d <| { day: _ + n }
+  addDays = d => n => d <| { day: (_ + n) }
 
-  addWeek : Date -> Date
-  addWeek d = d + 1w
+  addWeek = d => plus d w1
 
-  addTwoWeeks : Date -> Date
-  addTwoWeeks d = d + 1w + 1w
+  addTwoWeeks = d => plus (plus d w1) w1
 
-  shiftBy : Date -> Delta -> Date
-  shiftBy d delta = d + delta
+  shiftBy = d => delta => plus d delta
+}
