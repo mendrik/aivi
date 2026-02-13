@@ -10,14 +10,58 @@ Kernel effect primitives:
 
 `effect` is the same pattern but over `Effect` with `bind/pure`:
 
-| Surface | Desugaring |
-| :--- | :--- |
-| `effect { x <- e; body }` | `bind ⟦e⟧ (λx. ⟦effect { body }⟧)` |
-| `effect { x = e; body }` | `let x = ⟦e⟧ in ⟦effect { body }⟧` |
-| `effect { e; body }` | `bind ⟦e⟧ (λ_. ⟦effect { body }⟧)` (if `e : Effect E Unit`) |
-| `effect { e }` | `⟦e⟧` (the final expression must already be an `Effect`) |
-| `effect { }` | `pure Unit` |
-| `effect { s1; ...; sn }` (no final expression) | `⟦effect { s1; ...; sn; pure Unit }⟧` |
+- Bind:
+
+  ```aivi
+  effect {
+    x <- e
+    body
+  }
+  ```
+
+  desugars to `bind ⟦e⟧ (λx. ⟦effect { body }⟧)`.
+
+- Pure let-binding:
+
+  ```aivi
+  effect {
+    x = e
+    body
+  }
+  ```
+
+  desugars to `let x = ⟦e⟧ in ⟦effect { body }⟧`.
+
+- Sequencing an `Effect E Unit` expression:
+
+  ```aivi
+  effect {
+    e
+    body
+  }
+  ```
+
+  desugars to `bind ⟦e⟧ (λ_. ⟦effect { body }⟧)` (if `e : Effect E Unit`).
+
+- Final expression:
+
+  `effect { e }` desugars to `⟦e⟧` (the final expression must already be an `Effect`).
+
+- Empty block:
+
+  `effect { }` desugars to `pure Unit`.
+
+- No final expression:
+
+  ```aivi
+  effect {
+    s1
+    ...
+    sn
+  }
+  ```
+
+  desugars to `⟦effect { s1 ... sn pure Unit }⟧` (i.e. insert `pure Unit` as the final expression).
 
 If you want to return a pure value from an effect block, write `pure value` as the final expression.
 

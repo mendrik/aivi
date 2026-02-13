@@ -168,6 +168,28 @@ pub fn lex(content: &str) -> (Vec<CstToken>, Vec<Diagnostic>) {
                 continue;
             }
 
+            // Semicolons are not part of the surface syntax; keep them as recoverable tokens so
+            // the parser/LSP can continue and the formatter can drop them.
+            if ch == ';' {
+                diagnostics.push(Diagnostic {
+                    code: "E1006".to_string(),
+                    message: "semicolons are not part of AIVI syntax; use newlines".to_string(),
+                    span: span(line_no, col, 1),
+                    labels: vec![DiagnosticLabel {
+                        message: "remove this ';'".to_string(),
+                        span: span(line_no, col, 1),
+                    }],
+                });
+                tokens.push(CstToken {
+                    kind: "symbol".to_string(),
+                    text: ";".to_string(),
+                    span: span(line_no, col, 1),
+                });
+                index += 1;
+                col += 1;
+                continue;
+            }
+
             if let Some((symbol, len)) = match_symbol(&chars, index) {
                 tokens.push(CstToken {
                     kind: "symbol".to_string(),
@@ -363,6 +385,15 @@ pub fn filter_tokens(tokens: &[CstToken]) -> Vec<Token> {
                 });
             }
             last_line = token.span.start.line;
+        }
+        if token.kind == "symbol" && token.text == ";" {
+            // Treat legacy `;` as a line separator for recovery.
+            filtered.push(Token {
+                kind: TokenKind::Newline,
+                text: "\n".to_string(),
+                span: token.span.clone(),
+            });
+            continue;
         }
         let kind = match token.kind.as_str() {
             "ident" => TokenKind::Ident,

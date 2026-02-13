@@ -31,6 +31,9 @@ pub fn format_text_with_options(content: &str, options: FormatOptions) -> String
         if token.kind == "whitespace" {
             continue;
         }
+        if token.text == ";" {
+            continue;
+        }
         let line = token.span.start.line;
         if line == 0 {
             continue;
@@ -155,10 +158,10 @@ pub fn format_text_with_options(content: &str, options: FormatOptions) -> String
         if prev_text == "~" || prev_text == "@" || prev_text == "." || prev_text == "..." {
             return false;
         }
-        if curr_text == "," || curr_text == ";" || curr_text == ")" || curr_text == "]" {
+        if curr_text == "," || curr_text == ")" || curr_text == "]" {
             return false;
         }
-        if prev_text == "," || prev_text == ";" {
+        if prev_text == "," {
             return true;
         }
 

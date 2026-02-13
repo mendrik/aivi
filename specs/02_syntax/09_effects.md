@@ -236,10 +236,29 @@ Patches are pure values. Apply them where you have the record value available (o
 
 The `effect` block is the primary way to sequence impure operations. It translates directly to monadic binds.
 
-| `effect` Syntax | Explicit Monadic Syntax |
-| :--- | :--- |
-| `val = effect { x <- f; g x }` | `val = (f |> bind) (x => g x)` |
-| `effect { f; g }` | `(f |> bind) (_ => g)` |
+Example translations:
+
+```aivi
+val = effect {
+  x <- f
+  g x
+}
+```
+
+```aivi
+val = (f |> bind) (x => g x)
+```
+
+```aivi
+effect {
+  f
+  g
+}
+```
+
+```aivi
+(f |> bind) (_ => g)
+```
 
 Example translation:
 

@@ -2,11 +2,34 @@
 
 Kernel has only `case`, so even total bindings can lower via `case`. (A compiler may optimize to projections.)
 
-| Surface | Desugaring |
-| :--- | :--- |
-| `{ a: x } = e; body` | `case ⟦e⟧ of \| { a = x } -> ⟦body⟧` |
-| `[h, ...t] = e; body` | `case ⟦e⟧ of \| (h :: t) -> ⟦body⟧` |
-| `p = e; body` | `case ⟦e⟧ of \| ⟦p⟧ -> ⟦body⟧` |
+In surface syntax, these bindings appear in a `do { ... }` block:
+
+```aivi
+do {
+  { a: x } = e
+  body
+}
+```
+
+desugars to `case ⟦e⟧ of \| { a = x } -> ⟦body⟧`.
+
+```aivi
+do {
+  [h, ...t] = e
+  body
+}
+```
+
+desugars to `case ⟦e⟧ of \| (h :: t) -> ⟦body⟧`.
+
+```aivi
+do {
+  p = e
+  body
+}
+```
+
+desugars to `case ⟦e⟧ of \| ⟦p⟧ -> ⟦body⟧`.
 
 ### Deep Path Destructuring
 | Surface | Desugaring |
@@ -22,7 +45,17 @@ Pattern translation `⟦p⟧` uses the kernel pattern forms.
 | :--- | :--- |
 | `v@p` (pattern) | kernel pattern `v @ ⟦p⟧` |
 | `case e of \| v@{ name: n } -> b` | `case ⟦e⟧ of \| v @ { name = n } -> ⟦b⟧` |
-| binding: `v@p = e; body` | `case ⟦e⟧ of \| v @ ⟦p⟧ -> ⟦body⟧` |
+
+A `do { ... }` binding with `@`:
+
+```aivi
+do {
+  v@p = e
+  body
+}
+```
+
+desugars to `case ⟦e⟧ of \| v @ ⟦p⟧ -> ⟦body⟧`.
 
 
 # Pattern matching `?`

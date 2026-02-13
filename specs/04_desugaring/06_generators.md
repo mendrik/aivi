@@ -16,20 +16,59 @@ Primitive “constructors” as definable macros:
 
 ## `generate { … }`
 
-| Surface | Desugaring |
-| :--- | :--- |
-| `generate { yield e }` | `genYield ⟦e⟧` |
-| `generate { s1; s2 }` | `genAppend ⟦gen s1⟧ ⟦gen s2⟧` |
-| `generate { x <- g; body }` | `genBind ⟦g⟧ (λx. ⟦generate { body }⟧)` where `genBind g f = ΛR. λk. λz. g (λacc a. (f a) k acc) z` |
-| `generate { x -> pred; body }` | `genFilter (λx. ⟦pred⟧[_ := x]) ⟦generate { body }⟧` |
-| `generate { loop pat = init => body }` | define local `recurse` and start it: `let rec recurse pat = ⟦generate { body }⟧ in recurse ⟦init⟧` |
+- `generate { yield e }` desugars to `genYield ⟦e⟧`.
+
+- Sequencing:
+
+  ```aivi
+  generate {
+    s1
+    s2
+  }
+  ```
+
+  desugars to `genAppend ⟦gen s1⟧ ⟦gen s2⟧`.
+
+- Binding:
+
+  ```aivi
+  generate {
+    x <- g
+    body
+  }
+  ```
+
+  desugars to `genBind ⟦g⟧ (λx. ⟦generate { body }⟧)` where `genBind g f = ΛR. λk. λz. g (λacc a. (f a) k acc) z`.
+
+- Filtering:
+
+  ```aivi
+  generate {
+    x -> pred
+    body
+  }
+  ```
+
+  desugars to `genFilter (λx. ⟦pred⟧[_ := x]) ⟦generate { body }⟧`.
+
+- Loops:
+
+  `generate { loop pat = init => body }` desugars by defining local `recurse` and starting it: `let rec recurse pat = ⟦generate { body }⟧ in recurse ⟦init⟧`.
 
 ## `resource { ... }`
 
 Resources are desugared into `bracket` calls.
 
-| Surface | Desugaring |
-| :--- | :--- |
-| `resource { setup; yield r; cleanup }` | `Resource { acquire = ⟦setup; pure r⟧, release = λr. ⟦cleanup⟧ }` |
+- Resource sequencing:
+
+  ```aivi
+  resource {
+    setup
+    yield r
+    cleanup
+  }
+  ```
+
+  desugars to `Resource { acquire = ⟦setup pure r⟧, release = λr. ⟦cleanup⟧ }`.
 
 (Note: This is a simplification; the actual desugaring handles the `Resource` type wrapper).

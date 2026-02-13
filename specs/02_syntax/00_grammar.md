@@ -56,18 +56,14 @@ Inside a `TextLit`, `{` starts interpolation and `}` ends it; braces must be bal
 
 ### Separators (layout)
 
-Many constructs accept either:
-- one or more newlines, or
-- `;`
-
-as a separator. The parser should treat consecutive separators as one.
+Many constructs accept one or more newlines as a separator. The parser should treat consecutive newlines as one.
 
 In addition, many comma-delimited forms allow `,` as an alternative separator.
 
 We name these separators in the grammar:
 
 ```ebnf
-Sep        := ( Newline | ";" ) { ( Newline | ";" ) } ;
+Sep        := Newline { Newline } ;
 FieldSep   := Sep | "," ;
 ```
 
