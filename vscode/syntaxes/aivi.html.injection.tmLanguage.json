@@ -1,0 +1,32 @@
+{
+  "scopeName": "text.html.aivi.injection",
+  "injectionSelector": "L:source.aivi",
+  "patterns": [
+    {
+      "begin": "(~html~>)",
+      "end": "(<~html)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.aivi" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.aivi" }
+      },
+      "patterns": [
+        {
+          "begin": "(\\{)",
+          "end": "(\\})",
+          "beginCaptures": {
+            "1": { "name": "punctuation.section.embedded.begin.aivi" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.section.embedded.end.aivi" }
+          },
+          "patterns": [
+            { "include": "source.aivi" }
+          ]
+        },
+        { "include": "text.html.basic" }
+      ]
+    }
+  ]
+}
