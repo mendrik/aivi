@@ -12,7 +12,65 @@ mod expected_coercions_tests;
 mod types;
 
 use self::checker::TypeChecker;
-use self::types::Scheme;
+use self::types::{AliasInfo, Kind, Scheme};
+
+fn collect_global_type_info(
+    checker: &mut TypeChecker,
+    modules: &[Module],
+) -> (HashMap<String, Kind>, HashMap<String, AliasInfo>) {
+    let mut type_constructors = checker.builtin_type_constructors();
+
+    let kind_for_params = |params_len: usize| {
+        let mut kind = Kind::Star;
+        for _ in 0..params_len {
+            kind = Kind::Arrow(Box::new(Kind::Star), Box::new(kind));
+        }
+        kind
+    };
+
+    for module in modules {
+        for item in &module.items {
+            match item {
+                ModuleItem::TypeDecl(type_decl) => {
+                    type_constructors.insert(type_decl.name.name.clone(), kind_for_params(type_decl.params.len()));
+                }
+                ModuleItem::TypeAlias(alias) => {
+                    type_constructors.insert(alias.name.name.clone(), kind_for_params(alias.params.len()));
+                }
+                ModuleItem::DomainDecl(domain) => {
+                    for domain_item in &domain.items {
+                        if let DomainItem::TypeAlias(type_decl) = domain_item {
+                            type_constructors.insert(
+                                type_decl.name.name.clone(),
+                                kind_for_params(type_decl.params.len()),
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // Compute alias bodies using a context that recognizes all known type constructors, so
+    // imported type aliases don't degrade into fresh type variables.
+    let prev_constructors = checker.type_constructors.clone();
+    checker.type_constructors = type_constructors.clone();
+    let mut aliases = HashMap::new();
+    for module in modules {
+        for item in &module.items {
+            match item {
+                ModuleItem::TypeAlias(alias) => {
+                    aliases.insert(alias.name.name.clone(), checker.alias_info(alias));
+                }
+                _ => {}
+            }
+        }
+    }
+    checker.type_constructors = prev_constructors;
+
+    (type_constructors, aliases)
+}
 
 #[derive(Clone, Debug)]
 struct ClassDeclInfo {
@@ -325,6 +383,9 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
     let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
     let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
 
+    let (global_type_constructors, global_aliases) = collect_global_type_info(&mut checker, modules);
+    checker.set_global_type_info(global_type_constructors, global_aliases);
+
     for module in ordered_modules(modules) {
         checker.reset_module_context(module);
         let mut env = checker.builtins.clone();
@@ -404,6 +465,9 @@ pub fn elaborate_expected_coercions(modules: &mut [Module]) -> Vec<FileDiagnosti
     let mut module_domain_exports: HashMap<String, HashMap<String, Vec<String>>> = HashMap::new();
     let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
     let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
+
+    let (global_type_constructors, global_aliases) = collect_global_type_info(&mut checker, modules);
+    checker.set_global_type_info(global_type_constructors, global_aliases);
 
     for idx in ordered_module_indices(modules) {
         let module = &mut modules[idx];
@@ -529,6 +593,9 @@ pub fn infer_value_types(
     let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
     let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
     let mut inferred: HashMap<String, HashMap<String, String>> = HashMap::new();
+
+    let (global_type_constructors, global_aliases) = collect_global_type_info(&mut checker, modules);
+    checker.set_global_type_info(global_type_constructors, global_aliases);
 
     for module in ordered_modules(modules) {
         checker.reset_module_context(module);

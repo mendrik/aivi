@@ -20,6 +20,8 @@ pub(super) struct TypeChecker {
     aliases: HashMap<String, AliasInfo>,
     pub(super) builtin_types: HashMap<String, Kind>,
     pub(super) builtins: TypeEnv,
+    global_type_constructors: HashMap<String, Kind>,
+    global_aliases: HashMap<String, AliasInfo>,
     checked_defs: HashSet<String>,
     pub(super) classes: HashMap<String, ClassDeclInfo>,
     pub(super) instances: Vec<InstanceDeclInfo>,
@@ -39,6 +41,8 @@ impl TypeChecker {
             aliases: HashMap::new(),
             builtin_types: HashMap::new(),
             builtins: TypeEnv::default(),
+            global_type_constructors: HashMap::new(),
+            global_aliases: HashMap::new(),
             checked_defs: HashSet::new(),
             classes: HashMap::new(),
             instances: Vec::new(),
@@ -54,11 +58,23 @@ impl TypeChecker {
         checker
     }
 
+    pub(super) fn set_global_type_info(
+        &mut self,
+        type_constructors: HashMap<String, Kind>,
+        aliases: HashMap<String, AliasInfo>,
+    ) {
+        self.global_type_constructors = type_constructors;
+        self.global_aliases = aliases;
+    }
+
     pub(super) fn reset_module_context(&mut self, _module: &Module) {
         self.subst.clear();
         self.type_constructors = self.builtin_type_constructors();
         self.aliases.clear();
         self.register_builtin_aliases();
+        self.type_constructors
+            .extend(self.global_type_constructors.clone());
+        self.aliases.extend(self.global_aliases.clone());
         self.checked_defs.clear();
         self.classes.clear();
         self.instances.clear();
@@ -562,7 +578,7 @@ impl TypeChecker {
             .collect()
     }
 
-    fn alias_info(&mut self, alias: &TypeAlias) -> AliasInfo {
+    pub(super) fn alias_info(&mut self, alias: &TypeAlias) -> AliasInfo {
         let mut ctx = TypeContext::new(&self.type_constructors);
         let mut params = Vec::new();
         for param in &alias.params {
