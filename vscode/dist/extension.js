@@ -18034,11 +18034,17 @@ function activate(context) {
   if (configuredCommand && configuredCommand.trim().length > 0) {
     serverCommand = configuredCommand;
     serverArgs = configuredArgs;
+  } else if (fs.existsSync(bundledServerPath)) {
+    serverCommand = bundledServerPath;
+    serverArgs = [];
+  } else if (hasCommand("aivi-lsp")) {
+    serverCommand = "aivi-lsp";
+    serverArgs = [];
   } else if (hasCommand("aivi")) {
     serverCommand = "aivi";
     serverArgs = ["lsp"];
   } else {
-    serverCommand = fs.existsSync(bundledServerPath) ? bundledServerPath : "aivi-lsp";
+    serverCommand = "aivi-lsp";
     serverArgs = [];
   }
   if (!isWindows && serverCommand === bundledServerPath && fs.existsSync(bundledServerPath)) {

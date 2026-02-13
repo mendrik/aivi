@@ -25,17 +25,23 @@ export function activate(context: vscode.ExtensionContext) {
     return !res.error;
   };
 
-  // Preferred order: user config -> `aivi lsp` -> bundled `aivi-lsp` -> `aivi-lsp` on PATH.
+  // Preferred order: user config -> bundled `aivi-lsp` -> `aivi-lsp` on PATH -> `aivi lsp`.
   let serverCommand: string;
   let serverArgs: string[];
   if (configuredCommand && configuredCommand.trim().length > 0) {
     serverCommand = configuredCommand;
     serverArgs = configuredArgs;
+  } else if (fs.existsSync(bundledServerPath)) {
+    serverCommand = bundledServerPath;
+    serverArgs = [];
+  } else if (hasCommand("aivi-lsp")) {
+    serverCommand = "aivi-lsp";
+    serverArgs = [];
   } else if (hasCommand("aivi")) {
     serverCommand = "aivi";
     serverArgs = ["lsp"];
   } else {
-    serverCommand = fs.existsSync(bundledServerPath) ? bundledServerPath : "aivi-lsp";
+    serverCommand = "aivi-lsp";
     serverArgs = [];
   }
 

@@ -7,6 +7,7 @@ use aivi::{
 };
 use sha2::{Digest, Sha256};
 use std::env;
+use std::io;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -148,7 +149,7 @@ fn run() -> Result<(), AiviError> {
         }
         "lsp" | "build" | "run" => match command.as_str() {
             "lsp" => {
-                let status = Command::new("aivi-lsp").args(&rest).status()?;
+                let status = spawn_aivi_lsp(&rest)?;
                 if !status.success() {
                     return Err(AiviError::Io(std::io::Error::other(
                         "aivi-lsp exited with an error",
@@ -222,6 +223,57 @@ fn run() -> Result<(), AiviError> {
             print_help();
             Err(AiviError::InvalidCommand(command))
         }
+    }
+}
+
+fn spawn_aivi_lsp(args: &[String]) -> Result<std::process::ExitStatus, AiviError> {
+    let mut tried = Vec::<String>::new();
+    let mut candidates = Vec::<PathBuf>::new();
+
+    // First try a sibling binary next to the current `aivi` executable (works for
+    // workspace builds and `cargo install` when both binaries are installed).
+    if let Ok(exe) = env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let name = if cfg!(windows) { "aivi-lsp.exe" } else { "aivi-lsp" };
+            candidates.push(dir.join(name));
+        }
+    }
+
+    // Convenience for working in a repo with a globally-installed `aivi`.
+    if let Ok(cwd) = env::current_dir() {
+        let name = if cfg!(windows) { "aivi-lsp.exe" } else { "aivi-lsp" };
+        candidates.push(cwd.join("target").join("debug").join(name));
+        candidates.push(cwd.join("target").join("release").join(name));
+    }
+
+    for candidate in candidates {
+        if !candidate.is_file() {
+            continue;
+        }
+        tried.push(candidate.display().to_string());
+        match Command::new(&candidate).args(args).status() {
+            Ok(status) => return Ok(status),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => continue,
+            Err(err) => return Err(AiviError::Io(err)),
+        }
+    }
+
+    tried.push("aivi-lsp (on PATH)".to_string());
+    match Command::new("aivi-lsp").args(args).status() {
+        Ok(status) => Ok(status),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            let msg = format!(
+                "could not find `aivi-lsp`.\n\
+Tried: {}\n\
+\n\
+Fix:\n\
+- If you're in the repo: `cargo build -p aivi-lsp` (then rerun `aivi lsp`)\n\
+- Or install it: `cargo install --path crates/aivi_lsp`",
+                tried.join(", ")
+            );
+            Err(AiviError::Io(io::Error::new(io::ErrorKind::NotFound, msg)))
+        }
+        Err(err) => Err(AiviError::Io(err)),
     }
 }
 

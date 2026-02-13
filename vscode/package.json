@@ -91,7 +91,7 @@
         "aivi.server.command": {
           "type": "string",
           "default": "",
-          "description": "Override the language server command. If unset, the extension prefers `aivi lsp` and falls back to the bundled `aivi-lsp`."
+          "description": "Override the language server command. If unset, the extension prefers the bundled `aivi-lsp`, then `aivi-lsp` on PATH, then `aivi lsp`."
         },
         "aivi.server.args": {
           "type": "array",
