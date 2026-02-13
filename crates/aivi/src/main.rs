@@ -1,10 +1,9 @@
 use aivi::{
-    check_modules, check_types, collect_mcp_manifest, compile_rust, compile_rust_lib,
-    compile_rust_native, compile_rust_native_lib, desugar_target, embedded_stdlib_source,
-    ensure_aivi_dependency, format_target, kernel_target, load_module_diagnostics, load_modules,
-    parse_target, render_diagnostics, run_native, rust_ir_target, serve_mcp_stdio_with_policy,
-    validate_publish_preflight, write_scaffold, AiviError, CargoDepSpec, Codegen, McpPolicy,
-    ProjectKind,
+    check_modules, check_types, collect_mcp_manifest, compile_rust_native, compile_rust_native_lib,
+    desugar_target, embedded_stdlib_source, ensure_aivi_dependency, format_target, kernel_target,
+    load_module_diagnostics, load_modules, parse_target, render_diagnostics, run_native,
+    rust_ir_target, serve_mcp_stdio_with_policy, validate_publish_preflight, write_scaffold,
+    AiviError, CargoDepSpec, McpPolicy, ProjectKind,
 };
 use sha2::{Digest, Sha256};
 use std::env;
@@ -166,7 +165,6 @@ fn run() -> Result<(), AiviError> {
                         return Ok(());
                     };
                     if opts.target != "rust"
-                        && opts.target != "rust-embed"
                         && opts.target != "rust-native"
                         && opts.target != "rustc"
                     {
@@ -177,14 +175,7 @@ fn run() -> Result<(), AiviError> {
                     }
                     let _modules = load_checked_modules_with_progress(&opts.input)?;
                     let program = aivi::desugar_target_typed(&opts.input)?;
-                    if opts.target == "rust" || opts.target == "rust-embed" {
-                        let rust = compile_rust(program)?;
-                        let out_dir = opts
-                            .output
-                            .unwrap_or_else(|| PathBuf::from("target/aivi-gen"));
-                        write_rust_project_embed(&out_dir, &rust)?;
-                        println!("{}", out_dir.display());
-                    } else if opts.target == "rust-native" {
+                    if opts.target == "rust" || opts.target == "rust-native" {
                         let rust = compile_rust_native(program)?;
                         let out_dir = opts
                             .output
@@ -236,7 +227,7 @@ fn run() -> Result<(), AiviError> {
 
 fn print_help() {
     println!(
-        "aivi\n\nUSAGE:\n  aivi <COMMAND>\n\nCOMMANDS:\n  init <name> [--bin|--lib] [--edition 2024] [--language-version 0.1] [--force]\n  new <name> ... (alias of init)\n  search <query>\n  install <spec> [--no-fetch]\n  package [--allow-dirty] [--no-verify] [-- <cargo args...>]\n  publish [--dry-run] [--allow-dirty] [--no-verify] [-- <cargo args...>]\n  build [--release] [-- <cargo args...>]\n  run [--release] [-- <cargo args...>]\n  clean [--all]\n\n  parse <path|dir/...>\n  check <path|dir/...>\n  fmt <path>\n  desugar <path|dir/...>\n  kernel <path|dir/...>\n  rust-ir <path|dir/...>\n  lsp\n  build <path|dir/...> [--target rust|rust-embed|rust-native|rustc] [--out <dir|path>] [-- <rustc args...>]\n  run <path|dir/...> [--target native]\n  mcp serve <path|dir/...> [--allow-effects]\n  i18n gen <catalog.properties> --locale <tag> --module <name> --out <file>\n\n  -h, --help"
+        "aivi\n\nUSAGE:\n  aivi <COMMAND>\n\nCOMMANDS:\n  init <name> [--bin|--lib] [--edition 2024] [--language-version 0.1] [--force]\n  new <name> ... (alias of init)\n  search <query>\n  install <spec> [--no-fetch]\n  package [--allow-dirty] [--no-verify] [-- <cargo args...>]\n  publish [--dry-run] [--allow-dirty] [--no-verify] [-- <cargo args...>]\n  build [--release] [-- <cargo args...>]\n  run [--release] [-- <cargo args...>]\n  clean [--all]\n\n  parse <path|dir/...>\n  check <path|dir/...>\n  fmt <path>\n  desugar <path|dir/...>\n  kernel <path|dir/...>\n  rust-ir <path|dir/...>\n  lsp\n  build <path|dir/...> [--target rust|rust-native|rustc] [--out <dir|path>] [-- <rustc args...>]\n  run <path|dir/...> [--target native]\n  mcp serve <path|dir/...> [--allow-effects]\n  i18n gen <catalog.properties> --locale <tag> --module <name> --out <file>\n\n  -h, --help"
     );
 }
 
@@ -493,20 +484,6 @@ impl Drop for Spinner {
     fn drop(&mut self) {
         self.stop();
     }
-}
-
-fn write_rust_project_embed(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let aivi_path = normalize_path(&manifest_dir);
-    let cargo_toml = format!(
-        "[package]\nname = \"aivi-gen\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\naivi = {{ path = \"{}\" }}\nserde_json = \"1.0\"\n",
-        aivi_path
-    );
-    let src_dir = out_dir.join("src");
-    std::fs::create_dir_all(&src_dir)?;
-    std::fs::write(out_dir.join("Cargo.toml"), cargo_toml)?;
-    std::fs::write(src_dir.join("main.rs"), main_rs)?;
-    Ok(())
 }
 
 fn write_rust_project_native(out_dir: &Path, main_rs: &str) -> Result<(), AiviError> {
@@ -1014,15 +991,9 @@ fn generate_project_rust(project_root: &Path, cfg: &aivi::AiviToml) -> Result<()
     let src_out = gen_dir.join("src");
     std::fs::create_dir_all(&src_out)?;
 
-    let (out_path, rust) = match (cfg.project.kind, cfg.build.codegen) {
-        (ProjectKind::Bin, Codegen::Embed) => (src_out.join("main.rs"), compile_rust(program)?),
-        (ProjectKind::Lib, Codegen::Embed) => (src_out.join("lib.rs"), compile_rust_lib(program)?),
-        (ProjectKind::Bin, Codegen::Native) => {
-            (src_out.join("main.rs"), compile_rust_native(program)?)
-        }
-        (ProjectKind::Lib, Codegen::Native) => {
-            (src_out.join("lib.rs"), compile_rust_native_lib(program)?)
-        }
+    let (out_path, rust) = match cfg.project.kind {
+        ProjectKind::Bin => (src_out.join("main.rs"), compile_rust_native(program)?),
+        ProjectKind::Lib => (src_out.join("lib.rs"), compile_rust_native_lib(program)?),
     };
     std::fs::write(&out_path, rust)?;
     write_build_stamp(project_root, cfg, &gen_dir, &entry_path)?;

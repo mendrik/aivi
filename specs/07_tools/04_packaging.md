@@ -31,7 +31,6 @@ language_version = "0.1"  # Targeted Aivi version
 gen_dir = "target/aivi-gen" # Where generated Rust code is placed
 rust_edition = "2024"       # Rust edition for generated code
 cargo_profile = "dev"       # Default cargo profile
-codegen = "native"          # "native" (standalone Rust) or "embed" (HIR+interpreter); defaults to "native"
 ```
 
 ## `Cargo.toml` Integration
@@ -55,9 +54,7 @@ Dependencies are managed via `Cargo.toml`'s `[dependencies]` section. You can us
 
 ```toml
 [dependencies]
-aivi = { path = "..." } # Embed backend runtime (HIR + interpreter)
-aivi_native_runtime = { path = "..." } # Native backend runtime (standalone Rust; experimental)
-serde_json = "1.0"      # Standard Rust crate
+aivi_native_runtime = { path = "..." } # Runtime for generated Rust code (native backend; experimental)
 my-aivi-lib = { path = "../my-aivi-lib" } # Another Aivi package
 ```
 
@@ -67,17 +64,11 @@ When you run `aivi build`:
 
 1.  **Aivi Compilation**: The `aivi` compiler reads `src/*.aivi` files, type-checks them, and compiles them into Rust code.
 2.  **Code Generation**: The generated Rust code is written to `target/aivi-gen/src`.
-3.  **Rust Compilation**: `cargo build` is invoked on the generated Rust project in `target/aivi-gen`.
+3.  **Rust Compilation**: `cargo build` is invoked in the project root, compiling the generated sources referenced by your `Cargo.toml`.
 
 This architecture allows Aivi to leverage the full power of the Rust ecosystem, including optimized compilation, linking, and native interoperability.
 
-## Codegen Backends (v0.1)
+## Rust Backend (v0.1)
 
-AIVI v0.1 supports two Rust codegen modes for projects:
-
-- `codegen = "embed"`: Generates Rust that embeds the program (HIR) and executes it with the interpreter runtime.
-  This is the most complete backend today.
-- `codegen = "native"`: Generates standalone Rust logic (experimental). Generated code depends on `aivi_native_runtime`
-  instead of the interpreter.
-
-Select the backend in `aivi.toml` under `[build]`.
+AIVI v0.1 project builds (`aivi build` / `aivi run`) use the **native Rust codegen** backend, which emits standalone Rust
+and links against `aivi_native_runtime`. This backend is experimental and does not yet cover the full language surface.

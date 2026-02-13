@@ -41,13 +41,11 @@ pub use native_rust_backend::{emit_native_rust_source, emit_native_rust_source_l
 pub use pm::{
     collect_aivi_sources, edit_cargo_toml_dependencies, ensure_aivi_dependency, read_aivi_toml,
     validate_publish_preflight, write_scaffold, AiviCargoMetadata, AiviToml, CargoDepSpec,
-    CargoDepSpecParseError, CargoManifestEdits, Codegen, ProjectKind,
+    CargoDepSpecParseError, CargoManifestEdits, ProjectKind,
 };
 pub use resolver::check_modules;
 pub use runtime::run_native;
-pub use rust_codegen::{
-    compile_rust, compile_rust_lib, compile_rust_native, compile_rust_native_lib,
-};
+pub use rust_codegen::{compile_rust_native, compile_rust_native_lib};
 pub use rust_ir::{lower_kernel as lower_rust_ir, RustIrProgram};
 pub use rustc_backend::{build_with_rustc, emit_rustc_source};
 pub use stdlib::{embedded_stdlib_modules, embedded_stdlib_source};

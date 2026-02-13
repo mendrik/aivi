@@ -246,8 +246,6 @@ per-record boilerplate.
 ## 3.7 Implementation Details
 
 > [!NOTE] Rust Codegen
-> AIVI provides two Rust backends in v0.1:
-> 1. **Embed (legacy/default)**: embeds the HIR as JSON and runs it via the interpreter runtime.
-> 2. **Native (experimental)**: emits standalone Rust logic. This backend is currently partial (limited builtins/stdlib coverage; no `match` yet).
->
-> For projects, select the backend via `aivi.toml` using `[build].codegen = "embed" | "native"`.
+> AIVI v0.1 includes an interpreter and an experimental native Rust codegen backend.
+> Project builds (`aivi build` / `aivi run`) use native codegen, which emits standalone Rust logic and is currently partial
+> (limited builtins/stdlib coverage; no `match` yet).

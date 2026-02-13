@@ -100,7 +100,6 @@ aivi build [--release] [-- <cargo args...>]
 
 - `--release`: Build in release mode (optimizations enabled).
 - `<cargo args...>`: Additional arguments passed to `cargo build`.
-- Backend selection: controlled by `aivi.toml` via `[build].codegen = "embed" | "native"`.
 
 #### `run`
 
@@ -112,7 +111,6 @@ aivi run [--release] [-- <cargo args...>]
 
 - `--release`: Run in release mode.
 - `<cargo args...>`: Additional arguments passed to `cargo run`.
-- Backend selection: controlled by `aivi.toml` via `[build].codegen = "embed" | "native"`.
 
 ### Development Tools
 

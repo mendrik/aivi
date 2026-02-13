@@ -17,5 +17,5 @@ fn init_bin_writes_expected_files() {
 
     let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(cargo.contains("path = \"target/aivi-gen/src/main.rs\""));
-    assert!(cargo.contains("aivi = { path ="));
+    assert!(cargo.contains("aivi_native_runtime = { path ="));
 }
