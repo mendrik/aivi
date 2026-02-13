@@ -1,0 +1,11 @@
+node_modules
+.idea/
+.ai/
+
+specs/.vitepress/cache/
+specs/.vitepress/dist/
+
+# Legacy pandoc build output
+build
+target
+aivi-vscode-*

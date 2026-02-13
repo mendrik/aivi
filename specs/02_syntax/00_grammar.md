@@ -59,8 +59,8 @@ In addition, many comma-delimited forms allow `,` as an alternative separator.
 We name these separators in the grammar:
 
 ```ebnf
-Sep        := Newline { Newline } ;
-FieldSep   := Sep | "," ;
+Sep        := Newline { Newline }
+FieldSep   := Sep | ","
 ```
 
 ### Ellipsis
@@ -71,11 +71,11 @@ FieldSep   := Sep | "," ;
 ## 0.2 Top level
 
 ```ebnf
-Program        := { TopItem } ;
-TopItem        := { Decorator } (ModuleDef | Definition) ;
+Program        := { TopItem }
+TopItem        := { Decorator } (ModuleDef | Definition)
 
-Decorator      := "@" lowerIdent [ DecoratorArg ] Sep ;
-DecoratorArg   := Expr | RecordLit ;
+Decorator      := "@" lowerIdent [ DecoratorArg ] Sep
+DecoratorArg   := Expr | RecordLit
 
 Definition     := ValueSig
                | ValueBinding
@@ -83,100 +83,100 @@ Definition     := ValueSig
                | TypeDef
                | DomainDef
                | ClassDef
-               | InstanceDef ;
+               | InstanceDef
 
-ValueSig       := lowerIdent ":" Type Sep ;
-ValueBinding   := Pattern "=" Expr Sep ;
+ValueSig       := lowerIdent ":" Type Sep
+ValueBinding   := Pattern "=" Expr Sep
 
-TypeAlias      := "type" UpperIdent [ TypeParams ] "=" TypeRhs Sep ;
-TypeDef        := UpperIdent [ TypeParams ] "=" TypeRhs Sep ;
-TypeParams     := UpperIdent { UpperIdent } ;
+TypeAlias      := "type" UpperIdent [ TypeParams ] "=" TypeRhs Sep
+TypeDef        := UpperIdent [ TypeParams ] "=" TypeRhs Sep
+TypeParams     := UpperIdent { UpperIdent }
 TypeRhs        := Type
                | RecordType
-               | [ Sep? "|" ] ConDef { Sep? "|" ConDef } ;
-ConDef         := UpperIdent { TypeAtom } ;
+               | [ Sep? "|" ] ConDef { Sep? "|" ConDef }
+ConDef         := UpperIdent { TypeAtom }
 
-ModuleDef      := "module" ModulePath ( "=" ModuleBody Sep | Sep ModuleBodyImplicit ) ;
-ModulePath     := ModuleSeg { "." ModuleSeg } ;
-ModuleSeg      := lowerIdent | UpperIdent ;
-ModuleBody     := "{" { ModuleItem } "}" ;
-ModuleItem     := ExportStmt | UseStmt | Definition | ModuleDef ;
-ModuleBodyImplicit := { ModuleItem } EOF ;
+ModuleDef      := "module" ModulePath ( "=" ModuleBody Sep | Sep ModuleBodyImplicit )
+ModulePath     := ModuleSeg { "." ModuleSeg }
+ModuleSeg      := lowerIdent | UpperIdent
+ModuleBody     := "{" { ModuleItem } "}"
+ModuleItem     := ExportStmt | UseStmt | Definition | ModuleDef
+ModuleBodyImplicit := { ModuleItem } EOF
 (* ModuleBodyImplicit must be the last top-level item in the file. *)
-ExportStmt     := "export" ( "*" | ExportList ) Sep ;
-ExportList     := ExportItem { "," ExportItem } ;
-ExportItem     := lowerIdent | UpperIdent | ("domain" UpperIdent) ;
-UseStmt        := "use" ModulePath [ UseSpec ] Sep ;
+ExportStmt     := "export" ( "*" | ExportList ) Sep
+ExportList     := ExportItem { "," ExportItem }
+ExportItem     := lowerIdent | UpperIdent | ("domain" UpperIdent)
+UseStmt        := "use" ModulePath [ UseSpec ] Sep
 UseSpec        := "as" UpperIdent
                | "(" ImportList ")"
-               | "hiding" "(" ImportList ")" ;
-ImportList     := ImportItem { "," ImportItem } ;
-ImportItem     := (lowerIdent | UpperIdent | ("domain" UpperIdent)) [ "as" (lowerIdent | UpperIdent) ] ;
+               | "hiding" "(" ImportList ")"
+ImportList     := ImportItem { "," ImportItem }
+ImportItem     := (lowerIdent | UpperIdent | ("domain" UpperIdent)) [ "as" (lowerIdent | UpperIdent) ]
 
-DomainDef      := "domain" UpperIdent "over" Type "=" "{" { DomainItem } "}" Sep ;
-DomainItem     := TypeAlias | TypeDef | ValueSig | ValueBinding | OpDef | DeltaLitBinding ;
+DomainDef      := "domain" UpperIdent "over" Type "=" "{" { DomainItem } "}" Sep
+DomainItem     := TypeAlias | TypeDef | ValueSig | ValueBinding | OpDef | DeltaLitBinding
 OpDef          := "(" Operator ")" ":" Type Sep
-               | "(" Operator ")" Pattern { Pattern } "=" Expr Sep ;
+               | "(" Operator ")" Pattern { Pattern } "=" Expr Sep
 Operator       := "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "++" | "??"
-               | "&" | "|" | "^" | "~" | "<<" | ">>" ;
-DeltaLitBinding:= SuffixedNumberLit "=" Expr Sep ;
+               | "&" | "|" | "^" | "~" | "<<" | ">>"
+DeltaLitBinding:= SuffixedNumberLit "=" Expr Sep
 
-ClassDef       := "class" UpperIdent ClassParams "=" Type Sep ;
-ClassParams    := ClassParam { ClassParam } ;
+ClassDef       := "class" UpperIdent ClassParams "=" Type Sep
+ClassParams    := ClassParam { ClassParam }
 ClassParam     := UpperIdent
-               | "(" UpperIdent "*" { "*" } ")" ;
+               | "(" UpperIdent "*" { "*" } ")"
 
-InstanceDef    := "instance" [ UpperIdent ":" ] UpperIdent InstanceHead "=" RecordLit Sep ;
-InstanceHead   := "(" Type ")" ;
+InstanceDef    := "instance" [ UpperIdent ":" ] UpperIdent InstanceHead "=" RecordLit Sep
+InstanceHead   := "(" Type ")"
 ```
 
 
 ## 0.3 Expressions
 
 ```ebnf
-Expr           := IfExpr ;
+Expr           := IfExpr
 
 IfExpr         := "if" Expr "then" Expr "else" Expr
-               | LambdaExpr ;
+               | LambdaExpr
 
 LambdaExpr     := LambdaArgs "=>" Expr
-               | MatchExpr ;
-LambdaArgs     := PatParam { PatParam } ;
+               | MatchExpr
+LambdaArgs     := PatParam { PatParam }
 PatParam       := lowerIdent
                | "_"
                | RecordPat
                | TuplePat
                | ListPat
-               | "(" PatParam ")" ;
+               | "(" PatParam ")"
 
-MatchExpr      := PipeExpr [ "?" MatchArms ] [ OrFallback ] ;
-MatchArms      := Sep? "|" Arm { Sep "|" Arm } ;
-Arm            := Pattern [ "when" Expr ] "=>" Expr ;
+MatchExpr      := PipeExpr [ "?" MatchArms ] [ OrFallback ]
+MatchArms      := Sep? "|" Arm { Sep "|" Arm }
+Arm            := Pattern [ "when" Expr ] "=>" Expr
 
-OrFallback     := "or" ( Expr | OrArms ) ;
-OrArms         := Sep? "|" OrArm { Sep "|" OrArm } ;
-OrArm          := Pattern [ "when" Expr ] "=>" Expr ;
+OrFallback     := "or" ( Expr | OrArms )
+OrArms         := Sep? "|" OrArm { Sep "|" OrArm }
+OrArm          := Pattern [ "when" Expr ] "=>" Expr
 
-PipeExpr       := CoalesceExpr { "|>" CoalesceExpr } ;
+PipeExpr       := CoalesceExpr { "|>" CoalesceExpr }
 
-CoalesceExpr   := OrExpr { "??" OrExpr } ;
-OrExpr         := AndExpr { "||" AndExpr } ;
-AndExpr        := EqExpr { "&&" EqExpr } ;
-EqExpr         := CmpExpr { ("==" | "!=") CmpExpr } ;
-CmpExpr        := BitOrExpr { ("<" | "<=" | ">" | ">=") BitOrExpr } ;
-BitOrExpr      := BitXorExpr { "|" BitXorExpr } ;
-BitXorExpr     := BitAndExpr { "^" BitAndExpr } ;
-BitAndExpr     := ShiftExpr { "&" ShiftExpr } ;
-ShiftExpr      := AddExpr { ("<<" | ">>") AddExpr } ;
-AddExpr        := MulExpr { ("+" | "-" | "++") MulExpr } ;
-MulExpr        := UnaryExpr { ("*" | "/" | "%") UnaryExpr } ;
+CoalesceExpr   := OrExpr { "??" OrExpr }
+OrExpr         := AndExpr { "||" AndExpr }
+AndExpr        := EqExpr { "&&" EqExpr }
+EqExpr         := CmpExpr { ("==" | "!=") CmpExpr }
+CmpExpr        := BitOrExpr { ("<" | "<=" | ">" | ">=") BitOrExpr }
+BitOrExpr      := BitXorExpr { "|" BitXorExpr }
+BitXorExpr     := BitAndExpr { "^" BitAndExpr }
+BitAndExpr     := ShiftExpr { "&" ShiftExpr }
+ShiftExpr      := AddExpr { ("<<" | ">>") AddExpr }
+AddExpr        := MulExpr { ("+" | "-" | "++") MulExpr }
+MulExpr        := UnaryExpr { ("*" | "/" | "%") UnaryExpr }
 UnaryExpr      := ("!" | "-" | "~" ) UnaryExpr
-               | PatchExpr ;
+               | PatchExpr
 
-PatchExpr      := AppExpr { "<|" PatchLit } ;
+PatchExpr      := AppExpr { "<|" PatchLit }
 
-AppExpr        := PostfixExpr { PostfixExpr } ;
-PostfixExpr    := Atom { "." lowerIdent } ;
+AppExpr        := PostfixExpr { PostfixExpr }
+PostfixExpr    := Atom { "." lowerIdent }
 
 Atom           := Literal
                | lowerIdent
@@ -191,50 +191,50 @@ Atom           := Literal
                | EffectBlock
                | GenerateBlock
                | ResourceBlock
-               ;
+               
 
-Block          := "do" "{" { Stmt } "}" ;
-EffectBlock    := "effect" "{" { Stmt } "}" ;
-GenerateBlock  := "generate" "{" { GenStmt } "}" ;
-ResourceBlock  := "resource" "{" { ResStmt } "}" ;
+Block          := "do" "{" { Stmt } "}"
+EffectBlock    := "effect" "{" { Stmt } "}"
+GenerateBlock  := "generate" "{" { GenStmt } "}"
+ResourceBlock  := "resource" "{" { ResStmt } "}"
 
-Stmt           := BindStmt | ValueBinding | Expr Sep ;
-BindStmt       := Pattern "<-" Expr [ OrFallback ] Sep ;
+Stmt           := BindStmt | ValueBinding | Expr Sep
+BindStmt       := Pattern "<-" Expr [ OrFallback ] Sep
 
 GenStmt        := BindStmt
                | GuardStmt
                | ValueBinding
                | "yield" Expr Sep
-               | "loop" Pattern "=" Expr "=>" "{" { GenStmt } "}" Sep ;
-GuardStmt      := lowerIdent "->" Expr Sep ;
+               | "loop" Pattern "=" Expr "=>" "{" { GenStmt } "}" Sep
+GuardStmt      := lowerIdent "->" Expr Sep
 
 ResStmt        := ValueBinding
                | BindStmt
                | Expr Sep
-               | "yield" Expr Sep ;
+               | "yield" Expr Sep
 
-TupleLit       := "(" Expr "," Expr { "," Expr } ")" ;
-ListLit        := "[" [ Expr { FieldSep Expr } | Range ] "]" ;
-Range          := Expr ".." Expr ;
+TupleLit       := "(" Expr "," Expr { "," Expr } ")"
+ListLit        := "[" [ Expr { FieldSep Expr } | Range ] "]"
+Range          := Expr ".." Expr
 
-RecordLit      := "{" { RecordEntry } "}" ;
-RecordEntry    := RecordField | RecordSpread ;
-RecordField    := lowerIdent [ ":" Expr ] [ FieldSep ] ;
-RecordSpread   := "..." Expr [ FieldSep ] ;
+RecordLit      := "{" { RecordEntry } "}"
+RecordEntry    := RecordField | RecordSpread
+RecordField    := lowerIdent [ ":" Expr ] [ FieldSep ]
+RecordSpread   := "..." Expr [ FieldSep ]
 
-MapLit         := "~map" "{" [ MapEntry { FieldSep MapEntry } ] "}" ;
-SetLit         := "~set" "[" [ SetEntry { FieldSep SetEntry } ] "]" ;
-MapEntry       := Spread | Expr "=>" Expr ;
-SetEntry       := Spread | Expr ;
-Spread         := "..." Expr ;
+MapLit         := "~map" "{" [ MapEntry { FieldSep MapEntry } ] "}"
+SetLit         := "~set" "[" [ SetEntry { FieldSep SetEntry } ] "]"
+MapEntry       := Spread | Expr "=>" Expr
+SetEntry       := Spread | Expr
+Spread         := "..." Expr
 
-SigilLit       := MapLit | SetLit | RawSigilLit ;
-RawSigilLit    := "~" lowerIdent SigilBody ;
-SigilBody      := SigilParen | SigilBracket | SigilBrace | SigilRegex ;
-SigilParen     := "(" SigilText ")" ;
-SigilBracket   := "[" SigilText "]" ;
-SigilBrace     := "{" SigilText "}" ;
-SigilRegex     := "/" SigilRegexText "/" [ lowerIdent ] ;
+SigilLit       := MapLit | SetLit | RawSigilLit
+RawSigilLit    := "~" lowerIdent SigilBody
+SigilBody      := SigilParen | SigilBracket | SigilBrace | SigilRegex
+SigilParen     := "(" SigilText ")"
+SigilBracket   := "[" SigilText "]"
+SigilBrace     := "{" SigilText "}"
+SigilRegex     := "/" SigilRegexText "/" [ lowerIdent ]
 
 Literal        := "True"
                | "False"
@@ -244,7 +244,7 @@ Literal        := "True"
                | CharLit
                | IsoInstantLit
                | SuffixedNumberLit
-               | SigilLit ;
+               | SigilLit
 ```
 
 **Notes**
@@ -260,15 +260,15 @@ Literal        := "True"
 ## 0.4 Patching
 
 ```ebnf
-PatchLit       := "{" { PatchEntry } "}" ;
-PatchEntry     := Path ":" PatchInstr [ FieldSep ] ;
-PatchInstr     := "-" | ":=" Expr | Expr ;
+PatchLit       := "{" { PatchEntry } "}"
+PatchEntry     := Path ":" PatchInstr [ FieldSep ]
+PatchInstr     := "-" | ":=" Expr | Expr
 
-Path           := PathSeg { [ "." ] PathSeg } ;
+Path           := PathSeg { [ "." ] PathSeg }
 PathSeg        := lowerIdent
                | UpperIdent "." lowerIdent
-               | Select ;
-Select         := "[" ( "*" | Expr ) "]" ;
+               | Select
+Select         := "[" ( "*" | Expr ) "]"
 ```
 
 **Notes**
@@ -282,8 +282,8 @@ Select         := "[" ( "*" | Expr ) "]" ;
 A *unary* multi-clause function can be written using arms directly:
 
 ```ebnf
-ValueBinding   := lowerIdent "=" FunArms Sep ;
-FunArms        := "|" Arm { Sep "|" Arm } ;
+ValueBinding   := lowerIdent "=" FunArms Sep
+FunArms        := "|" Arm { Sep "|" Arm }
 ```
 
 This form desugars to a single-argument function that performs a `case` on its input (see [Desugaring: Patterns](../04_desugaring/04_patterns.md)).
@@ -295,28 +295,28 @@ If you want multi-argument matching, match on a tuple:
 ## 0.6 Types
 
 ```ebnf
-Type           := TypeArrow ;
-TypeArrow      := TypeAnd [ "->" TypeArrow ] ;
-TypeAnd        := TypePipe { "&" TypePipe } ;
-TypePipe       := TypeApp { "|>" TypeApp } ;
-TypeApp        := TypeAtom { TypeAtom } ;
+Type           := TypeArrow
+TypeArrow      := TypeAnd [ "->" TypeArrow ]
+TypeAnd        := TypePipe { "&" TypePipe }
+TypePipe       := TypeApp { "|>" TypeApp }
+TypeApp        := TypeAtom { TypeAtom }
 TypeAtom       := UpperIdent
                | lowerIdent
                | "*"
                | "(" Type ")"
                | TupleType
-               | RecordType ;
+               | RecordType
 
-TupleType      := "(" Type "," Type { "," Type } ")" ;
-RecordType     := "{" { RecordTypeField } "}" ;
-RecordTypeField:= lowerIdent ":" Type { FieldDecorator } [ FieldSep ] ;
-FieldDecorator := "@" lowerIdent [ DecoratorArg ] ;
+TupleType      := "(" Type "," Type { "," Type } ")"
+RecordType     := "{" { RecordTypeField } "}"
+RecordTypeField:= lowerIdent ":" Type { FieldDecorator } [ FieldSep ]
+FieldDecorator := "@" lowerIdent [ DecoratorArg ]
 ```
 
 ## 0.7 Patterns
 
 ```ebnf
-Pattern        := PatAtom [ "@" Pattern ] ;
+Pattern        := PatAtom [ "@" Pattern ]
 PatAtom        := "_"
                | lowerIdent
                | UpperIdent
@@ -324,15 +324,15 @@ PatAtom        := "_"
                | TuplePat
                | ListPat
                | RecordPat
-               | ConPat ;
+               | ConPat
 
-ConPat         := UpperIdent { PatAtom } ;
-TuplePat       := "(" Pattern "," Pattern { "," Pattern } ")" ;
-ListPat        := "[" [ Pattern { "," Pattern } [ "," "..." [ (lowerIdent | "_") ] ] ] "]" ;
+ConPat         := UpperIdent { PatAtom }
+TuplePat       := "(" Pattern "," Pattern { "," Pattern } ")"
+ListPat        := "[" [ Pattern { "," Pattern } [ "," "..." [ (lowerIdent | "_") ] ] ] "]"
 
-RecordPat      := "{" { RecordPatField } "}" ;
-RecordPatField := RecordPatKey [ (":" Pattern) | ("@" Pattern) ] [ FieldSep ] ;
-RecordPatKey   := lowerIdent { "." lowerIdent } ;
+RecordPat      := "{" { RecordPatField } "}"
+RecordPatField := RecordPatKey [ (":" Pattern) | ("@" Pattern) ] [ FieldSep ]
+RecordPatKey   := lowerIdent { "." lowerIdent }
 ```
 
 
