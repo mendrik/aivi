@@ -7,6 +7,7 @@ use chrono::{Datelike, NaiveDate};
 use regex::RegexBuilder;
 use url::Url;
 
+use crate::i18n::{parse_message_template, validate_key_text, MessagePart};
 use crate::hir::{
     HirBlockItem, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirPathSegment, HirPattern,
     HirProgram, HirRecordField, HirTextPart,
@@ -274,6 +275,10 @@ impl Runtime {
             HirExpr::LitSigil {
                 tag, body, flags, ..
             } => match tag.as_str() {
+                // Keep the runtime behavior aligned with `specs/02_syntax/13_sigils.md` and
+                // `specs/05_stdlib/00_core/29_i18n.md`:
+                // - ~k/~m are record-shaped values.
+                // - ~m includes compiled `parts` for `i18n.render`.
                 "r" => {
                     let mut builder = RegexBuilder::new(body);
                     for flag in flags.chars() {
@@ -315,6 +320,30 @@ impl Runtime {
                         RuntimeError::Message(format!("invalid datetime literal: {err}"))
                     })?;
                     Ok(Value::DateTime(body.clone()))
+                }
+                "k" => {
+                    validate_key_text(body).map_err(|msg| {
+                        RuntimeError::Message(format!("invalid i18n key literal: {msg}"))
+                    })?;
+                    let mut map = HashMap::new();
+                    map.insert("tag".to_string(), Value::Text(tag.clone()));
+                    map.insert("body".to_string(), Value::Text(body.trim().to_string()));
+                    map.insert("flags".to_string(), Value::Text(flags.clone()));
+                    Ok(Value::Record(Arc::new(map)))
+                }
+                "m" => {
+                    let parsed = parse_message_template(body).map_err(|msg| {
+                        RuntimeError::Message(format!("invalid i18n message literal: {msg}"))
+                    })?;
+                    let mut map = HashMap::new();
+                    map.insert("tag".to_string(), Value::Text(tag.clone()));
+                    map.insert("body".to_string(), Value::Text(body.clone()));
+                    map.insert("flags".to_string(), Value::Text(flags.clone()));
+                    map.insert(
+                        "parts".to_string(),
+                        i18n_message_parts_value(&parsed.parts),
+                    );
+                    Ok(Value::Record(Arc::new(map)))
                 }
                 _ => {
                     let mut map = HashMap::new();
@@ -1489,4 +1518,36 @@ fn url_to_record(url: &Url) -> HashMap<String, Value> {
     };
     map.insert("hash".to_string(), hash);
     map
+}
+
+fn i18n_message_parts_value(parts: &[MessagePart]) -> Value {
+    let mut out = Vec::with_capacity(parts.len());
+    for part in parts {
+        match part {
+            MessagePart::Lit(text) => {
+                out.push(Value::Record(Arc::new(HashMap::from([
+                    ("kind".to_string(), Value::Text("lit".to_string())),
+                    ("text".to_string(), Value::Text(text.clone())),
+                ]))));
+            }
+            MessagePart::Hole { name, ty } => {
+                let ty_value = match ty {
+                    Some(t) => Value::Constructor {
+                        name: "Some".to_string(),
+                        args: vec![Value::Text(t.clone())],
+                    },
+                    None => Value::Constructor {
+                        name: "None".to_string(),
+                        args: Vec::new(),
+                    },
+                };
+                out.push(Value::Record(Arc::new(HashMap::from([
+                    ("kind".to_string(), Value::Text("hole".to_string())),
+                    ("name".to_string(), Value::Text(name.clone())),
+                    ("ty".to_string(), ty_value),
+                ]))));
+            }
+        }
+    }
+    Value::List(Arc::new(out))
 }

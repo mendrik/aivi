@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::i18n::{parse_message_template, validate_key_text, MessagePart};
 use crate::rust_ir::{RustIrExpr, RustIrPathSegment, RustIrRecordField};
 use crate::AiviError;
 
@@ -65,9 +66,29 @@ pub(super) fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, Aivi
             let ind = "    ".repeat(indent);
             let ind2 = "    ".repeat(indent + 1);
             let ind3 = "    ".repeat(indent + 2);
-            format!(
-                "{{\n{ind2}let mut map = HashMap::new();\n{ind3}map.insert(\"tag\".to_string(), Value::Text({tag:?}.to_string()));\n{ind3}map.insert(\"body\".to_string(), Value::Text({body:?}.to_string()));\n{ind3}map.insert(\"flags\".to_string(), Value::Text({flags:?}.to_string()));\n{ind2}aivi_ok(Value::Record(Arc::new(map)))\n{ind}}}"
-            )
+            match tag.as_str() {
+                "k" => {
+                    validate_key_text(body).map_err(|msg| {
+                        AiviError::Codegen(format!("invalid i18n key literal: {msg}"))
+                    })?;
+                    format!(
+                        "{{\n{ind2}let mut map = HashMap::new();\n{ind3}map.insert(\"tag\".to_string(), Value::Text({tag:?}.to_string()));\n{ind3}map.insert(\"body\".to_string(), Value::Text({trimmed:?}.to_string()));\n{ind3}map.insert(\"flags\".to_string(), Value::Text({flags:?}.to_string()));\n{ind2}aivi_ok(Value::Record(Arc::new(map)))\n{ind}}}",
+                        trimmed = body.trim()
+                    )
+                }
+                "m" => {
+                    let parsed = parse_message_template(body).map_err(|msg| {
+                        AiviError::Codegen(format!("invalid i18n message literal: {msg}"))
+                    })?;
+                    let parts_code = emit_i18n_message_parts(&parsed.parts, indent + 2);
+                    format!(
+                        "{{\n{ind2}let mut map = HashMap::new();\n{ind3}map.insert(\"tag\".to_string(), Value::Text({tag:?}.to_string()));\n{ind3}map.insert(\"body\".to_string(), Value::Text({body:?}.to_string()));\n{ind3}map.insert(\"flags\".to_string(), Value::Text({flags:?}.to_string()));\n{ind3}map.insert(\"parts\".to_string(), {parts_code});\n{ind2}aivi_ok(Value::Record(Arc::new(map)))\n{ind}}}"
+                    )
+                }
+                _ => format!(
+                    "{{\n{ind2}let mut map = HashMap::new();\n{ind3}map.insert(\"tag\".to_string(), Value::Text({tag:?}.to_string()));\n{ind3}map.insert(\"body\".to_string(), Value::Text({body:?}.to_string()));\n{ind3}map.insert(\"flags\".to_string(), Value::Text({flags:?}.to_string()));\n{ind2}aivi_ok(Value::Record(Arc::new(map)))\n{ind}}}"
+                ),
+            }
         }
         RustIrExpr::LitBool { value, .. } => format!("aivi_ok(Value::Bool({value}))"),
         RustIrExpr::LitDateTime { text, .. } => {
@@ -211,6 +232,65 @@ pub(super) fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, Aivi
             scrutinee, arms, ..
         } => emit_match(scrutinee, arms, indent)?,
     })
+}
+
+fn emit_i18n_message_parts(parts: &[MessagePart], indent: usize) -> String {
+    let ind = "    ".repeat(indent);
+    let ind2 = "    ".repeat(indent + 1);
+    let ind3 = "    ".repeat(indent + 2);
+
+    let mut out = String::new();
+    out.push_str("{\n");
+    out.push_str(&ind2);
+    out.push_str("let mut items: Vec<Value> = Vec::new();\n");
+    for part in parts {
+        match part {
+            MessagePart::Lit(text) => {
+                out.push_str(&ind2);
+                out.push_str("items.push(Value::Record(Arc::new(HashMap::from([\n");
+                out.push_str(&ind3);
+                out.push_str(&format!(
+                    "(\"kind\".to_string(), Value::Text({:?}.to_string())),\n",
+                    "lit"
+                ));
+                out.push_str(&ind3);
+                out.push_str(&format!(
+                    "(\"text\".to_string(), Value::Text({text:?}.to_string())),\n"
+                ));
+                out.push_str(&ind2);
+                out.push_str("]))));\n");
+            }
+            MessagePart::Hole { name, ty } => {
+                let ty_code = match ty {
+                    Some(t) => format!(
+                        "Value::Constructor {{ name: \"Some\".to_string(), args: vec![Value::Text({t:?}.to_string())] }}"
+                    ),
+                    None => "Value::Constructor { name: \"None\".to_string(), args: Vec::new() }"
+                        .to_string(),
+                };
+                out.push_str(&ind2);
+                out.push_str("items.push(Value::Record(Arc::new(HashMap::from([\n");
+                out.push_str(&ind3);
+                out.push_str(&format!(
+                    "(\"kind\".to_string(), Value::Text({:?}.to_string())),\n",
+                    "hole"
+                ));
+                out.push_str(&ind3);
+                out.push_str(&format!(
+                    "(\"name\".to_string(), Value::Text({name:?}.to_string())),\n"
+                ));
+                out.push_str(&ind3);
+                out.push_str(&format!("(\"ty\".to_string(), {ty_code}),\n"));
+                out.push_str(&ind2);
+                out.push_str("]))));\n");
+            }
+        }
+    }
+    out.push_str(&ind2);
+    out.push_str("Value::List(Arc::new(items))\n");
+    out.push_str(&ind);
+    out.push('}');
+    out
 }
 
 fn emit_record(fields: &[RustIrRecordField], indent: usize) -> Result<String, AiviError> {

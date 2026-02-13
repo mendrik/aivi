@@ -29,7 +29,7 @@ This document lists features, modules, and behaviors described in the **AIVI Lan
 | Module | Status | Backend |
 | :--- | :--- | :--- |
 | `aivi.regex` | **Implemented** | Backed by `runtime/builtins/regex.rs`. |
-| `aivi.i18n` | **Implemented (Small)** | Properties catalogs + key/message sigils + placeholder type checking + locale fallback helpers (`Catalog`, fallback tags, catalog selection). Placeholder rendering uses the runtime's default formatting (locale-neutral; no CLDR/ICU formatting in v0.1). |
+| `aivi.i18n` | **Implemented (Small)** | Properties catalogs + key/message sigils (`~k`, `~m`) + placeholder type checking + locale fallback helpers (`Catalog`, fallback tags, catalog selection). `~m` evaluates to an open record that includes compiled `parts` for `i18n.render`. Placeholder rendering uses the runtime's default formatting (locale-neutral; no CLDR/ICU formatting in v0.1). |
 | `aivi.net.http` | **Implemented** | Backed by `runtime/url_http.rs`. |
 | `aivi.net.server` | **Implemented** | Backed by `runtime/http.rs` (using `aivi_http_server`). |
 | `aivi.db` | **Partial** | `database.rs` exists in stdlib/runtime, likely SQLite wrapper. |

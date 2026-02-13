@@ -14,6 +14,50 @@ fn expect_ok<T>(result: Result<T, RuntimeError>, msg: &str) -> T {
     }
 }
 
+fn runtime_from_source(source: &str) -> Runtime {
+    let (modules, diags) =
+        crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let program = crate::hir::desugar_modules(&modules);
+    let module = program.modules.into_iter().next().expect("expected module");
+
+    let globals = Env::new(None);
+    register_builtins(&globals);
+
+    let mut grouped: HashMap<String, Vec<HirExpr>> = HashMap::new();
+    for def in module.defs {
+        grouped.entry(def.name).or_default().push(def.expr);
+    }
+    for (name, exprs) in grouped {
+        if exprs.len() == 1 {
+            let thunk = ThunkValue {
+                expr: Arc::new(exprs.into_iter().next().unwrap()),
+                env: globals.clone(),
+                cached: Mutex::new(None),
+                in_progress: AtomicBool::new(false),
+            };
+            globals.set(name, Value::Thunk(Arc::new(thunk)));
+        } else {
+            let mut clauses = Vec::new();
+            for expr in exprs {
+                let thunk = ThunkValue {
+                    expr: Arc::new(expr),
+                    env: globals.clone(),
+                    cached: Mutex::new(None),
+                    in_progress: AtomicBool::new(false),
+                };
+                clauses.push(Value::Thunk(Arc::new(thunk)));
+            }
+            globals.set(name, Value::MultiClause(clauses));
+        }
+    }
+
+    let ctx = Arc::new(RuntimeContext { globals });
+    let cancel = CancelToken::root();
+    Runtime::new(ctx, cancel)
+}
+
 #[test]
 fn cleanups_run_even_when_cancelled() {
     let globals = Env::new(None);
@@ -46,48 +90,7 @@ t = "negative{n}"
 u = "brace \{x\}"
 v = "user: { { name: \"A\" }.name }"
 "#;
-
-    let (modules, diags) = crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);
-    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
-
-    let program = crate::hir::desugar_modules(&modules);
-    let module = program.modules.into_iter().next().expect("expected module");
-
-    let globals = Env::new(None);
-    register_builtins(&globals);
-    assert!(globals.get("println").is_some());
-
-    let mut grouped: HashMap<String, Vec<HirExpr>> = HashMap::new();
-    for def in module.defs {
-        grouped.entry(def.name).or_default().push(def.expr);
-    }
-    for (name, exprs) in grouped {
-        if exprs.len() == 1 {
-            let thunk = ThunkValue {
-                expr: Arc::new(exprs.into_iter().next().unwrap()),
-                env: globals.clone(),
-                cached: Mutex::new(None),
-                in_progress: AtomicBool::new(false),
-            };
-            globals.set(name, Value::Thunk(Arc::new(thunk)));
-        } else {
-            let mut clauses = Vec::new();
-            for expr in exprs {
-                let thunk = ThunkValue {
-                    expr: Arc::new(expr),
-                    env: globals.clone(),
-                    cached: Mutex::new(None),
-                    in_progress: AtomicBool::new(false),
-                };
-                clauses.push(Value::Thunk(Arc::new(thunk)));
-            }
-            globals.set(name, Value::MultiClause(clauses));
-        }
-    }
-
-    let ctx = Arc::new(RuntimeContext { globals });
-    let cancel = CancelToken::root();
-    let mut runtime = Runtime::new(ctx, cancel);
+    let mut runtime = runtime_from_source(source);
 
     let s = runtime.ctx.globals.get("s").unwrap();
     let t = runtime.ctx.globals.get("t").unwrap();
@@ -119,6 +122,66 @@ v = "user: { { name: \"A\" }.name }"
     assert_eq!(t, "negative-1");
     assert_eq!(u, "brace {x}");
     assert_eq!(v, "user: A");
+}
+
+#[test]
+fn i18n_sigils_evaluate_to_compiled_records() {
+    let source = r#"
+module test.i18nSigils
+k = ~k"app.welcome"
+m = ~m"Hello, {name:Text}!"
+rendered = i18n.render m { name: "Alice" } or "ERR"
+"#;
+    let mut runtime = runtime_from_source(source);
+
+    let k = runtime.ctx.globals.get("k").unwrap();
+    let k = expect_ok(runtime.force_value(k), "evaluate k");
+    let Value::Record(k_rec) = k else {
+        panic!("expected k to be a Record");
+    };
+    assert!(matches!(k_rec.get("tag"), Some(Value::Text(t)) if t == "k"));
+    assert!(matches!(k_rec.get("body"), Some(Value::Text(t)) if t == "app.welcome"));
+
+    let m = runtime.ctx.globals.get("m").unwrap();
+    let m = expect_ok(runtime.force_value(m), "evaluate m");
+    let Value::Record(m_rec) = m else {
+        panic!("expected m to be a Record");
+    };
+    assert!(matches!(m_rec.get("tag"), Some(Value::Text(t)) if t == "m"));
+    assert!(matches!(m_rec.get("body"), Some(Value::Text(t)) if t == "Hello, {name:Text}!"));
+    assert!(matches!(m_rec.get("parts"), Some(Value::List(_))));
+
+    let rendered = runtime.ctx.globals.get("rendered").unwrap();
+    let rendered = expect_ok(runtime.force_value(rendered), "evaluate rendered");
+    assert!(matches!(rendered, Value::Text(t) if t == "Hello, Alice!"));
+}
+
+#[test]
+fn structured_sigils_evaluate_to_map_and_set() {
+    let source = r#"
+module test.structuredSigils
+m = ~map{ "a" => 1, "b" => 2 }
+s = ~set["x", "y", "x"]
+a = m["a"]
+n = Set.size s
+"#;
+    let mut runtime = runtime_from_source(source);
+
+    let m = runtime.ctx.globals.get("m").unwrap();
+    let m = expect_ok(runtime.force_value(m), "evaluate m");
+    assert!(matches!(m, Value::Map(_)));
+
+    let s = runtime.ctx.globals.get("s").unwrap();
+    let s = expect_ok(runtime.force_value(s), "evaluate s");
+    assert!(matches!(s, Value::Set(_)));
+
+    let a = runtime.ctx.globals.get("a").unwrap();
+    let a = expect_ok(runtime.force_value(a), "evaluate a");
+    assert!(matches!(a, Value::Int(1)));
+
+    let n = runtime.ctx.globals.get("n").unwrap();
+    let n = expect_ok(runtime.force_value(n), "evaluate n");
+    assert!(matches!(n, Value::Int(2)));
 }
 
 #[test]
