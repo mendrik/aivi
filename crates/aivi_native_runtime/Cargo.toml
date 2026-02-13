@@ -26,3 +26,6 @@ uuid = { version = "1.10.0", features = ["v4"] }
 thiserror = "1.0.63"
 
 aivi_http_server = { path = "../aivi_http_server" }
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+postgres = "0.19.9"
+mysql = "24.0.0"

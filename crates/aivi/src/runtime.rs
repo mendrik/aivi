@@ -7,11 +7,11 @@ use chrono::{Datelike, NaiveDate};
 use regex::RegexBuilder;
 use url::Url;
 
-use crate::i18n::{parse_message_template, validate_key_text, MessagePart};
 use crate::hir::{
     HirBlockItem, HirExpr, HirListItem, HirLiteral, HirMatchArm, HirPathSegment, HirPattern,
     HirProgram, HirRecordField, HirTextPart,
 };
+use crate::i18n::{parse_message_template, validate_key_text, MessagePart};
 use crate::AiviError;
 
 mod builtins;
@@ -339,10 +339,7 @@ impl Runtime {
                     map.insert("tag".to_string(), Value::Text(tag.clone()));
                     map.insert("body".to_string(), Value::Text(body.clone()));
                     map.insert("flags".to_string(), Value::Text(flags.clone()));
-                    map.insert(
-                        "parts".to_string(),
-                        i18n_message_parts_value(&parsed.parts),
-                    );
+                    map.insert("parts".to_string(), i18n_message_parts_value(&parsed.parts));
                     Ok(Value::Record(Arc::new(map)))
                 }
                 _ => {

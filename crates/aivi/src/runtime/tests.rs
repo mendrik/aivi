@@ -15,8 +15,7 @@ fn expect_ok<T>(result: Result<T, RuntimeError>, msg: &str) -> T {
 }
 
 fn runtime_from_source(source: &str) -> Runtime {
-    let (modules, diags) =
-        crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);
+    let (modules, diags) = crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);
     assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
 
     let program = crate::hir::desugar_modules(&modules);
@@ -182,6 +181,50 @@ n = Set.size s
     let n = runtime.ctx.globals.get("n").unwrap();
     let n = expect_ok(runtime.force_value(n), "evaluate n");
     assert!(matches!(n, Value::Int(2)));
+}
+
+#[test]
+fn database_persists_rows_in_sqlite_memory() {
+    let source = r#"
+module test.databaseSqlite
+
+type Driver = Sqlite | Postgresql | Mysql
+type DbConfig = { driver: Driver, url: Text }
+
+User = { id: Int, name: Text }
+
+userTable = database.table "users" []
+
+main = effect {
+  _ <- database.configure { driver: Sqlite, url: ":memory:" }
+  _ <- database.runMigrations [ userTable ]
+  _ <- database.applyDelta userTable (database.ins { id: 1, name: "A" })
+  database.load userTable
+}
+"#;
+
+    let mut runtime = runtime_from_source(source);
+    let main = runtime.ctx.globals.get("main").unwrap();
+    let main = expect_ok(runtime.force_value(main), "evaluate main");
+    let Value::Effect(effect) = main else {
+        panic!("expected main to be an Effect");
+    };
+
+    let result = match runtime.run_effect_value(Value::Effect(effect)) {
+        Ok(value) => value,
+        Err(RuntimeError::Cancelled) => panic!("run main effect: cancelled"),
+        Err(RuntimeError::Message(message)) => panic!("run main effect: {message}"),
+        Err(RuntimeError::Error(value)) => panic!("run main effect: {}", format_value(&value)),
+    };
+    let Value::List(items) = result else {
+        panic!("expected List result");
+    };
+    assert_eq!(items.len(), 1);
+    let Value::Record(fields) = &items[0] else {
+        panic!("expected record row");
+    };
+    assert!(matches!(fields.get("id"), Some(Value::Int(1))));
+    assert!(matches!(fields.get("name"), Some(Value::Text(t)) if t == "A"));
 }
 
 #[test]

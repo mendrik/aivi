@@ -5,6 +5,7 @@ pub const SOURCE: &str = r#"
 module aivi.database
 export Table, ColumnType, ColumnConstraint, ColumnDefault, Column
 export Pred, Patch, Delta, DbError
+export Driver, DbConfig, configure
 export table, load, applyDelta, runMigrations
 export ins, upd, del
 export domain Database
@@ -28,6 +29,12 @@ type Column = {
 type Pred A = A -> Bool
 type Patch A = A -> A
 type Delta A = Insert A | Update (Pred A) (Patch A) | Delete (Pred A)
+
+type Driver = Sqlite | Postgresql | Mysql
+type DbConfig = { driver: Driver, url: Text }
+
+configure : DbConfig -> Effect DbError Unit
+configure config = database.configure config
 
 table : Text -> List Column -> Table A
 table name columns = database.table name columns

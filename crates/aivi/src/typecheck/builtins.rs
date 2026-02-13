@@ -2687,6 +2687,7 @@ impl TypeChecker {
 
         let db_row = self.fresh_var_id();
         let db_error_ty = Type::con("DbError");
+        let db_config_ty = Type::con("DbConfig");
         let table_ty = Type::con("Table").app(vec![Type::Var(db_row)]);
         let pred_ty = Type::con("Pred").app(vec![Type::Var(db_row)]);
         let patch_ty = Type::con("Patch").app(vec![Type::Var(db_row)]);
@@ -2711,6 +2712,10 @@ impl TypeChecker {
                             Box::new(table_ty.clone()),
                         )),
                     ),
+                ),
+                (
+                    "configure".to_string(),
+                    Type::Func(Box::new(db_config_ty), Box::new(db_effect_unit_ty.clone())),
                 ),
                 (
                     "load".to_string(),

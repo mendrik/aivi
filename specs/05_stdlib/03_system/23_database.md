@@ -15,6 +15,8 @@ use aivi.database as db
 
 	User = { id: Int, name: Text, email: Option Text, active: Bool, loginCount: Int, createdAt: Instant }
 
+dbDefault = { driver: Sqlite, url: ":memory:" }
+
 @static
 userTable : Table User
 userTable = db.table "users" [
@@ -28,6 +30,8 @@ userTable = db.table "users" [
 
 getActiveUsers : Effect DbError (List User)
 getActiveUsers = effect {
+  _ <- db.configure dbDefault
+  _ <- db.runMigrations [ userTable ]
   users <- db.load userTable
   pure (users |> filter active |> sortBy .createdAt)
 }
@@ -73,6 +77,17 @@ type ColumnDefault =
 
 // Predicate alias
 type Pred A = A => Bool
+
+// Select the runtime backend.
+type Driver
+  | Sqlite
+  | Postgresql
+  | Mysql
+
+// Configure the default database backend used by db.load / db.applyDelta / db.runMigrations.
+// - Sqlite: url is a filesystem path or ":memory:".
+// - Postgresql/Mysql: url is a connection string.
+type DbConfig = { driver: Driver, url: Text }
 
 // Deltas express insert/update/delete
 type Delta A =
