@@ -1,11 +1,11 @@
 # AIVI (draft language spec)
 
 > [!NOTE]
-> **AIVI v0.1** is primarily an interpreted language embedding a CST-to-Kernel pipeline.
-> Experimental native Rust codegen exists, but coverage is smaller than the interpreter today.
+> **AIVI v0.1** executes via a native Rust runtime embedding a CST-to-Kernel pipeline.
+> Experimental native Rust codegen exists, but coverage is still evolving.
 > See [Missing Features](specs/missing_features_v0.1.md) for current implementation status.
 
-AIVI is a high-integrity functional language aimed at WebAssembly. This repo contains the **v0.1 Rust implementation** (interpreter) and the language specification.
+AIVI is a high-integrity functional language aimed at WebAssembly. This repo contains the **v0.1 Rust implementation** (native runtime) and the language specification.
 
 - Read the spec entrypoint: `specs/README.md`
 - Browse the docs index: [Full specification](https://mendrik.github.io/aivi/)

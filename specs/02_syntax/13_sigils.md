@@ -8,7 +8,7 @@ Domains define these sigils to validate and construct types at compile time.
 
 ## Structured sigils
 
-Some domains parse sigils as **AIVI expressions** rather than raw text. For v1.0, the `Collections` domain defines:
+Some domains parse sigils as **AIVI expressions** rather than raw text. The `Collections` domain defines:
 
 <<< ../snippets/02_syntax/13_sigils/structured.aivi{aivi}
 

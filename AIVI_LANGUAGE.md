@@ -6,7 +6,7 @@ AIVI is a **statically typed, purely functional language** designed for high-int
 *   **No Null/Exceptions**: Uses `Option` and `Result`.
 *   **Expression-Oriented**: Everything is an expression.
 *   **No Loops**: Use recursion, `fold`, or `generate` blocks.
-*   **WASM-Native**: Compiles to WASM/WASI (interpreter in v0.1).
+*   **WASM-Native**: Targets WASM/WASI.
 
 ## 2. Syntax Reference
 
@@ -106,7 +106,7 @@ AIVI uses **Sigils** for complex literals that are validated at compile-time by 
     *   `KernelExpr::Lambda`: Standard closure.
     *   `KernelExpr::App`: Function application.
     *   `KernelExpr::Patch`: Optimized record update.
-*   **Runtime**: Tree-walking interpreter (v0.1) over the Kernel AST.
+*   **Runtime**: Native Rust runtime executing the desugared program.
 *   **LSP**: Deeply integrated, relies on `specs/` as source of truth.
 
 ## 6. Important Rules for Code Generation

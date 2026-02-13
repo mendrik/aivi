@@ -12,9 +12,15 @@ It allows you to read **Environment Variables** (like secret queries or API keys
 
 <<< ../../snippets/from_md/05_stdlib/03_system/25_system/block_02.aivi{aivi}
 
-## Goals for v1.0
+## Goals
 
-- Environment variables (read-only or read-write depending on capabilities).
-- Command-line arguments.
-- Process termination (`exit`).
-- Spawning child processes (optional for v1.0, but good to plan).
+Status:
+
+- 🟢 Done
+- 🟡 Partial
+- 🔴 Missing
+
+- 🟢 Environment variables (read-only or read-write depending on capabilities).
+- 🟢 Command-line arguments.
+- 🟢 Process termination (`exit`).
+- 🔴 Spawning child processes (optional, but good to plan).

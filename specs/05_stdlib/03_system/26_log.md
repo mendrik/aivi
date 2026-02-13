@@ -16,8 +16,14 @@ The `Log` domain provides **Structured Logging** for modern observability.
 
 <<< ../../snippets/from_md/05_stdlib/03_system/26_log/block_03.aivi{aivi}
 
-## Goals for v1.0
+## Goals
 
-- Standard levels: `Trace`, `Debug`, `Info`, `Warn`, `Error`.
-- Structured context (key-value pairs) rather than just format strings.
-- Pluggable backends (console by default, WASI logging).
+Status:
+
+- 🟢 Done
+- 🟡 Partial
+- 🔴 Missing
+
+- 🟢 Standard levels: `Trace`, `Debug`, `Info`, `Warn`, `Error`.
+- 🟢 Structured context (key-value pairs) rather than just format strings.
+- 🔴 Pluggable backends (console by default, WASI logging).
