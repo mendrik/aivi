@@ -211,6 +211,14 @@
     "sigil": {
       "patterns": [
         {
+          "match": "~html~>",
+          "name": "punctuation.definition.tag.begin.aivi"
+        },
+        {
+          "match": "<~html\\b",
+          "name": "punctuation.definition.tag.end.aivi"
+        },
+        {
           "begin": "(~html)(\\{)",
           "beginCaptures": {
             "1": {
