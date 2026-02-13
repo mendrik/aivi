@@ -217,17 +217,16 @@ fn aivi_tmlanguage() -> serde_json::Value {
         "sigil": {
           "patterns": [
             {
-              // Special-case: `~html{ ... }` commonly contains `{ expr }` splices, which would
-              // prematurely terminate the generic `{ ... }` sigil rule.
-              "name": "string.quoted.other.sigil.aivi",
-              "begin": "(~html)(\\{)",
+              // Special-case: `~html~> ... <~html` is an HTML sigil. We give it a distinct scope
+              // so VS Code can inject HTML highlighting and treat `{ ... }` as embedded AIVI.
+              "name": "string.quoted.other.sigil.html.aivi",
+              "begin": "(~html~>)",
               "beginCaptures": {
-                "1": { "name": "entity.name.function.sigil.aivi" },
-                "2": { "name": "punctuation.definition.string.begin.aivi" }
+                "1": { "name": "storage.type.sigil.aivi" }
               },
-              "end": "^\\s*\\}",
+              "end": "(<~html)",
               "endCaptures": {
-                "0": { "name": "punctuation.definition.string.end.aivi" }
+                "1": { "name": "storage.type.sigil.aivi" }
               }
             },
             {

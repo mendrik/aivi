@@ -1,35 +1,22 @@
 {
   "scopeName": "text.html.aivi.injection",
-  "injectionSelector": "L:source.aivi",
+  "injectionSelector": "L:string.quoted.other.sigil.html.aivi",
   "patterns": [
     {
-      "begin": "(~html)(~>)",
-      "end": "(<~)(html)\\b",
+      "begin": "(\\{)",
+      "end": "(\\})",
       "beginCaptures": {
-        "1": { "name": "entity.name.function.sigil.aivi" },
-        "2": { "name": "punctuation.definition.tag.begin.aivi" }
+        "1": { "name": "punctuation.section.embedded.begin.aivi" }
       },
       "endCaptures": {
-        "1": { "name": "punctuation.definition.tag.end.aivi" },
-        "2": { "name": "entity.name.function.sigil.close.aivi" }
+        "1": { "name": "punctuation.section.embedded.end.aivi" }
       },
       "patterns": [
-        {
-          "begin": "(\\{)",
-          "end": "(\\})",
-          "beginCaptures": {
-            "1": { "name": "punctuation.section.embedded.begin.aivi" }
-          },
-          "endCaptures": {
-            "1": { "name": "punctuation.section.embedded.end.aivi" }
-          },
-          "patterns": [
-            { "include": "source.aivi" }
-          ]
-        },
-        { "include": "text.html.basic" }
+        { "include": "source.aivi" }
       ]
-    }
+    },
+    { "include": "text.html.basic" }
   ]
 }
+
 

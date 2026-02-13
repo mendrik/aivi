@@ -156,7 +156,7 @@
     "aivi.path.mid": "#8A8A8A",
     "aivi.path.tail": "#C6C6C6",
     "aivi.unit": "#D7BA7D",
-    "aivi.sigil": "#D18616",
+    "aivi.sigil": "#565656",
     "function": "#DCDCAA",
     "property": "#9CDCFE",
     "typeParameter": "#DCDCAA",
@@ -187,7 +187,16 @@
     {
       "name": "AIVI Sigil Literals",
       "scope": ["string.quoted.other.sigil.aivi"],
-      "settings": { "foreground": "#D18616" }
+      "settings": { "foreground": "#565656" }
+    },
+    {
+      "name": "AIVI Sigil Delimiters",
+      "scope": [
+        "storage.type.sigil.aivi",
+        "punctuation.section.embedded.begin.aivi",
+        "punctuation.section.embedded.end.aivi"
+      ],
+      "settings": { "foreground": "#565656" }
     },
     {
       "name": "AIVI String Interpolation Braces",

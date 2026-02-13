@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -20,22 +18,6 @@ pub enum QuickInfoKind {
     Unknown,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct MarkerMetadata {
-    kind: QuickInfoKind,
-    name: String,
-    #[serde(default)]
-    module: Option<String>,
-    #[serde(default)]
-    signature: Option<String>,
-    #[serde(default)]
-    extract_signature: Option<bool>,
-    // Allow future keys without breaking parsing.
-    #[serde(flatten)]
-    _extra: HashMap<String, serde_json::Value>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuickInfoEntry {
     pub kind: QuickInfoKind,
@@ -50,8 +32,6 @@ pub struct DocIndex {
     entries: Vec<QuickInfoEntry>,
     #[serde(skip)]
     by_name: HashMap<String, Vec<usize>>,
-    #[serde(skip)]
-    by_fqn: HashMap<String, usize>,
 }
 
 impl DocIndex {
@@ -63,19 +43,6 @@ impl DocIndex {
         };
         index.rebuild_maps();
         Ok(index)
-    }
-
-    pub fn lookup(&self, fqn: &str) -> Option<&QuickInfoEntry> {
-        self.by_fqn.get(fqn).and_then(|i| self.entries.get(*i))
-    }
-
-    pub fn lookup_by_name(&self, name: &str) -> Vec<&QuickInfoEntry> {
-        self.by_name
-            .get(name)
-            .into_iter()
-            .flatten()
-            .filter_map(|i| self.entries.get(*i))
-            .collect()
     }
 
     pub fn lookup_best(&self, name: &str, module: Option<&str>) -> Option<&QuickInfoEntry> {
@@ -100,218 +67,180 @@ impl DocIndex {
 
     fn rebuild_maps(&mut self) {
         self.by_name.clear();
-        self.by_fqn.clear();
         for (i, entry) in self.entries.iter().enumerate() {
             self.by_name
                 .entry(entry.name.clone())
                 .or_default()
                 .push(i);
-            if let Some(fqn) = entry_fqn(entry) {
-                self.by_fqn.insert(fqn, i);
-            }
         }
     }
-
-    pub fn build_from_specs(specs_dir: &Path) -> std::io::Result<Self> {
-        let mut entries = Vec::new();
-        let mut stack = Vec::new();
-        for md_path in list_markdown_files(specs_dir)? {
-            let text = fs::read_to_string(&md_path)?;
-            entries.extend(extract_entries_from_markers(&text, &mut stack));
-            stack.clear();
-        }
-        let mut index = DocIndex {
-            entries,
-            ..Default::default()
-        };
-        index.rebuild_maps();
-        Ok(index)
-    }
-}
-
-fn entry_fqn(entry: &QuickInfoEntry) -> Option<String> {
-    match (&entry.kind, entry.module.as_deref()) {
-        (QuickInfoKind::Module, _) => Some(entry.name.clone()),
-        (_, Some(_module)) if entry.name.contains('.') => Some(entry.name.clone()),
-        (_, Some(module)) => Some(format!("{module}.{}", entry.name)),
-        _ => None,
-    }
-}
-
-fn list_markdown_files(root: &Path) -> std::io::Result<Vec<PathBuf>> {
-    fn visit(dir: &Path, out: &mut Vec<PathBuf>) -> std::io::Result<()> {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.file_name().and_then(|n| n.to_str()) == Some("node_modules") {
-                continue;
-            }
-            if path.is_dir() {
-                visit(&path, out)?;
-            } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
-                out.push(path);
-            }
-        }
-        Ok(())
-    }
-
-    let mut out = Vec::new();
-    visit(root, &mut out)?;
-    Ok(out)
-}
-
-#[derive(Debug)]
-struct OpenMarker {
-    metadata: MarkerMetadata,
-    content_start: usize,
-}
-
-fn extract_entries_from_markers(markdown: &str, stack: &mut Vec<OpenMarker>) -> Vec<QuickInfoEntry> {
-    const OPEN: &str = "<!-- quick-info:";
-    const CLOSE: &str = "<!-- /quick-info -->";
-
-    let mut entries = Vec::new();
-    let mut i = 0usize;
-    while i < markdown.len() {
-        let rest = &markdown[i..];
-        if rest.starts_with(OPEN) {
-            if let Some(end) = rest.find("-->") {
-                let header = &rest[..end];
-                let json = header
-                    .strip_prefix(OPEN)
-                    .unwrap_or("")
-                    .trim()
-                    .trim_end_matches('-')
-                    .trim();
-                if let Ok(metadata) = serde_json::from_str::<MarkerMetadata>(json) {
-                    let content_start = i + end + "-->".len();
-                    stack.push(OpenMarker {
-                        metadata,
-                        content_start,
-                    });
-                }
-                i += end + "-->".len();
-                continue;
-            }
-        } else if rest.starts_with(CLOSE) {
-            if let Some(open) = stack.pop() {
-                let content_end = i;
-                let raw = markdown[open.content_start..content_end].trim();
-                let mut content = strip_marker_comments(raw).trim().to_string();
-                if !content.is_empty() {
-                    let signature = open
-                        .metadata
-                        .signature
-                        .clone()
-                        .or_else(|| extract_signature(&content, open.metadata.extract_signature));
-                    entries.push(QuickInfoEntry {
-                        kind: open.metadata.kind,
-                        name: open.metadata.name,
-                        module: open.metadata.module,
-                        content: std::mem::take(&mut content),
-                        signature,
-                    });
-                }
-            }
-            i += CLOSE.len();
-            continue;
-        }
-
-        let ch = rest.chars().next().unwrap();
-        i += ch.len_utf8();
-    }
-    entries
-}
-
-fn strip_marker_comments(input: &str) -> String {
-    const OPEN: &str = "<!-- quick-info:";
-    const CLOSE: &str = "<!-- /quick-info -->";
-
-    let mut out = String::with_capacity(input.len());
-    let mut i = 0usize;
-    while i < input.len() {
-        let rest = &input[i..];
-        if rest.starts_with(OPEN) {
-            if let Some(end) = rest.find("-->") {
-                i += end + "-->".len();
-                continue;
-            }
-        }
-        if rest.starts_with(CLOSE) {
-            i += CLOSE.len();
-            continue;
-        }
-        out.push(rest.chars().next().unwrap());
-        i += rest.chars().next().unwrap().len_utf8();
-    }
-    out
-}
-
-fn extract_signature(content: &str, extract_signature: Option<bool>) -> Option<String> {
-    if extract_signature == Some(false) {
-        return None;
-    }
-
-    if let Some(block) = extract_fenced_block(content, "aivi") {
-        let block = block.trim();
-        if !block.is_empty() {
-            return Some(block.to_string());
-        }
-    }
-
-    // Heuristic: pick the first inline code span that looks like a type/signature.
-    for span in extract_inline_code_spans(content) {
-        let span = span.trim();
-        if span.contains("->") || span.contains(':') {
-            return Some(span.to_string());
-        }
-    }
-
-    None
-}
-
-fn extract_fenced_block(content: &str, lang: &str) -> Option<String> {
-    let fence = "```";
-    let mut i = 0usize;
-    while let Some(open_at) = content[i..].find(fence) {
-        let open_at = i + open_at;
-        let after = &content[open_at + fence.len()..];
-        let Some(line_end) = after.find('\n') else {
-            return None;
-        };
-        let info = after[..line_end].trim();
-        let code_start = open_at + fence.len() + line_end + 1;
-        if info != lang {
-            i = code_start;
-            continue;
-        }
-        let rest = &content[code_start..];
-        let Some(close_rel) = rest.find("\n```") else {
-            return None;
-        };
-        return Some(rest[..close_rel].to_string());
-    }
-    None
-}
-
-fn extract_inline_code_spans(content: &str) -> Vec<String> {
-    let mut spans = Vec::new();
-    let mut i = 0usize;
-    while let Some(open) = content[i..].find('`') {
-        let open = i + open;
-        let rest = &content[open + 1..];
-        let Some(close) = rest.find('`') else {
-            break;
-        };
-        spans.push(rest[..close].to_string());
-        i = open + 1 + close + 1;
-    }
-    spans
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Debug, Clone, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct MarkerMetadata {
+        kind: QuickInfoKind,
+        name: String,
+        #[serde(default)]
+        module: Option<String>,
+        #[serde(default)]
+        signature: Option<String>,
+        #[serde(default)]
+        extract_signature: Option<bool>,
+        // Allow future keys without breaking parsing.
+        #[serde(flatten)]
+        _extra: HashMap<String, serde_json::Value>,
+    }
+
+    #[derive(Debug)]
+    struct OpenMarker {
+        metadata: MarkerMetadata,
+        content_start: usize,
+    }
+
+    fn extract_entries_from_markers(
+        markdown: &str,
+        stack: &mut Vec<OpenMarker>,
+    ) -> Vec<QuickInfoEntry> {
+        const OPEN: &str = "<!-- quick-info:";
+        const CLOSE: &str = "<!-- /quick-info -->";
+
+        let mut entries = Vec::new();
+        let mut i = 0usize;
+        while i < markdown.len() {
+            let rest = &markdown[i..];
+            if rest.starts_with(OPEN) {
+                if let Some(end) = rest.find("-->") {
+                    let header = &rest[..end];
+                    let json = header.strip_prefix(OPEN).unwrap_or("").trim();
+                    if let Ok(metadata) = serde_json::from_str::<MarkerMetadata>(json) {
+                        let content_start = i + end + "-->".len();
+                        stack.push(OpenMarker {
+                            metadata,
+                            content_start,
+                        });
+                    }
+                    i += end + "-->".len();
+                    continue;
+                }
+            } else if rest.starts_with(CLOSE) {
+                if let Some(open) = stack.pop() {
+                    let raw = markdown[open.content_start..i].trim();
+                    let content = strip_marker_comments(raw).trim().to_string();
+                    if !content.is_empty() {
+                        let signature = open
+                            .metadata
+                            .signature
+                            .clone()
+                            .or_else(|| extract_signature(&content, open.metadata.extract_signature));
+                        entries.push(QuickInfoEntry {
+                            kind: open.metadata.kind,
+                            name: open.metadata.name,
+                            module: open.metadata.module,
+                            content,
+                            signature,
+                        });
+                    }
+                }
+                i += CLOSE.len();
+                continue;
+            }
+
+            let ch = rest.chars().next().unwrap();
+            i += ch.len_utf8();
+        }
+        entries
+    }
+
+    fn strip_marker_comments(input: &str) -> String {
+        const OPEN: &str = "<!-- quick-info:";
+        const CLOSE: &str = "<!-- /quick-info -->";
+
+        let mut out = String::with_capacity(input.len());
+        let mut i = 0usize;
+        while i < input.len() {
+            let rest = &input[i..];
+            if rest.starts_with(OPEN) {
+                if let Some(end) = rest.find("-->") {
+                    i += end + "-->".len();
+                    continue;
+                }
+            }
+            if rest.starts_with(CLOSE) {
+                i += CLOSE.len();
+                continue;
+            }
+            let ch = rest.chars().next().unwrap();
+            out.push(ch);
+            i += ch.len_utf8();
+        }
+        out
+    }
+
+    fn extract_signature(content: &str, extract_signature: Option<bool>) -> Option<String> {
+        if extract_signature == Some(false) {
+            return None;
+        }
+
+        if let Some(block) = extract_fenced_block(content, "aivi") {
+            let block = block.trim();
+            if !block.is_empty() {
+                return Some(block.to_string());
+            }
+        }
+
+        for span in extract_inline_code_spans(content) {
+            let span = span.trim();
+            if span.contains("->") || span.contains(':') {
+                return Some(span.to_string());
+            }
+        }
+
+        None
+    }
+
+    fn extract_fenced_block(content: &str, lang: &str) -> Option<String> {
+        let fence = "```";
+        let mut i = 0usize;
+        while let Some(open_at) = content[i..].find(fence) {
+            let open_at = i + open_at;
+            let after = &content[open_at + fence.len()..];
+            let Some(line_end) = after.find('\n') else {
+                return None;
+            };
+            let info = after[..line_end].trim();
+            let code_start = open_at + fence.len() + line_end + 1;
+            if info != lang {
+                i = code_start;
+                continue;
+            }
+            let rest = &content[code_start..];
+            let Some(close_rel) = rest.find("\n```") else {
+                return None;
+            };
+            return Some(rest[..close_rel].to_string());
+        }
+        None
+    }
+
+    fn extract_inline_code_spans(content: &str) -> Vec<String> {
+        let mut spans = Vec::new();
+        let mut i = 0usize;
+        while let Some(open) = content[i..].find('`') {
+            let open = i + open;
+            let rest = &content[open + 1..];
+            let Some(close) = rest.find('`') else {
+                break;
+            };
+            spans.push(rest[..close].to_string());
+            i = open + 1 + close + 1;
+        }
+        spans
+    }
 
     #[test]
     fn extract_wrapping_marker_simple() {

@@ -211,30 +211,19 @@
     "sigil": {
       "patterns": [
         {
-          "match": "~html~>",
-          "name": "punctuation.definition.tag.begin.aivi"
-        },
-        {
-          "match": "<~html\\b",
-          "name": "punctuation.definition.tag.end.aivi"
-        },
-        {
-          "begin": "(~html)(\\{)",
+          "begin": "(~html~>)",
           "beginCaptures": {
             "1": {
-              "name": "entity.name.function.sigil.aivi"
-            },
-            "2": {
-              "name": "punctuation.definition.string.begin.aivi"
+              "name": "storage.type.sigil.aivi"
             }
           },
-          "end": "^\\s*\\}",
+          "end": "(<~html)",
           "endCaptures": {
-            "0": {
-              "name": "punctuation.definition.string.end.aivi"
+            "1": {
+              "name": "storage.type.sigil.aivi"
             }
           },
-          "name": "string.quoted.other.sigil.aivi"
+          "name": "string.quoted.other.sigil.html.aivi"
         },
         {
           "begin": "(~(?!map\\b|set\\b)[a-z][A-Za-z0-9_]*)(/)",

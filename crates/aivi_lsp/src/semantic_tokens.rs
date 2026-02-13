@@ -675,7 +675,8 @@ impl Backend {
                     pos: &[(u32, u32)],
                     start: usize,
                     end: usize,
-                    token_type: u32| {
+                    token_type: u32,
+                    modifiers: u32| {
             if end <= start || start >= pos.len() {
                 return;
             }
@@ -702,7 +703,7 @@ impl Backend {
                     start_col,
                     len,
                     token_type,
-                    0,
+                    modifiers,
                 );
             } else {
                 // Should not happen for our tag/attr tokens; keep safe.
@@ -715,7 +716,7 @@ impl Backend {
                     start_col,
                     len,
                     token_type,
-                    0,
+                    modifiers,
                 );
             }
         };
@@ -731,6 +732,7 @@ impl Backend {
             0,
             prefix_len,
             Self::SEM_TOKEN_SIGIL,
+            0,
         );
         push(
             data,
@@ -740,7 +742,100 @@ impl Backend {
             chars.len().saturating_sub(suffix_len),
             chars.len(),
             Self::SEM_TOKEN_SIGIL,
+            0,
         );
+
+        let emit_embedded_aivi_tokens = |data: &mut Vec<SemanticToken>,
+                                         last_line: &mut u32,
+                                         last_start: &mut u32,
+                                         expr_start: usize,
+                                         expr_end: usize| {
+            if expr_end <= expr_start || expr_start >= chars.len() {
+                return;
+            }
+            let expr_end = expr_end.min(chars.len());
+            let expr_text: String = chars[expr_start..expr_end].iter().collect();
+            let expr_chars: Vec<char> = expr_text.chars().collect();
+            let mut expr_line_starts: Vec<usize> = Vec::new();
+            expr_line_starts.push(0);
+            for (idx, ch) in expr_chars.iter().enumerate() {
+                if *ch == '\n' {
+                    expr_line_starts.push(idx + 1);
+                }
+            }
+            let expr_char_index_from_line_col = |line: usize, col: usize| -> Option<usize> {
+                let line_index = line.saturating_sub(1);
+                let col_index = col.saturating_sub(1);
+                let start = *expr_line_starts.get(line_index)?;
+                Some(start + col_index)
+            };
+
+            let (tokens, _) = lex_cst(&expr_text);
+            let significant: Vec<usize> = tokens
+                .iter()
+                .enumerate()
+                .filter(|(_, token)| token.kind != "whitespace")
+                .map(|(idx, _)| idx)
+                .collect();
+            let signature_lines = Self::signature_lines(&tokens);
+            let dotted_paths = Self::dotted_path_roles(&tokens);
+
+            for (position, token_index) in significant.iter().copied().enumerate() {
+                let t = &tokens[token_index];
+                let prev = position
+                    .checked_sub(1)
+                    .and_then(|prev| significant.get(prev))
+                    .map(|idx| &tokens[*idx]);
+                let next = significant.get(position + 1).map(|idx| &tokens[*idx]);
+                let token_type = dotted_paths
+                    .get(&token_index)
+                    .copied()
+                    .or_else(|| Self::classify_semantic_token(prev, t, next));
+                let Some(token_type) = token_type else {
+                    continue;
+                };
+
+                let Some(local_start) =
+                    expr_char_index_from_line_col(t.span.start.line, t.span.start.column)
+                else {
+                    continue;
+                };
+                let global_start = expr_start.saturating_add(local_start);
+                let token_chars: Vec<char> = t.text.chars().collect();
+                if token_chars.is_empty() {
+                    continue;
+                }
+
+                let line0 = t.span.start.line.saturating_sub(1) as u32;
+                let modifiers = if signature_lines.contains(&line0) {
+                    1u32 << Self::SEM_MOD_SIGNATURE
+                } else {
+                    0
+                };
+
+                let mut seg_start = 0usize;
+                for (idx, ch) in token_chars.iter().enumerate() {
+                    if *ch != '\n' {
+                        continue;
+                    }
+                    if idx > seg_start {
+                        let start = global_start.saturating_add(seg_start);
+                        let end = global_start.saturating_add(idx);
+                        push(
+                            data, last_line, last_start, &pos, start, end, token_type, modifiers,
+                        );
+                    }
+                    seg_start = idx + 1;
+                }
+                if seg_start < token_chars.len() {
+                    let start = global_start.saturating_add(seg_start);
+                    let end = global_start.saturating_add(token_chars.len());
+                    push(
+                        data, last_line, last_start, &pos, start, end, token_type, modifiers,
+                    );
+                }
+            }
+        };
 
         let mut i = prefix_len;
         let end_limit = chars.len().saturating_sub(1);
@@ -773,6 +868,16 @@ impl Backend {
                         _ => {}
                     }
                     j += 1;
+                }
+                // Treat `{ ... }` like JSX: tokenize the embedded AIVI expression.
+                if j > i + 1 {
+                    emit_embedded_aivi_tokens(
+                        data,
+                        last_line,
+                        last_start,
+                        i + 1,
+                        j.saturating_sub(1),
+                    );
                 }
                 i = j;
                 continue;
@@ -830,6 +935,7 @@ impl Backend {
                 tag_start,
                 tag_end,
                 Self::SEM_TOKEN_TYPE,
+                0,
             );
 
             // Parse attributes until tag closes.
@@ -873,6 +979,7 @@ impl Backend {
                     attr_start,
                     attr_end,
                     Self::SEM_TOKEN_PROPERTY,
+                    0,
                 );
 
                 while j < end_limit && chars[j].is_whitespace() {
@@ -907,6 +1014,7 @@ impl Backend {
                             value_start,
                             value_end,
                             Self::SEM_TOKEN_STRING,
+                            0,
                         );
                     } else if j < end_limit && chars[j] == '{' {
                         // AIVI expression; skip balanced.
@@ -925,6 +1033,7 @@ impl Backend {
                             value_start,
                             j,
                             Self::SEM_TOKEN_STRING,
+                            0,
                         );
                     }
                 }
