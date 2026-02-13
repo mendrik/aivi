@@ -233,6 +233,7 @@ impl Backend {
                 .or_else(|| Self::find_call_info(right, position)),
             Expr::Block { items, .. } => items.iter().find_map(|item| match item {
                 BlockItem::Bind { expr, .. } => Self::find_call_info(expr, position),
+                BlockItem::Let { expr, .. } => Self::find_call_info(expr, position),
                 BlockItem::Filter { expr, .. }
                 | BlockItem::Yield { expr, .. }
                 | BlockItem::Recurse { expr, .. }

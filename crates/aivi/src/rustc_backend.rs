@@ -216,6 +216,7 @@ fn emit_module(module: RustIrModule, kind: EmitKind) -> Result<String, AiviError
     out.push_str("    IndexValue(Value),\n");
     out.push_str("    IndexFieldBool(String),\n");
     out.push_str("    IndexPredicate(Value),\n");
+    out.push_str("    IndexAll,\n");
     out.push_str("}\n\n");
 
     out.push_str("fn patch_apply(old: Value, updater: Value) -> Result<Value, String> {\n");
@@ -238,6 +239,18 @@ fn emit_module(module: RustIrModule, kind: EmitKind) -> Result<String, AiviError
     out.push_str("                Ok(Value::Record(map))\n");
     out.push_str("            }\n");
     out.push_str("            other => Err(format!(\"expected Record for field patch, got {}\", format_value(&other))),\n");
+    out.push_str("        },\n");
+    out.push_str("        PathSeg::IndexAll => match target {\n");
+    out.push_str("            Value::List(items) => {\n");
+    out.push_str("                let mut out_items = Vec::with_capacity(items.len());\n");
+    out.push_str("                for item in items.into_iter() {\n");
+    out.push_str(
+        "                    out_items.push(patch_path(item, &path[1..], updater.clone())?);\n",
+    );
+    out.push_str("                }\n");
+    out.push_str("                Ok(Value::List(out_items))\n");
+    out.push_str("            }\n");
+    out.push_str("            other => Err(format!(\"expected List for traversal patch, got {}\", format_value(&other))),\n");
     out.push_str("        },\n");
     out.push_str("        PathSeg::IndexValue(idx) => match (target, idx.clone()) {\n");
     out.push_str("            (Value::List(mut items), Value::Int(i)) => {\n");
@@ -666,6 +679,9 @@ fn emit_path(path: &[RustIrPathSegment], indent: usize) -> Result<String, AiviEr
                 out.push_str("PathSeg::IndexValue(");
                 out.push_str(&format!("({})?", emit_expr(expr, indent)?));
                 out.push(')');
+            }
+            RustIrPathSegment::IndexAll => {
+                out.push_str("PathSeg::IndexAll");
             }
         }
     }

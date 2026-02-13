@@ -71,7 +71,7 @@ fn default_cargo_profile() -> String {
 }
 
 fn default_codegen() -> Codegen {
-    Codegen::Embed
+    Codegen::Native
 }
 
 pub fn read_aivi_toml(path: &Path) -> Result<AiviToml, AiviError> {

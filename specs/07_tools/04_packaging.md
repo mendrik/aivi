@@ -31,7 +31,7 @@ language_version = "0.1"  # Targeted Aivi version
 gen_dir = "target/aivi-gen" # Where generated Rust code is placed
 rust_edition = "2024"       # Rust edition for generated code
 cargo_profile = "dev"       # Default cargo profile
-codegen = "native"          # "native" (standalone Rust) or "embed" (HIR+interpreter)
+codegen = "native"          # "native" (standalone Rust) or "embed" (HIR+interpreter); defaults to "native"
 ```
 
 ## `Cargo.toml` Integration

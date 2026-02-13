@@ -12,9 +12,9 @@ Error =
 
 messageFrom : Result Error Text -> Text
 messageFrom res =
-  res or
-    | Err NotFound m => m
-    | Err _          => "boom"
+res or
+| Err NotFound m => m
+| Err _          => "boom"
 
 main : Effect Text Unit
 main = effect {
@@ -30,4 +30,3 @@ main = effect {
 
   println detail
 }
-

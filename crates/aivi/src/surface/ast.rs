@@ -283,6 +283,7 @@ pub struct RecordField {
 pub enum PathSegment {
     Field(SpannedName),
     Index(Expr, Span),
+    All(Span),
 }
 
 #[derive(Debug, Clone)]

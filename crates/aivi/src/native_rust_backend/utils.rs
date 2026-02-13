@@ -121,7 +121,9 @@ pub(super) fn collect_free_locals_in_expr(
                         | RustIrPathSegment::IndexPredicate(expr) => {
                             collect_free_locals_in_expr(expr, bound, out);
                         }
-                        RustIrPathSegment::Field(_) | RustIrPathSegment::IndexFieldBool(_) => {}
+                        RustIrPathSegment::Field(_)
+                        | RustIrPathSegment::IndexFieldBool(_)
+                        | RustIrPathSegment::IndexAll => {}
                     }
                 }
                 collect_free_locals_in_expr(&field.value, bound, out);

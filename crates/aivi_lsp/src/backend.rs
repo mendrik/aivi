@@ -1065,6 +1065,7 @@ impl Backend {
             PathSegment::Index(expr, _) => {
                 Self::collect_expr_references(expr, ident, text, uri, locations);
             }
+            PathSegment::All(_) => {}
         }
     }
 
@@ -1091,6 +1092,10 @@ impl Backend {
     ) {
         match item {
             BlockItem::Bind { pattern, expr, .. } => {
+                Self::collect_pattern_references(pattern, ident, text, uri, locations);
+                Self::collect_expr_references(expr, ident, text, uri, locations);
+            }
+            BlockItem::Let { pattern, expr, .. } => {
                 Self::collect_pattern_references(pattern, ident, text, uri, locations);
                 Self::collect_expr_references(expr, ident, text, uri, locations);
             }

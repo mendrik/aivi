@@ -174,6 +174,8 @@ pub enum RustIrPathSegment {
     /// This is used for patch paths like `items[price > 15].price`, where unbound names in the
     /// bracket expression are treated as implicit field accesses on the element.
     IndexPredicate(RustIrExpr),
+    /// Traverse/patch all elements (e.g. `items[*]`).
+    IndexAll,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -494,13 +496,15 @@ fn lower_path_segment(
 ) -> Result<RustIrPathSegment, AiviError> {
     match seg {
         KernelPathSegment::Field(name) => Ok(RustIrPathSegment::Field(name)),
+        KernelPathSegment::All => Ok(RustIrPathSegment::IndexAll),
         KernelPathSegment::Index(expr) => {
             // A bare unbound name `items[active]` is shorthand for patching elements where
             // `item.active == True`.
             if let KernelExpr::Var { id, name } = &expr {
+                let reserved = is_reserved_selector_name(name);
                 let is_bound = locals.iter().rev().any(|local| local == name)
-                    || globals.iter().any(|g| g == name)
-                    || resolve_builtin(name).is_some();
+                    || (!reserved && globals.iter().any(|g| g == name))
+                    || (!reserved && resolve_builtin(name).is_some());
                 if !is_bound {
                     return Ok(RustIrPathSegment::IndexFieldBool(name.clone()));
                 }
@@ -578,10 +582,11 @@ fn collect_unbound_vars_in_kernel_expr(
 ) {
     match expr {
         KernelExpr::Var { name, .. } => {
+            let reserved = is_reserved_selector_name(name);
             let is_bound = bound.iter().rev().any(|b| b == name)
                 || locals.iter().rev().any(|b| b == name)
-                || globals.iter().any(|g| g == name)
-                || resolve_builtin(name).is_some();
+                || (!reserved && globals.iter().any(|g| g == name))
+                || (!reserved && resolve_builtin(name).is_some());
             if !is_bound {
                 out.insert(name.clone());
             }
@@ -729,6 +734,10 @@ fn collect_kernel_pattern_binders(pat: &crate::kernel::KernelPattern, out: &mut 
     }
 }
 
+fn is_reserved_selector_name(name: &str) -> bool {
+    matches!(name, "key" | "value")
+}
+
 fn rewrite_implicit_field_vars(
     expr: KernelExpr,
     implicit_param: &str,
@@ -803,6 +812,9 @@ fn rewrite_implicit_field_vars(
                             crate::kernel::KernelPathSegment::Field(name) => {
                                 crate::kernel::KernelPathSegment::Field(name)
                             }
+                            crate::kernel::KernelPathSegment::All => {
+                                crate::kernel::KernelPathSegment::All
+                            }
                             crate::kernel::KernelPathSegment::Index(expr) => {
                                 crate::kernel::KernelPathSegment::Index(
                                     rewrite_implicit_field_vars(expr, implicit_param, unbound),
@@ -831,6 +843,9 @@ fn rewrite_implicit_field_vars(
                         .map(|seg| match seg {
                             crate::kernel::KernelPathSegment::Field(name) => {
                                 crate::kernel::KernelPathSegment::Field(name)
+                            }
+                            crate::kernel::KernelPathSegment::All => {
+                                crate::kernel::KernelPathSegment::All
                             }
                             crate::kernel::KernelPathSegment::Index(expr) => {
                                 crate::kernel::KernelPathSegment::Index(

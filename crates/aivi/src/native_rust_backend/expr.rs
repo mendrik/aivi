@@ -176,7 +176,7 @@ pub(super) fn emit_expr(expr: &RustIrExpr, indent: usize) -> Result<String, Aivi
             let base_code = emit_expr(base, indent)?;
             let index_code = emit_expr(index, indent)?;
             format!(
-                "({base_code}).and_then(|b| ({index_code}).and_then(|i| match (b, i) {{ (Value::List(items), Value::Int(idx)) => items.get(idx as usize).cloned().ok_or_else(|| RuntimeError::Message(\"index out of bounds\".to_string())), (Value::Tuple(items), Value::Int(idx)) => items.get(idx as usize).cloned().ok_or_else(|| RuntimeError::Message(\"index out of bounds\".to_string())), (other, _) => Err(RuntimeError::Message(format!(\"index on unsupported value {{}}\", aivi_native_runtime::format_value(&other)))), }}))"
+                "({base_code}).and_then(|b| ({index_code}).and_then(|i| match (b, i) {{ (Value::List(items), Value::Int(idx)) => items.get(idx as usize).cloned().ok_or_else(|| RuntimeError::Message(\"index out of bounds\".to_string())), (Value::Tuple(items), Value::Int(idx)) => items.get(idx as usize).cloned().ok_or_else(|| RuntimeError::Message(\"index out of bounds\".to_string())), (Value::Map(entries), idx) => {{ let Some(key) = KeyValue::try_from_value(&idx) else {{ return Err(RuntimeError::Message(format!(\"map key is not a valid key type: {{}}\", aivi_native_runtime::format_value(&idx)))); }}; entries.get(&key).cloned().ok_or_else(|| RuntimeError::Message(\"missing map key\".to_string())) }}, (other, _) => Err(RuntimeError::Message(format!(\"index on unsupported value {{}}\", aivi_native_runtime::format_value(&other)))), }}))"
             )
         }
         RustIrExpr::If {
@@ -306,6 +306,9 @@ fn emit_path(path: &[RustIrPathSegment], indent: usize) -> Result<String, AiviEr
                 out.push_str("PathSeg::IndexValue(");
                 out.push_str(&format!("({})?", emit_expr(expr, indent)?));
                 out.push(')');
+            }
+            RustIrPathSegment::IndexAll => {
+                out.push_str("PathSeg::IndexAll");
             }
         }
     }

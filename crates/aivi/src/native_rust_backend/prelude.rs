@@ -3,7 +3,7 @@ pub(super) fn emit_runtime_prelude() -> String {
     out.push_str("use std::collections::HashMap;\n");
     out.push_str("use std::sync::{Arc, Mutex};\n\n");
     out.push_str(
-        "use aivi_native_runtime::{get_builtin, ok as aivi_ok, BuiltinImpl, BuiltinValue, EffectValue, ResourceValue, Runtime, RuntimeError, R, Value};\n\n",
+        "use aivi_native_runtime::{get_builtin, ok as aivi_ok, BuiltinImpl, BuiltinValue, EffectValue, KeyValue, ResourceValue, Runtime, RuntimeError, R, Value};\n\n",
     );
     out.push_str("fn __builtin(name: &str) -> Value {\n");
     out.push_str("    get_builtin(name).unwrap_or_else(|| panic!(\"missing builtin {name}\"))\n");
@@ -15,6 +15,7 @@ pub(super) fn emit_runtime_prelude() -> String {
     out.push_str("    IndexValue(Value),\n");
     out.push_str("    IndexFieldBool(String),\n");
     out.push_str("    IndexPredicate(Value),\n");
+    out.push_str("    IndexAll,\n");
     out.push_str("}\n\n");
 
     out.push_str("fn patch_apply(rt: &mut Runtime, old: Value, updater: Value) -> R {\n");
@@ -43,6 +44,26 @@ pub(super) fn emit_runtime_prelude() -> String {
         "            other => Err(RuntimeError::Message(format!(\"expected Record for field patch, got {}\", aivi_native_runtime::format_value(&other)))),\n",
     );
     out.push_str("        },\n");
+    out.push_str("        PathSeg::IndexAll => match target {\n");
+    out.push_str("            Value::List(items) => {\n");
+    out.push_str("                let mut out_items = Vec::with_capacity(items.len());\n");
+    out.push_str("                for item in items.iter().cloned() {\n");
+    out.push_str(
+        "                    out_items.push(patch_path(rt, item, &path[1..], updater.clone())?);\n",
+    );
+    out.push_str("                }\n");
+    out.push_str("                aivi_ok(Value::List(Arc::new(out_items)))\n");
+    out.push_str("            }\n");
+    out.push_str("            Value::Map(entries) => {\n");
+    out.push_str("                let mut out_entries = entries.as_ref().clone();\n");
+    out.push_str("                for (k, v) in entries.iter() {\n");
+    out.push_str("                    let new_val = patch_path(rt, v.clone(), &path[1..], updater.clone())?;\n");
+    out.push_str("                    out_entries.insert(k.clone(), new_val);\n");
+    out.push_str("                }\n");
+    out.push_str("                aivi_ok(Value::Map(Arc::new(out_entries)))\n");
+    out.push_str("            }\n");
+    out.push_str("            other => Err(RuntimeError::Message(format!(\"expected List/Map for traversal patch, got {}\", aivi_native_runtime::format_value(&other)))),\n");
+    out.push_str("        },\n");
     out.push_str("        PathSeg::IndexValue(idx) => match (target, idx.clone()) {\n");
     out.push_str("            (Value::List(items), Value::Int(i)) => {\n");
     out.push_str("                let i = i as usize;\n");
@@ -58,6 +79,18 @@ pub(super) fn emit_runtime_prelude() -> String {
     out.push_str("                let old = items[i].clone();\n");
     out.push_str("                items[i] = patch_path(rt, old, &path[1..], updater)?;\n");
     out.push_str("                aivi_ok(Value::Tuple(items))\n");
+    out.push_str("            }\n");
+    out.push_str("            (Value::Map(entries), idx) => {\n");
+    out.push_str("                let Some(key) = KeyValue::try_from_value(&idx) else {\n");
+    out.push_str("                    return Err(RuntimeError::Message(format!(\"map key is not a valid key type: {}\", aivi_native_runtime::format_value(&idx))));\n");
+    out.push_str("                };\n");
+    out.push_str("                let mut out_entries = entries.as_ref().clone();\n");
+    out.push_str(
+        "                let old = out_entries.get(&key).cloned().unwrap_or(Value::Unit);\n",
+    );
+    out.push_str("                let new_val = patch_path(rt, old, &path[1..], updater)?;\n");
+    out.push_str("                out_entries.insert(key, new_val);\n");
+    out.push_str("                aivi_ok(Value::Map(Arc::new(out_entries)))\n");
     out.push_str("            }\n");
     out.push_str(
         "            (other, _) => Err(RuntimeError::Message(format!(\"expected List/Tuple + Int for index patch, got {}\", aivi_native_runtime::format_value(&other)))),\n",
@@ -102,8 +135,29 @@ pub(super) fn emit_runtime_prelude() -> String {
     out.push_str("                }\n");
     out.push_str("                aivi_ok(Value::List(Arc::new(out_items)))\n");
     out.push_str("            }\n");
+    out.push_str("            Value::Map(entries) => {\n");
+    out.push_str("                let mut out_entries = entries.as_ref().clone();\n");
+    out.push_str("                for (k, v) in entries.iter() {\n");
+    out.push_str("                    let mut rec = HashMap::new();\n");
+    out.push_str("                    rec.insert(\"key\".to_string(), k.to_value());\n");
+    out.push_str("                    rec.insert(\"value\".to_string(), v.clone());\n");
+    out.push_str("                    let entry = Value::Record(Arc::new(rec));\n");
+    out.push_str("                    let keep = match rt.apply(pred.clone(), entry)? {\n");
+    out.push_str("                        Value::Bool(true) => true,\n");
+    out.push_str("                        Value::Bool(false) => false,\n");
     out.push_str(
-        "            other => Err(RuntimeError::Message(format!(\"expected List for predicate traversal patch, got {}\", aivi_native_runtime::format_value(&other)))),\n",
+        "                        other => return Err(RuntimeError::Message(format!(\"expected Bool predicate, got {}\", aivi_native_runtime::format_value(&other)))),\n",
+    );
+    out.push_str("                    };\n");
+    out.push_str("                    if keep {\n");
+    out.push_str("                        let new_val = patch_path(rt, v.clone(), &path[1..], updater.clone())?;\n");
+    out.push_str("                        out_entries.insert(k.clone(), new_val);\n");
+    out.push_str("                    }\n");
+    out.push_str("                }\n");
+    out.push_str("                aivi_ok(Value::Map(Arc::new(out_entries)))\n");
+    out.push_str("            }\n");
+    out.push_str(
+        "            other => Err(RuntimeError::Message(format!(\"expected List/Map for predicate traversal patch, got {}\", aivi_native_runtime::format_value(&other)))),\n",
     );
     out.push_str("        },\n");
     out.push_str("    }\n");

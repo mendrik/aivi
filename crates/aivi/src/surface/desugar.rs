@@ -121,6 +121,7 @@ fn desugar_expr(expr: Expr) -> Expr {
                             super::PathSegment::Index(expr, span) => {
                                 super::PathSegment::Index(desugar_expr(expr), span)
                             }
+                            super::PathSegment::All(span) => super::PathSegment::All(span),
                         })
                         .collect(),
                     value: desugar_expr(field.value),
@@ -142,6 +143,7 @@ fn desugar_expr(expr: Expr) -> Expr {
                             super::PathSegment::Index(expr, span) => {
                                 super::PathSegment::Index(desugar_expr(expr), span)
                             }
+                            super::PathSegment::All(span) => super::PathSegment::All(span),
                         })
                         .collect(),
                     value: desugar_expr(field.value),

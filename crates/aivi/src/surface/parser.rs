@@ -1314,7 +1314,11 @@ impl Parser {
 
         let mut out_arms = vec![ok_arm];
         if let Some(rhs) = fallback_expr {
-            let err_pat = self.build_ctor_pattern("Err", vec![Pattern::Wildcard(or_span.clone())], or_span.clone());
+            let err_pat = self.build_ctor_pattern(
+                "Err",
+                vec![Pattern::Wildcard(or_span.clone())],
+                or_span.clone(),
+            );
             out_arms.push(MatchArm {
                 pattern: err_pat,
                 guard: None,
@@ -1325,7 +1329,10 @@ impl Parser {
             out_arms.append(&mut parsed_arms);
         }
 
-        let span = merge_span(expr_span(&base), out_arms.last().map(|a| a.span.clone()).unwrap_or(or_span));
+        let span = merge_span(
+            expr_span(&base),
+            out_arms.last().map(|a| a.span.clone()).unwrap_or(or_span),
+        );
         Some(Expr::Match {
             scrutinee: Some(Box::new(base)),
             arms: out_arms,
@@ -2298,8 +2305,11 @@ impl Parser {
 
         let mut match_arms = vec![ok_arm];
         if let Some(rhs) = fallback_expr {
-            let err_pat =
-                self.build_ctor_pattern("Err", vec![Pattern::Wildcard(or_span.clone())], or_span.clone());
+            let err_pat = self.build_ctor_pattern(
+                "Err",
+                vec![Pattern::Wildcard(or_span.clone())],
+                or_span.clone(),
+            );
             let rhs_span = expr_span(&rhs);
             let body = self.build_call_expr(
                 self.build_ident_expr("pure", rhs_span.clone()),
@@ -2331,7 +2341,11 @@ impl Parser {
         }
 
         let err_name = self.fresh_internal_name("or_err", or_span.clone());
-        let err_pat = self.build_ctor_pattern("Err", vec![Pattern::Ident(err_name.clone())], or_span.clone());
+        let err_pat = self.build_ctor_pattern(
+            "Err",
+            vec![Pattern::Ident(err_name.clone())],
+            or_span.clone(),
+        );
         let err_body = self.build_call_expr(
             self.build_ident_expr("fail", or_span.clone()),
             vec![Expr::Ident(err_name)],
@@ -2353,7 +2367,13 @@ impl Parser {
         let span = merge_span(or_span.clone(), or_span.clone());
         Expr::Block {
             kind: BlockKind::Effect,
-            items: vec![bind_item, BlockItem::Expr { expr: match_expr, span }],
+            items: vec![
+                bind_item,
+                BlockItem::Expr {
+                    expr: match_expr,
+                    span,
+                },
+            ],
             span: or_span,
         }
     }
@@ -2379,7 +2399,7 @@ impl Parser {
         let mut path = Vec::new();
         if let Some(name) = self.consume_ident() {
             path.push(PathSegment::Field(name));
-        } else {
+        } else if !self.check_symbol("[") {
             self.pos = start;
             return None;
         }
@@ -2391,15 +2411,24 @@ impl Parser {
                 }
             }
             if self.consume_symbol("[") {
+                let seg_start = self.previous_span();
+                self.consume_newlines();
+                if self.consume_symbol("*") {
+                    self.consume_newlines();
+                    let end = self.expect_symbol("]", "expected ']' in record field path");
+                    let end = end.unwrap_or(self.previous_span());
+                    path.push(PathSegment::All(merge_span(seg_start, end)));
+                    continue;
+                }
+
                 let expr = self.parse_expr().unwrap_or(Expr::Raw {
                     text: String::new(),
                     span: self.previous_span(),
                 });
+                self.consume_newlines();
                 let end = self.expect_symbol("]", "expected ']' in record field path");
-                path.push(PathSegment::Index(
-                    expr,
-                    end.unwrap_or(self.previous_span()),
-                ));
+                let end = end.unwrap_or(self.previous_span());
+                path.push(PathSegment::Index(expr, merge_span(seg_start, end)));
                 continue;
             }
             break;
@@ -3552,6 +3581,11 @@ fn path_span(path: &[PathSegment]) -> Span {
         (Some(PathSegment::Field(first)), Some(PathSegment::Index(_, span))) => {
             merge_span(first.span.clone(), span.clone())
         }
+        (Some(PathSegment::Field(first)), Some(PathSegment::All(span))) => {
+            merge_span(first.span.clone(), span.clone())
+        }
+        (Some(PathSegment::Index(_, span)), _) => span.clone(),
+        (Some(PathSegment::All(span)), _) => span.clone(),
         _ => Span {
             start: Position { line: 1, column: 1 },
             end: Position { line: 1, column: 1 },

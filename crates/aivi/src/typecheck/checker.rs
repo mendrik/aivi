@@ -2,8 +2,9 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::diagnostics::{Diagnostic, FileDiagnostic, Span};
 use crate::surface::{
-    BlockItem, BlockKind, Def, DomainItem, Expr, Literal, Module, ModuleItem, PathSegment, Pattern,
-    RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeDecl, TypeExpr, TypeSig,
+    BlockItem, BlockKind, Def, DomainItem, Expr, ListItem, Literal, Module, ModuleItem,
+    PathSegment, Pattern, RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias,
+    TypeDecl, TypeExpr, TypeSig,
 };
 
 use super::types::{
@@ -1104,14 +1105,40 @@ impl TypeChecker {
     ) -> Result<Type, TypeError> {
         let base_ty = self.infer_expr(base, env)?;
         let index_ty = self.infer_expr(index, env)?;
-        self.unify_with_span(index_ty, Type::con("Int"), expr_span(index))?;
-        let elem = self.fresh_var();
+
+        // `x[i]` is overloaded for a few container types.
+        // Try `List[Int]` first, then fall back to `Map[key]`.
+        let base_subst = self.subst.clone();
+
+        // List indexing: `List A` + `Int` -> `A`
+        let list_elem_ty = self.fresh_var();
+        if self
+            .unify_with_span(index_ty.clone(), Type::con("Int"), expr_span(index))
+            .is_ok()
+            && self
+                .unify_with_span(
+                    base_ty.clone(),
+                    Type::con("List").app(vec![list_elem_ty.clone()]),
+                    expr_span(base),
+                )
+                .is_ok()
+        {
+            return Ok(self.apply(list_elem_ty));
+        }
+
+        // Reset any constraints added by the failed list attempt.
+        self.subst = base_subst;
+
+        // Map indexing: `Map K V` + `K` -> `V`
+        let key_ty = self.fresh_var();
+        let value_ty = self.fresh_var();
         self.unify_with_span(
             base_ty,
-            Type::con("List").app(vec![elem.clone()]),
+            Type::con("Map").app(vec![key_ty.clone(), value_ty.clone()]),
             expr_span(base),
         )?;
-        Ok(elem)
+        self.unify_with_span(index_ty, key_ty, expr_span(index))?;
+        Ok(self.apply(value_ty))
     }
 
     fn infer_call(
@@ -1515,8 +1542,7 @@ impl TypeChecker {
                         self.subst = snapshot;
                         return Err(TypeError {
                             span: expr_span(expr),
-                            message:
-                                "use `<-` to run effects; `=` binds pure values".to_string(),
+                            message: "use `<-` to run effects; `=` binds pure values".to_string(),
                             expected: None,
                             found: None,
                         });
@@ -1543,7 +1569,8 @@ impl TypeChecker {
                     } else {
                         // Expression statements only auto-run effects when they return `Unit`.
                         // For non-`Unit` results, require an explicit `<-` bind.
-                        let value_ty = self.require_effect_value(expr_ty, err_ty.clone(), expr_span(expr))?;
+                        let value_ty =
+                            self.require_effect_value(expr_ty, err_ty.clone(), expr_span(expr))?;
                         self.unify_with_span(value_ty, Type::con("Unit"), expr_span(expr))?;
                     }
                 }
@@ -1647,8 +1674,12 @@ impl TypeChecker {
     ) -> Result<Type, TypeError> {
         for field in fields {
             let value_ty = self.infer_expr(&field.value, env)?;
-            let field_ty =
-                self.record_field_type(target_ty.clone(), &field.path, field.span.clone())?;
+            let field_ty = self.infer_patch_path_focus(
+                target_ty.clone(),
+                &field.path,
+                env,
+                field.span.clone(),
+            )?;
             let value_applied = self.apply(value_ty.clone());
             let field_applied = self.apply(field_ty.clone());
             if matches!(field_applied, Type::Func(_, _))
@@ -1670,6 +1701,160 @@ impl TypeChecker {
             self.unify_with_span(value_ty, field_ty, field.span.clone())?;
         }
         Ok(target_ty)
+    }
+
+    fn infer_patch_path_focus(
+        &mut self,
+        target_ty: Type,
+        path: &[PathSegment],
+        env: &mut TypeEnv,
+        span: Span,
+    ) -> Result<Type, TypeError> {
+        if path.is_empty() {
+            return Err(TypeError {
+                span,
+                message: "patch path must not be empty".to_string(),
+                expected: None,
+                found: None,
+            });
+        }
+
+        let mut current_ty = target_ty;
+        for segment in path {
+            match segment {
+                PathSegment::Field(name) => {
+                    let field_ty = self.fresh_var();
+                    let mut fields = BTreeMap::new();
+                    fields.insert(name.name.clone(), field_ty.clone());
+                    self.unify_with_span(
+                        current_ty,
+                        Type::Record { fields, open: true },
+                        name.span.clone(),
+                    )?;
+                    current_ty = field_ty;
+                }
+                PathSegment::All(seg_span) => {
+                    let checkpoint = self.subst.clone();
+
+                    // List traversal: `List A` -> `A`
+                    let elem_ty = self.fresh_var();
+                    if self
+                        .unify_with_span(
+                            current_ty.clone(),
+                            Type::con("List").app(vec![elem_ty.clone()]),
+                            seg_span.clone(),
+                        )
+                        .is_ok()
+                    {
+                        current_ty = elem_ty;
+                        continue;
+                    }
+
+                    // Map traversal: `Map K V` -> `V`
+                    self.subst = checkpoint;
+                    let key_ty = self.fresh_var();
+                    let value_ty = self.fresh_var();
+                    self.unify_with_span(
+                        current_ty,
+                        Type::con("Map").app(vec![key_ty, value_ty.clone()]),
+                        seg_span.clone(),
+                    )?;
+                    current_ty = value_ty;
+                }
+                PathSegment::Index(expr, seg_span) => {
+                    let unbound = collect_unbound_names(expr, env);
+                    if unbound.is_empty() {
+                        let idx_ty = self.infer_expr(expr, env)?;
+                        let checkpoint = self.subst.clone();
+
+                        // List index: `List A` + `Int` -> `A`
+                        let elem_ty = self.fresh_var();
+                        if self
+                            .unify_with_span(idx_ty.clone(), Type::con("Int"), expr_span(expr))
+                            .is_ok()
+                            && self
+                                .unify_with_span(
+                                    current_ty.clone(),
+                                    Type::con("List").app(vec![elem_ty.clone()]),
+                                    seg_span.clone(),
+                                )
+                                .is_ok()
+                        {
+                            current_ty = elem_ty;
+                            continue;
+                        }
+
+                        // Map key selector: `Map K V` + `K` -> `V`
+                        self.subst = checkpoint;
+                        let key_ty = self.fresh_var();
+                        let value_ty = self.fresh_var();
+                        self.unify_with_span(
+                            current_ty,
+                            Type::con("Map").app(vec![key_ty.clone(), value_ty.clone()]),
+                            seg_span.clone(),
+                        )?;
+                        self.unify_with_span(idx_ty, key_ty, expr_span(expr))?;
+                        current_ty = value_ty;
+                    } else {
+                        // Predicate selector: `items[price > 80]` treats unbound names as
+                        // implicit field accesses on the element (`_.price > 80`).
+                        let checkpoint = self.subst.clone();
+
+                        // List predicate: element is `A`, predicate is `A -> Bool`.
+                        let elem_ty = self.fresh_var();
+                        if self
+                            .unify_with_span(
+                                current_ty.clone(),
+                                Type::con("List").app(vec![elem_ty.clone()]),
+                                seg_span.clone(),
+                            )
+                            .is_ok()
+                        {
+                            let param = "__it".to_string();
+                            let mut env2 = env.clone();
+                            env2.insert(param.clone(), Scheme::mono(elem_ty.clone()));
+                            let rewritten =
+                                rewrite_implicit_field_vars(expr.clone(), &param, &unbound);
+                            let pred_ty = self.infer_expr(&rewritten, &mut env2)?;
+                            if self
+                                .unify_with_span(pred_ty, Type::con("Bool"), expr_span(&rewritten))
+                                .is_ok()
+                            {
+                                current_ty = elem_ty;
+                                continue;
+                            }
+                        }
+
+                        // Map predicate: element is `{ key: K, value: V }`, focus is `V`.
+                        self.subst = checkpoint;
+                        let key_ty = self.fresh_var();
+                        let value_ty = self.fresh_var();
+                        self.unify_with_span(
+                            current_ty.clone(),
+                            Type::con("Map").app(vec![key_ty.clone(), value_ty.clone()]),
+                            seg_span.clone(),
+                        )?;
+                        let mut entry_fields = BTreeMap::new();
+                        entry_fields.insert("key".to_string(), key_ty);
+                        entry_fields.insert("value".to_string(), value_ty.clone());
+                        let entry_ty = Type::Record {
+                            fields: entry_fields,
+                            open: true,
+                        };
+
+                        let param = "__it".to_string();
+                        let mut env2 = env.clone();
+                        env2.insert(param.clone(), Scheme::mono(entry_ty));
+                        let rewritten = rewrite_implicit_field_vars(expr.clone(), &param, &unbound);
+                        let pred_ty = self.infer_expr(&rewritten, &mut env2)?;
+                        self.unify_with_span(pred_ty, Type::con("Bool"), expr_span(&rewritten))?;
+                        current_ty = value_ty;
+                    }
+                }
+            }
+        }
+
+        Ok(self.apply(current_ty))
     }
 
     fn infer_patch_literal(
@@ -1835,7 +2020,7 @@ impl TypeChecker {
                     fields.insert(name.name.clone(), current);
                     current = Type::Record { fields, open: true };
                 }
-                PathSegment::Index(_, _) => {
+                PathSegment::Index(_, _) | PathSegment::All(_) => {
                     current = Type::con("List").app(vec![current]);
                 }
             }
@@ -2743,6 +2928,354 @@ impl TypeChecker {
     }
 }
 
+fn collect_unbound_names(expr: &Expr, env: &TypeEnv) -> HashSet<String> {
+    fn collect_pattern_binders(pattern: &Pattern, out: &mut Vec<String>) {
+        match pattern {
+            Pattern::Wildcard(_) => {}
+            Pattern::Ident(name) => out.push(name.name.clone()),
+            Pattern::Literal(_) => {}
+            Pattern::Constructor { args, .. } => {
+                for arg in args {
+                    collect_pattern_binders(arg, out);
+                }
+            }
+            Pattern::Tuple { items, .. } => {
+                for item in items {
+                    collect_pattern_binders(item, out);
+                }
+            }
+            Pattern::List { items, rest, .. } => {
+                for item in items {
+                    collect_pattern_binders(item, out);
+                }
+                if let Some(rest) = rest.as_deref() {
+                    collect_pattern_binders(rest, out);
+                }
+            }
+            Pattern::Record { fields, .. } => {
+                for field in fields {
+                    collect_pattern_binders(&field.pattern, out);
+                }
+            }
+        }
+    }
+
+    fn collect_expr(
+        expr: &Expr,
+        env: &TypeEnv,
+        bound: &mut Vec<String>,
+        out: &mut HashSet<String>,
+    ) {
+        match expr {
+            Expr::Ident(name) => {
+                if name.name == "_" {
+                    return;
+                }
+                let reserved = matches!(name.name.as_str(), "key" | "value");
+                let is_bound = bound.iter().rev().any(|b| b == &name.name)
+                    || (!reserved && env.get(&name.name).is_some());
+                if !is_bound {
+                    out.insert(name.name.clone());
+                }
+            }
+            Expr::Literal(_) | Expr::Raw { .. } | Expr::FieldSection { .. } => {}
+            Expr::TextInterpolate { parts, .. } => {
+                for part in parts {
+                    if let TextPart::Expr { expr, .. } = part {
+                        collect_expr(expr, env, bound, out);
+                    }
+                }
+            }
+            Expr::List { items, .. } => {
+                for item in items {
+                    collect_expr(&item.expr, env, bound, out);
+                }
+            }
+            Expr::Tuple { items, .. } => {
+                for item in items {
+                    collect_expr(item, env, bound, out);
+                }
+            }
+            Expr::Record { fields, .. } | Expr::PatchLit { fields, .. } => {
+                for field in fields {
+                    for seg in &field.path {
+                        if let PathSegment::Index(expr, _) = seg {
+                            collect_expr(expr, env, bound, out);
+                        }
+                    }
+                    collect_expr(&field.value, env, bound, out);
+                }
+            }
+            Expr::FieldAccess { base, .. } => collect_expr(base, env, bound, out),
+            Expr::Index { base, index, .. } => {
+                collect_expr(base, env, bound, out);
+                collect_expr(index, env, bound, out);
+            }
+            Expr::Call { func, args, .. } => {
+                collect_expr(func, env, bound, out);
+                for arg in args {
+                    collect_expr(arg, env, bound, out);
+                }
+            }
+            Expr::Lambda { params, body, .. } => {
+                let before = bound.len();
+                for param in params {
+                    collect_pattern_binders(param, bound);
+                }
+                collect_expr(body, env, bound, out);
+                bound.truncate(before);
+            }
+            Expr::Match {
+                scrutinee, arms, ..
+            } => {
+                if let Some(scrutinee) = scrutinee.as_deref() {
+                    collect_expr(scrutinee, env, bound, out);
+                }
+                for arm in arms {
+                    let before = bound.len();
+                    collect_pattern_binders(&arm.pattern, bound);
+                    if let Some(guard) = arm.guard.as_ref() {
+                        collect_expr(guard, env, bound, out);
+                    }
+                    collect_expr(&arm.body, env, bound, out);
+                    bound.truncate(before);
+                }
+            }
+            Expr::If {
+                cond,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                collect_expr(cond, env, bound, out);
+                collect_expr(then_branch, env, bound, out);
+                collect_expr(else_branch, env, bound, out);
+            }
+            Expr::Binary { left, right, .. } => {
+                collect_expr(left, env, bound, out);
+                collect_expr(right, env, bound, out);
+            }
+            Expr::Block { items, .. } => {
+                let before = bound.len();
+                for item in items {
+                    match item {
+                        BlockItem::Bind { pattern, expr, .. }
+                        | BlockItem::Let { pattern, expr, .. } => {
+                            collect_expr(expr, env, bound, out);
+                            collect_pattern_binders(pattern, bound);
+                        }
+                        BlockItem::Filter { expr, .. }
+                        | BlockItem::Yield { expr, .. }
+                        | BlockItem::Recurse { expr, .. }
+                        | BlockItem::Expr { expr, .. } => collect_expr(expr, env, bound, out),
+                    }
+                }
+                bound.truncate(before);
+            }
+        }
+    }
+
+    let mut bound = Vec::new();
+    let mut out = HashSet::new();
+    collect_expr(expr, env, &mut bound, &mut out);
+    out
+}
+
+fn rewrite_implicit_field_vars(
+    expr: Expr,
+    implicit_param: &str,
+    unbound: &HashSet<String>,
+) -> Expr {
+    match expr {
+        Expr::Ident(name) if unbound.contains(&name.name) => {
+            let param = SpannedName {
+                name: implicit_param.to_string(),
+                span: name.span.clone(),
+            };
+            let field = SpannedName {
+                name: name.name,
+                span: name.span.clone(),
+            };
+            Expr::FieldAccess {
+                base: Box::new(Expr::Ident(param)),
+                field,
+                span: name.span,
+            }
+        }
+        Expr::Ident(_) | Expr::Literal(_) | Expr::Raw { .. } | Expr::FieldSection { .. } => expr,
+        Expr::TextInterpolate { parts, span } => Expr::TextInterpolate {
+            parts: parts
+                .into_iter()
+                .map(|part| match part {
+                    TextPart::Text { .. } => part,
+                    TextPart::Expr { expr, span } => TextPart::Expr {
+                        expr: Box::new(rewrite_implicit_field_vars(*expr, implicit_param, unbound)),
+                        span,
+                    },
+                })
+                .collect(),
+            span,
+        },
+        Expr::List { items, span } => Expr::List {
+            items: items
+                .into_iter()
+                .map(|item| ListItem {
+                    expr: rewrite_implicit_field_vars(item.expr, implicit_param, unbound),
+                    spread: item.spread,
+                    span: item.span,
+                })
+                .collect(),
+            span,
+        },
+        Expr::Tuple { items, span } => Expr::Tuple {
+            items: items
+                .into_iter()
+                .map(|item| rewrite_implicit_field_vars(item, implicit_param, unbound))
+                .collect(),
+            span,
+        },
+        Expr::Record { fields, span } => Expr::Record {
+            fields: fields
+                .into_iter()
+                .map(|field| RecordField {
+                    spread: field.spread,
+                    path: field
+                        .path
+                        .into_iter()
+                        .map(|seg| match seg {
+                            PathSegment::Field(name) => PathSegment::Field(name),
+                            PathSegment::Index(expr, seg_span) => PathSegment::Index(
+                                rewrite_implicit_field_vars(expr, implicit_param, unbound),
+                                seg_span,
+                            ),
+                            PathSegment::All(seg_span) => PathSegment::All(seg_span),
+                        })
+                        .collect(),
+                    value: rewrite_implicit_field_vars(field.value, implicit_param, unbound),
+                    span: field.span,
+                })
+                .collect(),
+            span,
+        },
+        Expr::PatchLit { fields, span } => Expr::PatchLit {
+            fields: fields
+                .into_iter()
+                .map(|field| RecordField {
+                    spread: field.spread,
+                    path: field
+                        .path
+                        .into_iter()
+                        .map(|seg| match seg {
+                            PathSegment::Field(name) => PathSegment::Field(name),
+                            PathSegment::Index(expr, seg_span) => PathSegment::Index(
+                                rewrite_implicit_field_vars(expr, implicit_param, unbound),
+                                seg_span,
+                            ),
+                            PathSegment::All(seg_span) => PathSegment::All(seg_span),
+                        })
+                        .collect(),
+                    value: rewrite_implicit_field_vars(field.value, implicit_param, unbound),
+                    span: field.span,
+                })
+                .collect(),
+            span,
+        },
+        Expr::FieldAccess { base, field, span } => Expr::FieldAccess {
+            base: Box::new(rewrite_implicit_field_vars(*base, implicit_param, unbound)),
+            field,
+            span,
+        },
+        Expr::Index { base, index, span } => Expr::Index {
+            base: Box::new(rewrite_implicit_field_vars(*base, implicit_param, unbound)),
+            index: Box::new(rewrite_implicit_field_vars(*index, implicit_param, unbound)),
+            span,
+        },
+        Expr::Call { func, args, span } => Expr::Call {
+            func: Box::new(rewrite_implicit_field_vars(*func, implicit_param, unbound)),
+            args: args
+                .into_iter()
+                .map(|arg| rewrite_implicit_field_vars(arg, implicit_param, unbound))
+                .collect(),
+            span,
+        },
+        Expr::Lambda { params, body, span } => Expr::Lambda {
+            params,
+            body: Box::new(rewrite_implicit_field_vars(*body, implicit_param, unbound)),
+            span,
+        },
+        Expr::Match {
+            scrutinee,
+            arms,
+            span,
+        } => Expr::Match {
+            scrutinee: scrutinee
+                .map(|e| Box::new(rewrite_implicit_field_vars(*e, implicit_param, unbound))),
+            arms: arms
+                .into_iter()
+                .map(|mut arm| {
+                    arm.guard = arm
+                        .guard
+                        .map(|g| rewrite_implicit_field_vars(g, implicit_param, unbound));
+                    arm.body = rewrite_implicit_field_vars(arm.body, implicit_param, unbound);
+                    arm
+                })
+                .collect(),
+            span,
+        },
+        Expr::If {
+            cond,
+            then_branch,
+            else_branch,
+            span,
+        } => Expr::If {
+            cond: Box::new(rewrite_implicit_field_vars(*cond, implicit_param, unbound)),
+            then_branch: Box::new(rewrite_implicit_field_vars(
+                *then_branch,
+                implicit_param,
+                unbound,
+            )),
+            else_branch: Box::new(rewrite_implicit_field_vars(
+                *else_branch,
+                implicit_param,
+                unbound,
+            )),
+            span,
+        },
+        Expr::Binary {
+            op,
+            left,
+            right,
+            span,
+        } => Expr::Binary {
+            op,
+            left: Box::new(rewrite_implicit_field_vars(*left, implicit_param, unbound)),
+            right: Box::new(rewrite_implicit_field_vars(*right, implicit_param, unbound)),
+            span,
+        },
+        Expr::Block { kind, items, span } => Expr::Block {
+            kind,
+            items: items
+                .into_iter()
+                .map(|mut item| {
+                    match &mut item {
+                        BlockItem::Bind { expr, .. }
+                        | BlockItem::Let { expr, .. }
+                        | BlockItem::Filter { expr, .. }
+                        | BlockItem::Yield { expr, .. }
+                        | BlockItem::Recurse { expr, .. }
+                        | BlockItem::Expr { expr, .. } => {
+                            *expr =
+                                rewrite_implicit_field_vars(expr.clone(), implicit_param, unbound);
+                        }
+                    }
+                    item
+                })
+                .collect(),
+            span,
+        },
+    }
+}
+
 fn expr_span(expr: &Expr) -> Span {
     match expr {
         Expr::Ident(name) => name.span.clone(),
@@ -2839,6 +3372,7 @@ fn desugar_holes_inner(expr: Expr, is_root: bool) -> Expr {
                                 PathSegment::Index(desugar_holes_inner(expr, false), span)
                             }
                             PathSegment::Field(name) => PathSegment::Field(name),
+                            PathSegment::All(span) => PathSegment::All(span),
                         })
                         .collect();
                     field.path = path;
@@ -2860,6 +3394,7 @@ fn desugar_holes_inner(expr: Expr, is_root: bool) -> Expr {
                                 PathSegment::Index(desugar_holes_inner(expr, false), span)
                             }
                             PathSegment::Field(name) => PathSegment::Field(name),
+                            PathSegment::All(span) => PathSegment::All(span),
                         })
                         .collect();
                     field.path = path;
@@ -2991,14 +3526,16 @@ fn contains_hole(expr: &Expr) -> bool {
         Expr::List { items, .. } => items.iter().any(|item| contains_hole(&item.expr)),
         Expr::Tuple { items, .. } => items.iter().any(contains_hole),
         Expr::Record { fields, .. } => fields.iter().any(|field| {
-            field.path.iter().any(
-                |segment| matches!(segment, PathSegment::Index(expr, _) if contains_hole(expr)),
-            ) || contains_hole(&field.value)
+            field.path.iter().any(|segment| match segment {
+                PathSegment::Index(expr, _) => contains_hole(expr),
+                PathSegment::Field(_) | PathSegment::All(_) => false,
+            }) || contains_hole(&field.value)
         }),
         Expr::PatchLit { fields, .. } => fields.iter().any(|field| {
-            field.path.iter().any(
-                |segment| matches!(segment, PathSegment::Index(expr, _) if contains_hole(expr)),
-            ) || contains_hole(&field.value)
+            field.path.iter().any(|segment| match segment {
+                PathSegment::Index(expr, _) => contains_hole(expr),
+                PathSegment::Field(_) | PathSegment::All(_) => false,
+            }) || contains_hole(&field.value)
         }),
         Expr::FieldAccess { base, .. } => contains_hole(base),
         Expr::FieldSection { .. } => true,
@@ -3095,6 +3632,7 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
                             PathSegment::Index(expr, span) => {
                                 PathSegment::Index(replace_holes_inner(expr, counter, params), span)
                             }
+                            PathSegment::All(span) => PathSegment::All(span),
                         })
                         .collect(),
                     value: replace_holes_inner(field.value, counter, params),
@@ -3116,6 +3654,7 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
                             PathSegment::Index(expr, span) => {
                                 PathSegment::Index(replace_holes_inner(expr, counter, params), span)
                             }
+                            PathSegment::All(span) => PathSegment::All(span),
                         })
                         .collect(),
                     value: replace_holes_inner(field.value, counter, params),

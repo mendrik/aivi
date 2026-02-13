@@ -23,7 +23,8 @@ mod values;
 use self::builtins::register_builtins;
 use self::environment::{Env, RuntimeContext};
 use self::values::{
-    BuiltinImpl, BuiltinValue, ClosureValue, EffectValue, ResourceValue, ThunkValue, Value,
+    BuiltinImpl, BuiltinValue, ClosureValue, EffectValue, KeyValue, ResourceValue, ThunkValue,
+    Value,
 };
 
 #[derive(Debug)]
@@ -368,12 +369,13 @@ impl Runtime {
             HirExpr::Index { base, index, .. } => {
                 let base_value = self.eval_expr(base, env)?;
                 let index_value = self.eval_expr(index, env)?;
-                let idx = match index_value {
-                    Value::Int(value) => value,
-                    _ => return Err(RuntimeError::Message("index expects an Int".to_string())),
-                };
                 match base_value {
                     Value::List(items) => {
+                        let Value::Int(idx) = index_value else {
+                            return Err(RuntimeError::Message(
+                                "list index expects an Int".to_string(),
+                            ));
+                        };
                         let idx = idx as usize;
                         items
                             .get(idx)
@@ -381,11 +383,28 @@ impl Runtime {
                             .ok_or_else(|| RuntimeError::Message("index out of bounds".to_string()))
                     }
                     Value::Tuple(items) => {
+                        let Value::Int(idx) = index_value else {
+                            return Err(RuntimeError::Message(
+                                "tuple index expects an Int".to_string(),
+                            ));
+                        };
                         let idx = idx as usize;
                         items
                             .get(idx)
                             .cloned()
                             .ok_or_else(|| RuntimeError::Message("index out of bounds".to_string()))
+                    }
+                    Value::Map(entries) => {
+                        let Some(key) = KeyValue::try_from_value(&index_value) else {
+                            return Err(RuntimeError::Message(format!(
+                                "map key is not a valid key type: {}",
+                                format_value(&index_value)
+                            )));
+                        };
+                        entries
+                            .get(&key)
+                            .cloned()
+                            .ok_or_else(|| RuntimeError::Message("missing map key".to_string()))
                     }
                     _ => Err(RuntimeError::Message(
                         "index on unsupported value".to_string(),
@@ -790,7 +809,7 @@ impl Runtime {
                         }
                     }
                 }
-                HirPathSegment::Index(_) => {
+                HirPathSegment::Index(_) | HirPathSegment::All => {
                     return Err(RuntimeError::Message(
                         "patch index paths are not supported in native runtime yet".to_string(),
                     ))
@@ -814,7 +833,7 @@ impl Runtime {
                 current.insert(name.clone(), new_value);
                 Ok(())
             }
-            HirPathSegment::Index(_) => Err(RuntimeError::Message(
+            HirPathSegment::Index(_) | HirPathSegment::All => Err(RuntimeError::Message(
                 "patch index paths are not supported in native runtime yet".to_string(),
             )),
         }
@@ -1204,7 +1223,7 @@ fn insert_record_path(
                     }
                 }
             }
-            HirPathSegment::Index(_) => {
+            HirPathSegment::Index(_) | HirPathSegment::All => {
                 return Err(RuntimeError::Message(
                     "record index paths are not supported in native runtime yet".to_string(),
                 ))

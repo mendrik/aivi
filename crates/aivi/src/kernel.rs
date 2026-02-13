@@ -149,6 +149,7 @@ pub struct KernelRecordField {
 pub enum KernelPathSegment {
     Field(String),
     Index(KernelExpr),
+    All,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -725,6 +726,7 @@ fn lower_path_segment(seg: HirPathSegment, id_gen: &mut IdGen) -> KernelPathSegm
     match seg {
         HirPathSegment::Field(name) => KernelPathSegment::Field(name),
         HirPathSegment::Index(expr) => KernelPathSegment::Index(lower_expr(expr, id_gen)),
+        HirPathSegment::All => KernelPathSegment::All,
     }
 }
 

@@ -148,6 +148,7 @@ pub struct HirRecordField {
 pub enum HirPathSegment {
     Field(String),
     Index(HirExpr),
+    All,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -469,6 +470,7 @@ fn lower_expr_inner(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
                             crate::surface::PathSegment::Index(expr, _) => {
                                 HirPathSegment::Index(lower_expr(expr, id_gen))
                             }
+                            crate::surface::PathSegment::All(_) => HirPathSegment::All,
                         })
                         .collect(),
                     value: lower_expr(field.value, id_gen),
@@ -498,6 +500,7 @@ fn lower_expr_inner(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
                                 crate::surface::PathSegment::Index(expr, _) => {
                                     HirPathSegment::Index(lower_expr(expr, id_gen))
                                 }
+                                crate::surface::PathSegment::All(_) => HirPathSegment::All,
                             })
                             .collect(),
                         value: lower_expr(field.value, id_gen),
@@ -630,6 +633,7 @@ fn lower_expr_inner(expr: Expr, id_gen: &mut IdGen) -> HirExpr {
                                         crate::surface::PathSegment::Index(expr, _) => {
                                             HirPathSegment::Index(lower_expr(expr, id_gen))
                                         }
+                                        crate::surface::PathSegment::All(_) => HirPathSegment::All,
                                     })
                                     .collect(),
                                 value: lower_expr(field.value, id_gen),
@@ -830,28 +834,34 @@ fn contains_placeholder(expr: &Expr) -> bool {
         Expr::List { items, .. } => items.iter().any(|item| contains_placeholder(&item.expr)),
         Expr::Tuple { items, .. } => items.iter().any(contains_placeholder),
         Expr::Record { fields, .. } => fields.iter().any(|field| {
-            field
-                .path
-                .iter()
-                .any(|segment| matches!(segment, crate::surface::PathSegment::Index(expr, _) if contains_placeholder(expr)))
-                || contains_placeholder(&field.value)
+            field.path.iter().any(|segment| match segment {
+                crate::surface::PathSegment::Index(expr, _) => contains_placeholder(expr),
+                crate::surface::PathSegment::Field(_) | crate::surface::PathSegment::All(_) => {
+                    false
+                }
+            }) || contains_placeholder(&field.value)
         }),
         Expr::PatchLit { fields, .. } => fields.iter().any(|field| {
-            field
-                .path
-                .iter()
-                .any(|segment| matches!(segment, crate::surface::PathSegment::Index(expr, _) if contains_placeholder(expr)))
-                || contains_placeholder(&field.value)
+            field.path.iter().any(|segment| match segment {
+                crate::surface::PathSegment::Index(expr, _) => contains_placeholder(expr),
+                crate::surface::PathSegment::Field(_) | crate::surface::PathSegment::All(_) => {
+                    false
+                }
+            }) || contains_placeholder(&field.value)
         }),
         Expr::FieldAccess { base, .. } => contains_placeholder(base),
         // Field sections (`.field`) are handled directly during lowering.
         Expr::FieldSection { .. } => false,
-        Expr::Index { base, index, .. } => contains_placeholder(base) || contains_placeholder(index),
+        Expr::Index { base, index, .. } => {
+            contains_placeholder(base) || contains_placeholder(index)
+        }
         Expr::Call { func, args, .. } => {
             contains_placeholder(func) || args.iter().any(contains_placeholder)
         }
         Expr::Lambda { body, .. } => contains_placeholder(body),
-        Expr::Match { scrutinee, arms, .. } => {
+        Expr::Match {
+            scrutinee, arms, ..
+        } => {
             scrutinee.as_deref().is_some_and(contains_placeholder)
                 || arms.iter().any(|arm| {
                     arm.guard.as_ref().is_some_and(contains_placeholder)
@@ -863,10 +873,14 @@ fn contains_placeholder(expr: &Expr) -> bool {
             then_branch,
             else_branch,
             ..
-        } => contains_placeholder(cond)
-            || contains_placeholder(then_branch)
-            || contains_placeholder(else_branch),
-        Expr::Binary { left, right, .. } => contains_placeholder(left) || contains_placeholder(right),
+        } => {
+            contains_placeholder(cond)
+                || contains_placeholder(then_branch)
+                || contains_placeholder(else_branch)
+        }
+        Expr::Binary { left, right, .. } => {
+            contains_placeholder(left) || contains_placeholder(right)
+        }
         Expr::Block { items, .. } => items.iter().any(|item| match item {
             BlockItem::Bind { expr, .. } => contains_placeholder(expr),
             BlockItem::Let { expr, .. } => contains_placeholder(expr),
@@ -937,6 +951,9 @@ fn desugar_placeholder_lambdas(expr: Expr) -> Expr {
                                     span,
                                 )
                             }
+                            crate::surface::PathSegment::All(span) => {
+                                crate::surface::PathSegment::All(span)
+                            }
                         })
                         .collect(),
                     value: desugar_placeholder_lambdas(field.value),
@@ -962,6 +979,9 @@ fn desugar_placeholder_lambdas(expr: Expr) -> Expr {
                                     desugar_placeholder_lambdas(expr),
                                     span,
                                 )
+                            }
+                            crate::surface::PathSegment::All(span) => {
+                                crate::surface::PathSegment::All(span)
                             }
                         })
                         .collect(),
@@ -1189,6 +1209,9 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
                                     span,
                                 )
                             }
+                            crate::surface::PathSegment::All(span) => {
+                                crate::surface::PathSegment::All(span)
+                            }
                         })
                         .collect(),
                     value: replace_holes_inner(field.value, counter, params),
@@ -1214,6 +1237,9 @@ fn replace_holes_inner(expr: Expr, counter: &mut u32, params: &mut Vec<String>) 
                                     replace_holes_inner(expr, counter, params),
                                     span,
                                 )
+                            }
+                            crate::surface::PathSegment::All(span) => {
+                                crate::surface::PathSegment::All(span)
                             }
                         })
                         .collect(),

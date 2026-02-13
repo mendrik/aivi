@@ -39,7 +39,7 @@ This document lists features, modules, and behaviors described in the **AIVI Lan
 
 | Component | Status | Notes |
 | :--- | :--- | :--- |
-| **Native Codegen** | **Experimental (Partial)** | `aivi build` can emit standalone Rust logic via `[build].codegen = "native"`. Current limitations include incomplete builtins/stdlib coverage plus gaps in native runtime feature coverage (e.g. some index paths and raw expressions). |
+| **Native Codegen** | **Experimental (Partial)** | `aivi build` can emit standalone Rust logic via `[build].codegen = "native"`. Coverage is improving (including `[*]` traversal selectors, Map indexing, and Map key/predicate patch selectors), but the backend is still not feature-complete vs. the interpreter. |
 | **Package Manager** | **Implemented (Minimal)** | Cargo-backed `search`/`install` plus `package`/`publish` wrappers. Dependency installs validate `[package.metadata.aivi]` and enforce `kind = "lib"`; publishing validates `aivi.toml` ↔ `Cargo.toml` metadata consistency. |
 | **LSP** | **Implemented** | `aivi_lsp` crate exists with diagnostics, formatting, and definition lookup. |
 
