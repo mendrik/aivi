@@ -758,6 +758,12 @@ impl TypeChecker {
 
         for (member_name, member_sig) in class_info.members.iter() {
             let Some(def) = defs_by_name.get(member_name).copied() else {
+                // If the member is inherited via a superclass constraint, allow the instance
+                // to omit it as long as a matching superclass instance is in scope.
+                if self.instance_method_satisfied_by_super(instance, &class_info, member_name) {
+                    continue;
+                }
+
                 diagnostics.push(self.error_to_diag(
                     module,
                     TypeError {
@@ -819,6 +825,111 @@ impl TypeChecker {
                     },
                 ));
             }
+        }
+    }
+
+    fn instance_method_satisfied_by_super(
+        &mut self,
+        instance: &crate::surface::InstanceDecl,
+        class_info: &ClassDeclInfo,
+        missing_member: &str,
+    ) -> bool {
+        // Only methods provided by superclass constraints may be delegated.
+        let direct_supers = self.flatten_type_and_list(&class_info.supers);
+        for super_expr in direct_supers {
+            let Some((super_name, super_params)) =
+                self.class_ref_from_type_expr(&super_expr)
+            else {
+                continue;
+            };
+            let Some(super_info) = self.classes.get(super_name) else {
+                continue;
+            };
+            if !super_info.members.contains_key(missing_member) {
+                continue;
+            }
+            // Instantiate the superclass parameters by unifying the class parameters with the
+            // concrete instance parameters, then applying the resulting substitution.
+            let base_subst = self.subst.clone();
+            let mut ctx = TypeContext::new(&self.type_constructors);
+            for (class_param, inst_param) in class_info.params.iter().zip(instance.params.iter()) {
+                let class_ty = self.type_from_expr(class_param, &mut ctx);
+                let inst_ty = self.type_from_expr(inst_param, &mut ctx);
+                if self.unify(class_ty, inst_ty, instance.span.clone()).is_err() {
+                    self.subst = base_subst;
+                    return false;
+                }
+            }
+
+            let mut instantiated_params = Vec::with_capacity(super_params.len());
+            for p in &super_params {
+                let ty = self.type_from_expr(p, &mut ctx);
+                instantiated_params.push(self.apply(ty));
+            }
+
+            self.subst = base_subst;
+
+            if self.find_instance_types(super_name, &instantiated_params, instance.span.clone()) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn find_instance_types(&mut self, class_name: &str, params: &[Type], span: Span) -> bool {
+        let candidates: Vec<InstanceDeclInfo> = self
+            .instances
+            .iter()
+            .filter(|inst| inst.class_name == class_name && inst.params.len() == params.len())
+            .cloned()
+            .collect();
+
+        for candidate in candidates {
+            let base_subst = self.subst.clone();
+            let mut ctx = TypeContext::new(&self.type_constructors);
+            let mut ok = true;
+            for (expected_ty, candidate_param) in params.iter().zip(candidate.params.iter()) {
+                let candidate_ty = self.type_from_expr(candidate_param, &mut ctx);
+                if self.unify(expected_ty.clone(), candidate_ty, span.clone()).is_err() {
+                    ok = false;
+                    break;
+                }
+            }
+            self.subst = base_subst;
+            if ok {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn flatten_type_and_list(&self, items: &[TypeExpr]) -> Vec<TypeExpr> {
+        let mut out = Vec::new();
+        for item in items {
+            self.flatten_type_and_into(item, &mut out);
+        }
+        out
+    }
+
+    fn flatten_type_and_into(&self, item: &TypeExpr, out: &mut Vec<TypeExpr>) {
+        match item {
+            TypeExpr::And { items, .. } => {
+                for inner in items {
+                    self.flatten_type_and_into(inner, out);
+                }
+            }
+            other => out.push(other.clone()),
+        }
+    }
+
+    fn class_ref_from_type_expr<'a>(&self, ty: &'a TypeExpr) -> Option<(&'a str, Vec<TypeExpr>)> {
+        match ty {
+            TypeExpr::Name(name) => Some((name.name.as_str(), Vec::new())),
+            TypeExpr::Apply { base, args, .. } => match base.as_ref() {
+                TypeExpr::Name(name) => Some((name.name.as_str(), args.clone())),
+                _ => None,
+            },
+            _ => None,
         }
     }
 
@@ -2762,7 +2873,7 @@ impl TypeChecker {
                 }
             }
             TypeExpr::And { items, .. } => {
-                // v0.1: `A & B` is record/type composition. For now we only support composing records;
+                // v0.1: `A with B` is record/type composition. For now we only support composing records;
                 // other compositions fall back to an unconstrained fresh type variable.
                 let mut merged = BTreeMap::new();
                 let mut open = true;

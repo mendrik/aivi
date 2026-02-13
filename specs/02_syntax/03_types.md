@@ -117,7 +117,9 @@ desugars to:
 
 <<< ../snippets/from_md/02_syntax/03_types/block_17.aivi{aivi}
 
-`A & B` in type position denotes **record/type composition** (an intersection-like merge). It is primarily used for class inheritance and trait aggregation in v0.1.
+`A with B` in type position denotes **record/type composition** (an intersection-like merge). It is primarily used for class inheritance and trait aggregation in v0.1.
+
+In v0.1, `&` is accepted as a legacy alias for `with`, but `with` is the preferred spelling going forward (to avoid confusion with `&&` and bitwise `&`).
 
 Instances:
 

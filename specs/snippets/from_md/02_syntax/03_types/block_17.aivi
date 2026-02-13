@@ -1,2 +1,2 @@
 class Monad (M *) =
-Applicative (M *) & Chain (M *)
+Applicative (M *) with Chain (M *)

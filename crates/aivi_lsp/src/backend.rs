@@ -1194,7 +1194,7 @@ impl Backend {
                 .iter()
                 .map(Self::type_expr_to_string)
                 .collect::<Vec<_>>()
-                .join(" & "),
+                .join(" with "),
             TypeExpr::Apply { base, args, .. } => {
                 let base_str = match **base {
                     TypeExpr::Func { .. } => format!("({})", Self::type_expr_to_string(base)),

@@ -21,7 +21,7 @@ instance Functor (Option *) = {
     | Some x => Some (f x)
 }
 
-class Monad (M *) = Functor (M *) & {
+class Monad (M *) = Functor (M *) with {
   pure: A -> M A
   flatMap: M A -> (A -> M B) -> M B
 }

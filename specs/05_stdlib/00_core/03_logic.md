@@ -101,9 +101,6 @@ A `Group` provides an `invert` operation.
 
 <<< ../../snippets/from_md/05_stdlib/00_core/03_logic/block_19.aivi{aivi}
 
-Note:
-- In v0.1, the standard algebraic hierarchy is modeled as independent classes (no superclass constraints are enforced).
-
 ### `Effect` sequencing is `chain`/`bind`
 
 `effect { ... }` is surface syntax for repeated sequencing (see [Effects](../../02_syntax/09_effects.md)):

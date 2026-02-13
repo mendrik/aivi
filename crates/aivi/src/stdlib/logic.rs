@@ -18,7 +18,7 @@ class Setoid A = {
   equals: A -> A -> Bool
 }
 
-class Ord A = {
+class Ord A = Setoid A with {
   lte: A -> A -> Bool
 }
 
@@ -28,11 +28,11 @@ class Semigroup A = {
   concat: A -> A -> A
 }
 
-class Monoid A = {
+class Monoid A = Semigroup A with {
   empty: A
 }
 
-class Group A = {
+class Group A = Monoid A with {
   invert: A -> A
 }
 
@@ -42,7 +42,7 @@ class Semigroupoid (F * *) = {
   compose: F B C -> F A B -> F A C
 }
 
-class Category (F * *) = {
+class Category (F * *) = Semigroupoid (F * *) with {
   id: F A A
 }
 
@@ -52,25 +52,19 @@ class Functor (F *) = {
   map: (A -> B) -> F A -> F B
 }
 
-class Apply (F *) = {
+class Apply (F *) = Functor (F *) with {
   ap: F (A -> B) -> F A -> F B
 }
 
-class Applicative (F *) = {
+class Applicative (F *) = Apply (F *) with {
   of: A -> F A
 }
 
-class Chain (F *) = {
+class Chain (F *) = Apply (F *) with {
   chain: (A -> F B) -> F A -> F B
 }
 
-// NOTE: Although class declarations can name superclasses, instances currently
-// must explicitly define every member (including inherited ones). We keep
-// `Monad` as a marker class to avoid forcing redundant `map`/`ap`/`of`/`chain`
-// definitions in every `Monad` instance.
-class Monad (M *) = {
-  __monad: Unit
-}
+class Monad (M *) = Applicative (M *) with Chain (M *) with { }
 
 // 5. Folds and Traversals
 
@@ -78,7 +72,7 @@ class Foldable (F *) = {
   reduce: (B -> A -> B) -> B -> F A -> B
 }
 
-class Traversable (T *) = {
+class Traversable (T *) = Functor (T *) with Foldable (T *) with {
   traverse: (A -> F B) -> T A -> F (T B)
 }
 
@@ -123,9 +117,7 @@ instance Chain (Option *) = {
       | Some x => f x
 }
 
-instance Monad (Option *) = {
-  __monad: {}
-}
+instance Monad (Option *) = {}
 
 // Result
 
@@ -155,7 +147,5 @@ instance Chain (Result E *) = {
       | Err e => Err e
 }
 
-instance Monad (Result E *) = {
-  __monad: {}
-}
+instance Monad (Result E *) = {}
 "#;

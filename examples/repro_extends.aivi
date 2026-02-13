@@ -1,4 +1,3 @@
-
 @no_prelude
 module aivi.repro_extends = {
 
@@ -6,7 +5,7 @@ module aivi.repro_extends = {
     foo: A -> A
   }
 
-  class Sub A = Super A & {
+  class Sub A = Super A with {
     bar: A -> A
   }
 

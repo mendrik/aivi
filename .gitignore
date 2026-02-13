@@ -8,3 +8,4 @@ specs/.vitepress/cache/
 build
 target
 aivi-vscode-*
+/*.aivi

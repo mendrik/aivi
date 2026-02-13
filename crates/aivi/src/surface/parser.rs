@@ -687,7 +687,7 @@ impl Parser {
 
         // Spec form:
         //   class Monad (M *) =
-        //     Functor (M *) & { pure: A -> M A }
+        //     Functor (M *) with { pure: A -> M A }
         //
         // We parse the RHS as a type expression, then treat record-type operands as the class
         // member set and non-record operands as superclasses.
@@ -2628,7 +2628,7 @@ impl Parser {
 
     fn parse_type_and(&mut self) -> Option<TypeExpr> {
         let mut items = vec![self.parse_type_pipe()?];
-        while self.consume_symbol("&") {
+        while self.consume_symbol("&") || self.consume_ident_text("with").is_some() {
             let rhs = self.parse_type_pipe().unwrap_or(TypeExpr::Unknown {
                 span: type_span(items.last().unwrap()),
             });
@@ -2744,6 +2744,11 @@ impl Parser {
             return Some(TypeExpr::Star { span });
         }
         if let Some(name) = self.consume_ident() {
+            if name.name == "with" {
+                // `with` is reserved in type position (composition operator).
+                self.pos -= 1;
+                return None;
+            }
             return Some(TypeExpr::Name(name));
         }
         None
