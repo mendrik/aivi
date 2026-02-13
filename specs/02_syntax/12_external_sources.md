@@ -71,21 +71,21 @@ req = http.request {
 
 Typed access to environment configuration. Values are decoded using the expected type and optional defaults.
 
-```aivi
-// Read a single environment variable as Text
-appEnv : Source Env Text
-appEnv = env.get "APP_ENV"
+	```aivi
+	// Read a single environment variable as Text
+	appEnv : Source Env Text
+	appEnv = env.get "APP_ENV"
 
-// Decode a typed configuration record with defaults
-DbConfig = {
-  driver: Text
-  url: Text?
-  host: Text?
-  port: Int?
-  user: Text?
-  password: Text?
-  database: Text?
-}
+	// Decode a typed configuration record with defaults
+	DbConfig = {
+	  driver: Text
+	  url: Option Text
+	  host: Option Text
+	  port: Option Int
+	  user: Option Text
+	  password: Option Text
+	  database: Option Text
+	}
 
 defaultDbConfig : DbConfig
 defaultDbConfig = {

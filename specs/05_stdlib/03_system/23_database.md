@@ -13,7 +13,7 @@ It builds on existing AIVI features:
 ```aivi
 use aivi.database as db
 
-User = { id: Int, name: Text, email: Text?, active: Bool, loginCount: Int, createdAt: Instant }
+	User = { id: Int, name: Text, email: Option Text, active: Bool, loginCount: Int, createdAt: Instant }
 
 @static
 userTable : Table User
@@ -64,12 +64,12 @@ type ColumnDefault =
   | DefaultText Text
   | DefaultNow
 
-type Column = {
-  name: Text
-  type: ColumnType
-  constraints: List ColumnConstraint
-  default: ColumnDefault?
-}
+	type Column = {
+	  name: Text
+	  type: ColumnType
+	  constraints: List ColumnConstraint
+	  default: Option ColumnDefault
+	}
 
 // Predicate alias
 type Pred A = A => Bool
