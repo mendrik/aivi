@@ -4,5 +4,6 @@ members = [
     "crates/aivi_http_server",
     "crates/aivi_lsp",
     "crates/aivi_native_runtime",
+    "crates/doc_index_gen",
 ]
 resolver = "2"

@@ -117,6 +117,7 @@ When working on the compiler (`crates/`):
 *   **Specs**: Update `specs/` *before* or *alongside* code changes.
 *   **Specs**: Update indices and make sure links are working.
 *   **AIVI Code Blocks**: Format all AIVI snippets in docs to match `aivi fmt` output (use `aivi fmt path` or `cargo run -p aivi -- fmt path`). In particular, keep formatter-style alignment for `<-` inside `effect { ... }` blocks and `=>` in pattern matching arms. Prefer fenced code blocks with the `aivi` language tag.
+*   **Quick Info Markers**: For LSP hover/quick-info, wrap existing spec markdown with `<!-- quick-info: {JSON} --> ... <!-- /quick-info -->` (see `specs/doc-markers-spec.md`). Do not duplicate prose just to satisfy tooling.
 *   **Roadmap**: Check `specs/roadmap/README.md` to align work with current phases.
 *   **Guidelines**: Follow `.junie/guidelines.md`.
 *   **AGENTS.md**: Update this file if workflows or structures change significantly.

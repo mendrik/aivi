@@ -1,6 +1,8 @@
 # Standard Library: Prelude
 
+<!-- quick-info: {"kind":"module","name":"aivi.prelude"} -->
 The **Prelude** is your default toolkit. It acts as the "standard library of the standard library," automatically using the core types and domains you use in almost every program (like `Int`, `List`, `Text`, and `Result`). It ensures you don't have to write fifty `use` lines just to add two numbers or print "Hello World".
+<!-- /quick-info -->
 
 <<< ../../snippets/from_md/05_stdlib/00_core/01_prelude/block_01.aivi{aivi}
 

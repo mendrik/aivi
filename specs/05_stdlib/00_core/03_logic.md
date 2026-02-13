@@ -1,6 +1,8 @@
 # Standard Library: Logic (Algebraic Hierarchy)
 
+<!-- quick-info: {"kind":"module","name":"aivi.logic"} -->
 The `aivi.logic` module defines the standard algebraic hierarchy for AIVI, based on the **Fantasy Land Specification**. These classes provide a universal language for data transformation, equality, and composition.
+<!-- /quick-info -->
 
 <<< ../../snippets/from_md/05_stdlib/00_core/03_logic/block_01.aivi{aivi}
 
@@ -53,7 +55,9 @@ A `Group` provides an `invert` operation.
 
 ### Functor
 
+<!-- quick-info: {"kind":"class","name":"Functor","module":"aivi.logic"} -->
 <<< ../../snippets/from_md/05_stdlib/00_core/03_logic/block_09.aivi{aivi}
+<!-- /quick-info -->
 
 ### Apply
 

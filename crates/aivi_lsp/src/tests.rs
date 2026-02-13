@@ -7,6 +7,7 @@ use tower_lsp::lsp_types::{
 };
 
 use crate::backend::Backend;
+use crate::doc_index::DocIndex;
 use crate::state::IndexedModule;
 
 fn sample_text() -> &'static str {
@@ -215,7 +216,8 @@ fn build_hover_reports_type_signature() {
     let text = sample_text();
     let uri = sample_uri();
     let position = position_for(text, "add 1 2");
-    let hover = Backend::build_hover(text, &uri, position).expect("hover found");
+    let doc_index = DocIndex::default();
+    let hover = Backend::build_hover(text, &uri, position, &doc_index).expect("hover found");
     let HoverContents::Markup(markup) = hover.contents else {
         panic!("expected markup hover");
     };
@@ -254,8 +256,10 @@ run = add 1 2"#;
     }
 
     let position = position_for(app_text, "add 1 2");
-    let hover = Backend::build_hover_with_workspace(app_text, &app_uri, position, &workspace)
-        .expect("hover found");
+    let doc_index = DocIndex::default();
+    let hover =
+        Backend::build_hover_with_workspace(app_text, &app_uri, position, &workspace, &doc_index)
+            .expect("hover found");
     let HoverContents::Markup(markup) = hover.contents else {
         panic!("expected markup hover");
     };
@@ -273,7 +277,8 @@ id = x => x
 run = id 1"#;
     let uri = sample_uri();
     let position = position_for(text, "id 1");
-    let hover = Backend::build_hover(text, &uri, position).expect("hover found");
+    let doc_index = DocIndex::default();
+    let hover = Backend::build_hover(text, &uri, position, &doc_index).expect("hover found");
     let HoverContents::Markup(markup) = hover.contents else {
         panic!("expected markup hover");
     };

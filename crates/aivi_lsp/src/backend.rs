@@ -11,6 +11,7 @@ use tokio::sync::Mutex;
 use tower_lsp::lsp_types::{Location, Position, Range, TextEdit, Url};
 use tower_lsp::Client;
 
+use crate::doc_index::{DocIndex, QuickInfoEntry, QuickInfoKind};
 use crate::state::BackendState;
 
 pub(super) struct Backend {
@@ -238,6 +239,27 @@ impl Backend {
         ident: &str,
         inferred: Option<&HashMap<String, String>>,
         doc: Option<&str>,
+        doc_index: &DocIndex,
+    ) -> Option<String> {
+        if let Some(entry) = doc_index.lookup_best(ident, Some(module.name.name.as_str())) {
+            return Some(Self::format_quick_info(entry, module, ident, inferred));
+        }
+
+        let mut base = Self::hover_base_for_module(module, ident, inferred)?;
+        if let Some(doc) = doc {
+            let doc = doc.trim();
+            if !doc.is_empty() {
+                base.push_str("\n\n");
+                base.push_str(doc);
+            }
+        }
+        Some(base)
+    }
+
+    fn hover_base_for_module(
+        module: &Module,
+        ident: &str,
+        inferred: Option<&HashMap<String, String>>,
     ) -> Option<String> {
         let mut base = None;
         if module.name.name == ident {
@@ -285,16 +307,36 @@ impl Backend {
                 }
             }
         }
+        base
+    }
 
-        let mut base = base?;
-        if let Some(doc) = doc {
-            let doc = doc.trim();
-            if !doc.is_empty() {
-                base.push_str("\n\n");
-                base.push_str(doc);
+    fn format_quick_info(
+        entry: &QuickInfoEntry,
+        module: &Module,
+        ident: &str,
+        inferred: Option<&HashMap<String, String>>,
+    ) -> String {
+        // Prefer the existing hover logic for accurate types, but replace docs with spec-derived docs.
+        let base = Self::hover_base_for_module(module, ident, inferred).unwrap_or_else(|| {
+            match entry.kind {
+                QuickInfoKind::Module => format!("module `{}`", entry.name),
+                _ => format!("`{}`", entry.name),
+            }
+        });
+
+        let mut out = base;
+        if let Some(sig) = &entry.signature {
+            // If the base is just a bare identifier, add a signature line.
+            if !out.contains(" : `") && entry.kind != QuickInfoKind::Module {
+                out = format!("`{}` : `{}`", entry.name, sig);
             }
         }
-        Some(base)
+
+        if !entry.content.trim().is_empty() {
+            out.push_str("\n\n");
+            out.push_str(entry.content.trim());
+        }
+        out
     }
 
     fn hover_contents_for_item(

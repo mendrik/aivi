@@ -327,14 +327,15 @@ impl LanguageServer for Backend {
             position,
         } = params.text_document_position_params;
         let uri = text_document.uri;
+        let doc_index = { Arc::clone(&self.state.lock().await.doc_index) };
         let hover = match self
             .with_document_text(&uri, |content| content.to_string())
             .await
         {
             Some(text) => {
                 let workspace = self.workspace_modules_for(&uri).await;
-                Self::build_hover_with_workspace(&text, &uri, position, &workspace)
-                    .or_else(|| Self::build_hover(&text, &uri, position))
+                Self::build_hover_with_workspace(&text, &uri, position, &workspace, doc_index.as_ref())
+                    .or_else(|| Self::build_hover(&text, &uri, position, doc_index.as_ref()))
             }
             None => None,
         };

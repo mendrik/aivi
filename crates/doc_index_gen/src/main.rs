@@ -45,22 +45,36 @@ struct QuickInfoEntry {
 }
 
 fn main() {
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
-    let specs_dir = manifest_dir.join("../../specs");
+    let args: Vec<String> = env::args().collect();
+    let specs_dir = get_flag_value(&args, "--specs-dir")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| usage_and_exit("--specs-dir is required"));
+    let output = get_flag_value(&args, "--output")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| usage_and_exit("--output is required"));
 
-    // Keep rebuilds correct when specs change.
-    println!("cargo:rerun-if-changed={}", specs_dir.display());
-
-    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));
-    let out_path = out_dir.join("doc_index.json");
-
-    let entries = build_entries_from_specs(&specs_dir).unwrap_or_else(|err| {
-        eprintln!("warning: doc index build failed: {err}");
-        Vec::new()
-    });
-
+    let entries = build_entries_from_specs(&specs_dir)
+        .unwrap_or_else(|err| usage_and_exit(&format!("failed to read specs: {err}")));
     let json = serde_json::to_string_pretty(&entries).expect("serialize doc index");
-    fs::write(&out_path, json).expect("write doc_index.json");
+    if let Some(parent) = output.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).expect("create output directory");
+        }
+    }
+    fs::write(&output, json).expect("write output");
+}
+
+fn usage_and_exit(msg: &str) -> ! {
+    eprintln!("{msg}");
+    eprintln!("usage: doc-index-gen --specs-dir <path> --output <path>");
+    std::process::exit(2);
+}
+
+fn get_flag_value(args: &[String], flag: &str) -> Option<String> {
+    args.iter()
+        .position(|a| a == flag)
+        .and_then(|i| args.get(i + 1))
+        .cloned()
 }
 
 fn build_entries_from_specs(specs_dir: &Path) -> std::io::Result<Vec<QuickInfoEntry>> {
@@ -236,3 +250,4 @@ fn extract_inline_code_spans(content: &str) -> Vec<String> {
     }
     spans
 }
+

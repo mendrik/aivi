@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::backend::Backend;
+    use crate::doc_index::DocIndex;
     use tower_lsp::lsp_types::{HoverContents, Position, Url};
 
     fn sample_uri() -> Url {
@@ -38,7 +39,8 @@ add = x y => x + y
         let position = position_for(text, "+ y");
 
         // This is expected to FAIL currently because '+' is not extracted as an identifier
-        let hover = Backend::build_hover(text, &uri, position);
+        let doc_index = DocIndex::default();
+        let hover = Backend::build_hover(text, &uri, position, &doc_index);
 
         if let Some(hover) = hover {
             let HoverContents::Markup(_markup) = hover.contents else {
@@ -68,7 +70,8 @@ main = [1] ++ [2]
         let uri = sample_uri();
         let position = position_for(text, "++ [2]");
 
-        let hover = Backend::build_hover(text, &uri, position);
+        let doc_index = DocIndex::default();
+        let hover = Backend::build_hover(text, &uri, position, &doc_index);
 
         // Assert that we found *something*
         assert!(

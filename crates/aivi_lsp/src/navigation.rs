@@ -9,6 +9,7 @@ use tower_lsp::lsp_types::{
 };
 
 use crate::backend::Backend;
+use crate::doc_index::DocIndex;
 use crate::state::IndexedModule;
 
 impl Backend {
@@ -279,7 +280,12 @@ impl Backend {
         None
     }
 
-    pub(super) fn build_hover(text: &str, uri: &Url, position: Position) -> Option<Hover> {
+    pub(super) fn build_hover(
+        text: &str,
+        uri: &Url,
+        position: Position,
+        doc_index: &DocIndex,
+    ) -> Option<Hover> {
         let ident = Self::extract_identifier(text, position)?;
         let path = PathBuf::from(Self::path_from_uri(uri));
         let (modules, _) = parse_modules(&path, text);
@@ -287,9 +293,13 @@ impl Backend {
         for module in modules.iter() {
             let doc = Self::doc_for_ident(text, module, &ident);
             let inferred = inferred.get(&module.name.name);
-            if let Some(contents) =
-                Self::hover_contents_for_module(module, &ident, inferred, doc.as_deref())
-            {
+            if let Some(contents) = Self::hover_contents_for_module(
+                module,
+                &ident,
+                inferred,
+                doc.as_deref(),
+                doc_index,
+            ) {
                 return Some(Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
@@ -307,6 +317,7 @@ impl Backend {
         uri: &Url,
         position: Position,
         workspace_modules: &HashMap<String, IndexedModule>,
+        doc_index: &DocIndex,
     ) -> Option<Hover> {
         let ident = Self::extract_identifier(text, position)?;
         let path = PathBuf::from(Self::path_from_uri(uri));
@@ -335,6 +346,7 @@ impl Backend {
                     &ident,
                     inferred,
                     doc.as_deref(),
+                    doc_index,
                 ) {
                     return Some(Hover {
                         contents: HoverContents::Markup(MarkupContent {
@@ -354,6 +366,7 @@ impl Backend {
             &ident,
             inferred_current,
             doc.as_deref(),
+            doc_index,
         ) {
             return Some(Hover {
                 contents: HoverContents::Markup(MarkupContent {
@@ -382,9 +395,13 @@ impl Backend {
                 .as_deref()
                 .and_then(|text| Self::doc_for_ident(text, &indexed.module, &ident));
             let inferred = inferred.get(&indexed.module.name.name);
-            if let Some(contents) =
-                Self::hover_contents_for_module(&indexed.module, &ident, inferred, doc.as_deref())
-            {
+            if let Some(contents) = Self::hover_contents_for_module(
+                &indexed.module,
+                &ident,
+                inferred,
+                doc.as_deref(),
+                doc_index,
+            ) {
                 return Some(Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,

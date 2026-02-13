@@ -88,9 +88,14 @@ impl DocIndex {
                 }
             }
         }
-        candidates
-            .first()
-            .and_then(|i| self.entries.get(*i))
+        // Avoid incorrect docs when multiple modules export the same name.
+        if candidates.len() == 1 {
+            candidates
+                .first()
+                .and_then(|i| self.entries.get(*i))
+        } else {
+            None
+        }
     }
 
     fn rebuild_maps(&mut self) {
@@ -125,7 +130,7 @@ impl DocIndex {
 }
 
 fn entry_fqn(entry: &QuickInfoEntry) -> Option<String> {
-    match (entry.kind, entry.module.as_deref()) {
+    match (&entry.kind, entry.module.as_deref()) {
         (QuickInfoKind::Module, _) => Some(entry.name.clone()),
         (_, Some(_module)) if entry.name.contains('.') => Some(entry.name.clone()),
         (_, Some(module)) => Some(format!("{module}.{}", entry.name)),
@@ -212,8 +217,8 @@ fn extract_entries_from_markers(markdown: &str, stack: &mut Vec<OpenMarker>) -> 
             continue;
         }
 
-        // Advance by one byte; inputs are UTF-8 and marker tokens are ASCII.
-        i += 1;
+        let ch = rest.chars().next().unwrap();
+        i += ch.len_utf8();
     }
     entries
 }
