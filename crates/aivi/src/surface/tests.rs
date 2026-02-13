@@ -220,11 +220,11 @@ fn parses_structured_sigil_html_literal() {
 module Example
 
 x =
-  ~html{
+  ~html~>
     <div class="card">
       <span>{ 1 }</span>
     </div>
-  }
+  <~html
 "#;
     let (modules, diags) = parse_modules(Path::new("test.aivi"), src);
     assert!(
@@ -245,12 +245,12 @@ x =
 
     assert!(
         !matches!(&def.expr, Expr::Literal(Literal::Sigil { tag, .. }) if tag == "html"),
-        "expected ~html{{...}} to parse as a structured literal, not a sigil literal"
+        "expected ~html~> to parse as a structured literal, not a sigil literal"
     );
 
     assert!(
         expr_contains_ident(&def.expr, "vElement") && expr_contains_ident(&def.expr, "vClass"),
-        "expected ~html{{...}} to lower into UI helpers"
+        "expected ~html~> to lower into UI helpers"
     );
 }
 

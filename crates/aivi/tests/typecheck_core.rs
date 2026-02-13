@@ -190,11 +190,11 @@ use aivi.ui
 use aivi.ui.layout
 
 node =
-  ~html{
+  ~html~>
     <div style={ { width: 10px, gap: 2em } }>
       <span>{ TextNode "1" }</span>
     </div>
-  }"#;
+  <~html"#;
     check_ok_with_embedded(source, &["aivi", "aivi.ui", "aivi.ui.layout"]);
 }
 

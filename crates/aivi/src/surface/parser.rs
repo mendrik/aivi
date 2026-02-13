@@ -2629,11 +2629,11 @@ impl Parser {
             (line, col)
         }
 
-        // Compute the body offset inside the full sigil token (`~html{ ... }`).
+        // Compute the body offset inside the full sigil token (`~html~> ... <~html`).
         let body_start_offset = sigil
             .text
             .chars()
-            .position(|ch| ch == '{')
+            .position(|ch| ch == '>')
             .map(|i| i + 1)
             .unwrap_or(0);
 
@@ -4788,6 +4788,27 @@ fn parse_sigil_text(text: &str) -> Option<(String, String, String)> {
         break;
     }
     let open = open?;
+    
+    // Special handling for ~html~> ... <~html delimiter
+    if open == '~' {
+        // Expect '>' after '~'
+        let next_ch = iter.next()?;
+        if next_ch != '>' {
+            return None;
+        }
+        // The body is everything until we find the closing <~TAGNAME sequence
+        let closing_marker = format!("<~{}", tag);
+        let remainder: String = iter.collect();
+        if let Some(pos) = remainder.find(&closing_marker) {
+            let body = remainder[..pos].to_string();
+            // No flags for this delimiter type
+            return Some((tag, body, String::new()));
+        } else {
+            // If no closing marker found, take everything
+            return Some((tag, remainder, String::new()));
+        }
+    }
+    
     let close = match open {
         '/' => '/',
         '"' => '"',
@@ -4797,7 +4818,7 @@ fn parse_sigil_text(text: &str) -> Option<(String, String, String)> {
         _ => return None,
     };
     let mut body = String::new();
-    // Brace-delimited sigils may contain nested `{ ... }` splices (notably `~html{ ... }`).
+    // Some sigils may contain nested `{ ... }` splices (notably `~html~> ... <~html`).
     // For other delimiters, we stop at the first close delimiter.
     if open == '{' {
         let mut escaped = false;

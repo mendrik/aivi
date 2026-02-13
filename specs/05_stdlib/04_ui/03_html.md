@@ -1,14 +1,18 @@
 # HTML Sigil (`~html{ ... }`)
 
-The `~html{ ... }` sigil parses HTML-like syntax and lowers it to `aivi.ui.VNode msg` constructors.
+The `~html~> ... <~html` sigil allows embedding HTML inside Aivi code:syntax and lowers it to `aivi.ui.VNode msg` constructors.
 
 `~html{ ... }` is **typed templating**: it produces `VNode` values, not HTML strings.
 
 ## Splices
 
-Use `{ expr }` inside `~html{}` to splice an AIVI expression:
-
-- In child position, the expected type is `VNode msg`. If the splice is `Text` (or implements `ToText`), it is coerced by wrapping with `TextNode` (and inserting `toText` when needed).
+Use `{ expr }` inode =
+  ~html~>
+    <div class="card">
+      <h1>Hello</h1>
+      <p>{ TextNode text }</p>
+    </div>
+  <~htmltype is `VNode msg`. If the splice is `Text` (or implements `ToText`), it is coerced by wrapping with `TextNode` (and inserting `toText` when needed).
 - In attribute position, `...={expr}` is type-checked against the attribute's expected type (e.g. `style` expects a record).
 
 <<< ../../snippets/from_md/05_stdlib/04_ui/03_html/block_01.aivi{aivi}

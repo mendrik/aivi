@@ -326,88 +326,78 @@ fn lex_sigil_multiline(
         '(' => ')',
         '[' => ']',
         '{' => '}',
+        '~' => '<', // For ~html~>...<~html, the 'open' is '~', and the 'close' starts with '<'
         _ => return None,
     };
 
-    // `~html{ ... }` is allowed to span multiple lines and contain nested `{ ... }` splices.
-    if tag == "html" && open == '{' {
-        index += 1; // consume '{'
+    // `~html~> ... <~html` is allowed to span multiple lines and contain nested `{ ... }` splices.
+    if tag == "html" && open == '~' {
+        // Check for '>' after '~'
+        index += 1; // consume '~'
+        if index >= chars.len() || chars[index] != '>' {
+            return None;
+        }
+        index += 1; // consume '>'
 
         let mut line = start_line;
         let mut col = start_col + (index - start);
-        let mut depth = 1usize;
         let mut in_quote: Option<char> = None;
         let mut escaped = false;
         let mut closed = false;
 
+        // Scan for the closing delimiter "<~html"
         while index < chars.len() {
             let ch = chars[index];
             if ch == '\n' {
                 line += 1;
                 col = 1;
-                index += 1;
-                escaped = false;
-                continue;
+            } else {
+                col += 1;
             }
 
             if escaped {
                 escaped = false;
                 index += 1;
-                col += 1;
-                continue;
-            }
-            if ch == '\\' {
-                escaped = true;
-                index += 1;
-                col += 1;
                 continue;
             }
 
-            if let Some(q) = in_quote {
-                if ch == q {
+            if ch == '\\' {
+                escaped = true;
+                index += 1;
+                continue;
+            }
+
+            if let Some(quote_char) = in_quote {
+                if ch == quote_char {
                     in_quote = None;
                 }
                 index += 1;
-                col += 1;
                 continue;
             }
 
             if ch == '"' || ch == '\'' {
                 in_quote = Some(ch);
                 index += 1;
-                col += 1;
                 continue;
             }
 
-            if ch == '{' {
-                depth += 1;
-                index += 1;
-                col += 1;
-                continue;
-            }
-            if ch == '}' {
-                depth = depth.saturating_sub(1);
-                index += 1;
-                col += 1;
-                if depth == 0 {
+            // Check for closing delimiter "<~html"
+            if ch == '<' && index + 5 < chars.len() {
+               if chars[index + 1] == '~'
+                    && chars[index + 2] == 'h'
+                    && chars[index + 3] == 't'
+                    && chars[index + 4] == 'm'
+                    && chars[index + 5] == 'l'
+                {
+                    // Found closing delimiter
                     closed = true;
+                    index += 6; // consume "<~html"
+                    col += 5; // Adjust col to be at the last char of the delimiter
                     break;
                 }
-                continue;
             }
 
             index += 1;
-            col += 1;
-        }
-
-        if closed {
-            while index < chars.len() && chars[index].is_ascii_alphabetic() {
-                if chars[index] == '\n' {
-                    break;
-                }
-                index += 1;
-                col += 1;
-            }
         }
 
         let text: String = chars[start..index.min(chars.len())].iter().collect();
