@@ -1,4 +1,11 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DiagnosticSeverity {
+    Error,
+    Warning,
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Position {
@@ -21,6 +28,7 @@ pub struct DiagnosticLabel {
 #[derive(Debug, Clone, Serialize)]
 pub struct Diagnostic {
     pub code: String,
+    pub severity: DiagnosticSeverity,
     pub message: String,
     pub span: Span,
     pub labels: Vec<DiagnosticLabel>,
@@ -30,6 +38,12 @@ pub struct Diagnostic {
 pub struct FileDiagnostic {
     pub path: String,
     pub diagnostic: Diagnostic,
+}
+
+pub fn file_diagnostics_have_errors(diagnostics: &[FileDiagnostic]) -> bool {
+    diagnostics
+        .iter()
+        .any(|diag| diag.diagnostic.severity == DiagnosticSeverity::Error)
 }
 
 pub fn render_diagnostics(path: &str, diagnostics: &[Diagnostic]) -> String {
@@ -55,8 +69,12 @@ fn render_diagnostic_with_source(
 ) -> String {
     let mut output = String::new();
     let start = &diagnostic.span.start;
+    let severity = match diagnostic.severity {
+        DiagnosticSeverity::Error => "error",
+        DiagnosticSeverity::Warning => "warning",
+    };
     output.push_str(&format!(
-        "error[{}] {}:{}:{} {}\n",
+        "{severity}[{}] {}:{}:{} {}\n",
         diagnostic.code, path, start.line, start.column, diagnostic.message
     ));
     if let Some(source) = source {

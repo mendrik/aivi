@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use crate::cst::CstToken;
-use crate::diagnostics::{Diagnostic, DiagnosticLabel, FileDiagnostic, Position, Span};
+use crate::diagnostics::{
+    Diagnostic, DiagnosticLabel, DiagnosticSeverity, FileDiagnostic, Position, Span,
+};
 use crate::lexer::{filter_tokens, lex, Token, TokenKind};
 
 use super::ast::*;
@@ -13,6 +15,7 @@ pub fn parse_modules(path: &Path, content: &str) -> (Vec<Module>, Vec<FileDiagno
     let mut modules = parser.parse_modules();
     inject_prelude_imports(&mut modules);
     expand_domain_exports(&mut modules);
+    let mut decorator_diags = apply_static_decorators(&mut modules);
     let mut diagnostics: Vec<FileDiagnostic> = lex_diags
         .into_iter()
         .map(|diag| FileDiagnostic {
@@ -21,6 +24,7 @@ pub fn parse_modules(path: &Path, content: &str) -> (Vec<Module>, Vec<FileDiagno
         })
         .collect();
     diagnostics.append(&mut parser.diagnostics);
+    diagnostics.append(&mut decorator_diags);
     (modules, diagnostics)
 }
 
@@ -101,6 +105,195 @@ fn expand_domain_exports(modules: &mut [Module]) {
         }
         module.exports.extend(extra_exports);
     }
+}
+
+fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
+    fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
+        decorators.iter().any(|decorator| decorator.name.name == name)
+    }
+
+    fn emit_diag(
+        module: &Module,
+        out: &mut Vec<FileDiagnostic>,
+        code: &str,
+        message: String,
+        span: Span,
+    ) {
+        out.push(FileDiagnostic {
+            path: module.path.clone(),
+            diagnostic: Diagnostic {
+                code: code.to_string(),
+                severity: DiagnosticSeverity::Error,
+                message,
+                span,
+                labels: Vec::new(),
+            },
+        });
+    }
+
+    fn apply_static_to_def(module: &Module, def: &mut Def, out: &mut Vec<FileDiagnostic>) {
+        if !has_decorator(&def.decorators, "static") {
+            return;
+        }
+        if !def.params.is_empty() {
+            emit_diag(
+                module,
+                out,
+                "E1514",
+                "`@static` can only be applied to value definitions (no parameters)".to_string(),
+                def.span.clone(),
+            );
+            return;
+        }
+
+        // v0.1 minimal implementation: `@static x = file.read \"path\"` becomes a string literal
+        // embedded in the surface AST (and thus in all backends).
+        let original_span = expr_span(&def.expr);
+        let expr = def.expr.clone();
+        let Expr::Call { func, args, .. } = &expr else {
+            emit_diag(
+                module,
+                out,
+                "E1515",
+                "`@static` currently supports only `file.read \"path\"`".to_string(),
+                original_span,
+            );
+            return;
+        };
+        let (base_name, field_name) = match func.as_ref() {
+            Expr::FieldAccess { base, field, .. } => match base.as_ref() {
+                Expr::Ident(name) => (Some(name.name.as_str()), Some(field.name.as_str())),
+                _ => (None, None),
+            },
+            _ => (None, None),
+        };
+        if base_name != Some("file") || field_name != Some("read") {
+            emit_diag(
+                module,
+                out,
+                "E1515",
+                "`@static` currently supports only `file.read \"path\"`".to_string(),
+                original_span,
+            );
+            return;
+        }
+        if args.len() != 1 {
+            emit_diag(
+                module,
+                out,
+                "E1515",
+                "`@static` currently supports only `file.read \"path\"`".to_string(),
+                original_span,
+            );
+            return;
+        }
+        let Some(Expr::Literal(Literal::String { text: rel, .. })) = args.first() else {
+            emit_diag(
+                module,
+                out,
+                "E1515",
+                "`@static file.read` expects a string literal path".to_string(),
+                original_span,
+            );
+            return;
+        };
+
+        let base_dir = std::path::Path::new(&module.path)
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."));
+        let full_path = base_dir.join(rel);
+        match std::fs::read_to_string(&full_path) {
+            Ok(contents) => {
+                def.expr = Expr::Literal(Literal::String {
+                    text: contents,
+                    span: original_span,
+                });
+            }
+            Err(err) => {
+                emit_diag(
+                    module,
+                    out,
+                    "E1515",
+                    format!(
+                        "`@static` failed to read {}: {}",
+                        full_path.display(),
+                        err
+                    ),
+                    original_span,
+                );
+            }
+        }
+    }
+
+    let mut diags = Vec::new();
+    for module in modules {
+        for item in &mut module.items {
+            match item {
+                ModuleItem::Def(def) => apply_static_to_def(module, def, &mut diags),
+                ModuleItem::InstanceDecl(instance) => {
+                    for def in &mut instance.defs {
+                        apply_static_to_def(module, def, &mut diags);
+                    }
+                }
+                ModuleItem::DomainDecl(domain) => {
+                    for domain_item in &mut domain.items {
+                        match domain_item {
+                            DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                                apply_static_to_def(module, def, &mut diags);
+                            }
+                            DomainItem::TypeAlias(_)
+                            | DomainItem::TypeSig(_) => {}
+                        }
+                    }
+                }
+                ModuleItem::TypeSig(sig) => {
+                    if has_decorator(&sig.decorators, "static") {
+                        emit_diag(
+                            module,
+                            &mut diags,
+                            "E1514",
+                            "`@static` can only be applied to value definitions".to_string(),
+                            sig.span.clone(),
+                        );
+                    }
+                }
+                ModuleItem::TypeDecl(type_decl) => {
+                    if has_decorator(&type_decl.decorators, "static") {
+                        emit_diag(
+                            module,
+                            &mut diags,
+                            "E1514",
+                            "`@static` can only be applied to value definitions".to_string(),
+                            type_decl.span.clone(),
+                        );
+                    }
+                }
+                ModuleItem::TypeAlias(type_alias) => {
+                    if has_decorator(&type_alias.decorators, "static") {
+                        emit_diag(
+                            module,
+                            &mut diags,
+                            "E1514",
+                            "`@static` can only be applied to value definitions".to_string(),
+                            type_alias.span.clone(),
+                        );
+                    }
+                }
+                ModuleItem::ClassDecl(class_decl) => {
+                    if has_decorator(&class_decl.decorators, "static") {
+                        emit_diag(
+                            module,
+                            &mut diags,
+                            "E1514",
+                            "`@static` can only be applied to value definitions".to_string(),
+                            class_decl.span.clone(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+    diags
 }
 
 struct Parser {
@@ -476,6 +669,20 @@ impl Parser {
                             "E1511",
                             "`@deprecated` expects an argument (e.g. `@deprecated \"message\"`)",
                             decorator.span.clone(),
+                        );
+                    } else if !matches!(
+                        decorator.arg,
+                        Some(Expr::Literal(Literal::String { .. }))
+                    ) {
+                        let span = decorator
+                            .arg
+                            .as_ref()
+                            .map(expr_span)
+                            .unwrap_or_else(|| decorator.span.clone());
+                        self.emit_diag(
+                            "E1510",
+                            "`@deprecated` expects a string literal argument",
+                            span,
                         );
                     }
                 }
@@ -3023,6 +3230,7 @@ impl Parser {
                 path: self.path.clone(),
                 diagnostic: Diagnostic {
                     code: diag.code,
+                    severity: diag.severity,
                     message: diag.message,
                     span: shift_span(&mapped_span, line - 1, column - 1),
                     labels: diag
@@ -3194,6 +3402,7 @@ impl Parser {
             path: self.path.clone(),
             diagnostic: Diagnostic {
                 code: code.to_string(),
+                severity: DiagnosticSeverity::Error,
                 message: message.to_string(),
                 span,
                 labels: Vec::new(),

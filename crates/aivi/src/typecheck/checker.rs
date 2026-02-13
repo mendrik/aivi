@@ -3348,6 +3348,7 @@ impl TypeChecker {
             path: module.path.clone(),
             diagnostic: Diagnostic {
                 code: "E3000".to_string(),
+                severity: crate::diagnostics::DiagnosticSeverity::Error,
                 message,
                 span,
                 labels: Vec::new(),

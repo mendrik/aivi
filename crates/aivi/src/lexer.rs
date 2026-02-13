@@ -1,5 +1,5 @@
 use crate::cst::CstToken;
-use crate::diagnostics::{Diagnostic, DiagnosticLabel, Position, Span};
+use crate::diagnostics::{Diagnostic, DiagnosticLabel, DiagnosticSeverity, Position, Span};
 use crate::syntax;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,6 +90,7 @@ pub fn lex(content: &str) -> (Vec<CstToken>, Vec<Diagnostic>) {
                 if !closed {
                     diagnostics.push(Diagnostic {
                         code: "E1001".to_string(),
+                        severity: DiagnosticSeverity::Error,
                         message: "unterminated string literal".to_string(),
                         span: span(line_no, col, index - start),
                         labels: vec![DiagnosticLabel {
@@ -113,6 +114,7 @@ pub fn lex(content: &str) -> (Vec<CstToken>, Vec<Diagnostic>) {
                         let sigil_span = span(line_no, col, len);
                         diagnostics.push(Diagnostic {
                             code: "E1005".to_string(),
+                            severity: DiagnosticSeverity::Error,
                             message: "unterminated sigil literal".to_string(),
                             span: sigil_span.clone(),
                             labels: vec![DiagnosticLabel {
@@ -173,6 +175,7 @@ pub fn lex(content: &str) -> (Vec<CstToken>, Vec<Diagnostic>) {
             if ch == ';' {
                 diagnostics.push(Diagnostic {
                     code: "E1006".to_string(),
+                    severity: DiagnosticSeverity::Error,
                     message: "semicolons are not part of AIVI syntax; use newlines".to_string(),
                     span: span(line_no, col, 1),
                     labels: vec![DiagnosticLabel {
@@ -203,6 +206,7 @@ pub fn lex(content: &str) -> (Vec<CstToken>, Vec<Diagnostic>) {
 
             diagnostics.push(Diagnostic {
                 code: "E1000".to_string(),
+                severity: DiagnosticSeverity::Error,
                 message: format!("unexpected character '{ch}'"),
                 span: span(line_no, col, 1),
                 labels: Vec::new(),
@@ -324,6 +328,7 @@ fn check_braces(tokens: &[CstToken]) -> Vec<Diagnostic> {
                 let Some((open, open_span)) = stack.pop() else {
                     diagnostics.push(Diagnostic {
                         code: "E1002".to_string(),
+                        severity: DiagnosticSeverity::Error,
                         message: format!("unmatched closing '{}'", token.text),
                         span: token.span.clone(),
                         labels: Vec::new(),
@@ -333,6 +338,7 @@ fn check_braces(tokens: &[CstToken]) -> Vec<Diagnostic> {
                 if !matches_pair(&open, &token.text) {
                     diagnostics.push(Diagnostic {
                         code: "E1003".to_string(),
+                        severity: DiagnosticSeverity::Error,
                         message: format!("mismatched '{}' and '{}'", open, token.text),
                         span: token.span.clone(),
                         labels: vec![DiagnosticLabel {
@@ -349,6 +355,7 @@ fn check_braces(tokens: &[CstToken]) -> Vec<Diagnostic> {
     for (open, span) in stack {
         diagnostics.push(Diagnostic {
             code: "E1004".to_string(),
+            severity: DiagnosticSeverity::Error,
             message: format!("unclosed '{}'", open),
             span,
             labels: Vec::new(),

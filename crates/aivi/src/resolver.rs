@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::diagnostics::{Diagnostic, FileDiagnostic};
+use crate::diagnostics::{Diagnostic, DiagnosticSeverity, FileDiagnostic};
 use crate::surface::{BlockItem, Def, DomainItem, Expr, Module, ModuleItem, Pattern, TextPart};
 
 pub fn check_modules(modules: &[Module]) -> Vec<FileDiagnostic> {
@@ -13,6 +13,7 @@ pub fn check_modules(modules: &[Module]) -> Vec<FileDiagnostic> {
                 existing,
                 Diagnostic {
                     code: "E2000".to_string(),
+                    severity: DiagnosticSeverity::Error,
                     message: format!("duplicate module '{}'", module.name.name),
                     span: module.name.span.clone(),
                     labels: Vec::new(),
@@ -36,6 +37,7 @@ pub fn check_modules(modules: &[Module]) -> Vec<FileDiagnostic> {
                 module,
                 Diagnostic {
                     code: "E2004".to_string(),
+                    severity: DiagnosticSeverity::Error,
                     message: "cyclic module dependency".to_string(),
                     span: module.name.span.clone(),
                     labels: Vec::new(),
@@ -55,6 +57,7 @@ fn check_duplicate_exports(module: &Module, diagnostics: &mut Vec<FileDiagnostic
                 module,
                 Diagnostic {
                     code: "E2001".to_string(),
+                    severity: DiagnosticSeverity::Error,
                     message: format!("duplicate export '{}'", export.name),
                     span: export.span.clone(),
                     labels: Vec::new(),
@@ -79,6 +82,7 @@ fn check_uses(
                 module,
                 Diagnostic {
                     code: "E2002".to_string(),
+                    severity: DiagnosticSeverity::Error,
                     message: format!("unknown module '{}'", use_decl.module.name),
                     span: use_decl.module.span.clone(),
                     labels: Vec::new(),
@@ -101,6 +105,7 @@ fn check_uses(
                     module,
                     Diagnostic {
                         code: "E2003".to_string(),
+                        severity: DiagnosticSeverity::Error,
                         message: format!(
                             "module '{}' does not export '{}'",
                             use_decl.module.name, item.name
@@ -293,6 +298,7 @@ fn check_expr(
                     module,
                     Diagnostic {
                         code: "E2005".to_string(),
+                        severity: DiagnosticSeverity::Error,
                         message: format!("unknown name '{}'", name.name),
                         span: name.span.clone(),
                         labels: Vec::new(),

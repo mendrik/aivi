@@ -77,7 +77,10 @@ impl Backend {
 
         Diagnostic {
             range: Self::span_to_range(file_diag.diagnostic.span),
-            severity: Some(DiagnosticSeverity::ERROR),
+            severity: Some(match file_diag.diagnostic.severity {
+                aivi::DiagnosticSeverity::Error => DiagnosticSeverity::ERROR,
+                aivi::DiagnosticSeverity::Warning => DiagnosticSeverity::WARNING,
+            }),
             code: Some(NumberOrString::String(file_diag.diagnostic.code)),
             code_description: None,
             source: Some("aivi".to_string()),

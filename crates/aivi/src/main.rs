@@ -63,7 +63,11 @@ fn run() -> Result<(), AiviError> {
                     if !rendered.is_empty() {
                         eprintln!("{rendered}");
                     }
-                    had_errors = true;
+                    had_errors = had_errors
+                        || file
+                            .diagnostics
+                            .iter()
+                            .any(|d| d.severity == aivi::DiagnosticSeverity::Error);
                 }
             }
             if had_errors {
@@ -79,20 +83,22 @@ fn run() -> Result<(), AiviError> {
             let mut diagnostics = load_module_diagnostics(target)?;
             let modules = load_modules(target)?;
             diagnostics.extend(check_modules(&modules));
-            if diagnostics.is_empty() {
+            if !aivi::file_diagnostics_have_errors(&diagnostics) {
                 diagnostics.extend(check_types(&modules));
             }
-            if diagnostics.is_empty() {
-                return Ok(());
-            }
-            for diag in diagnostics {
+            let has_errors = aivi::file_diagnostics_have_errors(&diagnostics);
+            for diag in &diagnostics {
                 let rendered =
                     render_diagnostics(&diag.path, std::slice::from_ref(&diag.diagnostic));
                 if !rendered.is_empty() {
                     eprintln!("{rendered}");
                 }
             }
-            Err(AiviError::Diagnostics)
+            if has_errors {
+                Err(AiviError::Diagnostics)
+            } else {
+                Ok(())
+            }
         }
         "fmt" => {
             let Some(target) = rest.first() else {
@@ -109,7 +115,7 @@ fn run() -> Result<(), AiviError> {
                 return Ok(());
             };
             let diagnostics = load_module_diagnostics(target)?;
-            if !diagnostics.is_empty() {
+            if aivi::file_diagnostics_have_errors(&diagnostics) {
                 for diag in diagnostics {
                     let rendered =
                         render_diagnostics(&diag.path, std::slice::from_ref(&diag.diagnostic));
@@ -391,10 +397,10 @@ fn cmd_mcp_serve(target: &str, allow_effects: bool) -> Result<(), AiviError> {
     let mut diagnostics = load_module_diagnostics(target)?;
     let modules = load_modules(target)?;
     diagnostics.extend(check_modules(&modules));
-    if diagnostics.is_empty() {
+    if !aivi::file_diagnostics_have_errors(&diagnostics) {
         diagnostics.extend(check_types(&modules));
     }
-    if !diagnostics.is_empty() {
+    if aivi::file_diagnostics_have_errors(&diagnostics) {
         for diag in diagnostics {
             let rendered = render_diagnostics(&diag.path, std::slice::from_ref(&diag.diagnostic));
             if !rendered.is_empty() {
@@ -575,10 +581,10 @@ fn load_checked_modules_with_progress(target: &str) -> Result<Vec<aivi::Module>,
     let mut stdlib_modules = aivi::embedded_stdlib_modules();
     stdlib_modules.append(&mut modules);
     diagnostics.extend(check_modules(&stdlib_modules));
-    if diagnostics.is_empty() {
+    if !aivi::file_diagnostics_have_errors(&diagnostics) {
         diagnostics.extend(check_types(&stdlib_modules));
     }
-    if diagnostics.is_empty() {
+    if !aivi::file_diagnostics_have_errors(&diagnostics) {
         return Ok(stdlib_modules);
     }
     for diag in diagnostics {
@@ -594,10 +600,10 @@ fn load_checked_modules(target: &str) -> Result<Vec<aivi::Module>, AiviError> {
     let mut diagnostics = load_module_diagnostics(target)?;
     let modules = load_modules(target)?;
     diagnostics.extend(check_modules(&modules));
-    if diagnostics.is_empty() {
+    if !aivi::file_diagnostics_have_errors(&diagnostics) {
         diagnostics.extend(check_types(&modules));
     }
-    if diagnostics.is_empty() {
+    if !aivi::file_diagnostics_have_errors(&diagnostics) {
         return Ok(modules);
     }
     for diag in diagnostics {
