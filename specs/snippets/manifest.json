@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "path": "specs/snippets/02_syntax/13_sigils/basic.aivi",
+      "module": "docs.syntax.sigils.basic",
+      "verify": ["fmt", "parse"]
+    },
+    {
+      "path": "specs/snippets/02_syntax/13_sigils/structured.aivi",
+      "module": "docs.syntax.sigils.structured",
+      "verify": ["fmt", "parse"]
+    },
+    {
+      "path": "specs/snippets/_smoke/typecheck_ok.aivi",
+      "module": "docs.snippets.smoke.typecheck_ok",
+      "stdlib": "none",
+      "verify": ["fmt", "check"]
+    }
+  ]
+}

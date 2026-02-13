@@ -6,7 +6,9 @@
   "scripts": {
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
-    "docs:preview": "vitepress preview"
+    "docs:preview": "vitepress preview",
+    "snippets:check": "node scripts/verify-snippets.mjs",
+    "snippets:fix": "node scripts/verify-snippets.mjs --fix"
   },
   "devDependencies": {
     "vitepress": "1.6.4",

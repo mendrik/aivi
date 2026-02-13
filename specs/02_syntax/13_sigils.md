@@ -3,18 +3,7 @@
 Sigils provide custom parsing for complex literals. They start with `~` followed by a tag and a delimiter.
 
 ```aivi
-// Regex
-pattern = ~r/\w+@\w+\.\w+/
-
-// URL
-endpoint = ~u(https://api.example.com)
-
-// Date
-birthday = ~d(1990-12-31)
-
-// I18n key and message templates
-welcomeKey = ~k"app.welcome"
-welcomeMsg = ~m"Hello, {name:Text}!"
+<<< ../snippets/02_syntax/13_sigils/basic.aivi
 ```
 
 Domains define these sigils to validate and construct types at compile time.
@@ -24,14 +13,7 @@ Domains define these sigils to validate and construct types at compile time.
 Some domains parse sigils as **AIVI expressions** rather than raw text. For v1.0, the `Collections` domain defines:
 
 ```aivi
-// Map literal (entries use =>, spread with ...)
-users = ~map{
-  "id-1" => { name: "Alice" }
-  "id-2" => { name: "Bob" }
-}
-
-// Set literal (spread with ...)
-tags = ~set[...baseTags, "hot", "new"]
+<<< ../snippets/02_syntax/13_sigils/structured.aivi
 ```
 
 The exact meaning of a sigil is domain-defined; see [Collections](../05_stdlib/00_core/28_collections.md) for `~map` and `~set`.

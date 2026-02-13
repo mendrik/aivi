@@ -212,6 +212,12 @@ const EMBEDDED_MODULES: &[EmbeddedModule] = &[
 ];
 
 pub fn embedded_stdlib_modules() -> Vec<Module> {
+    // The embedded stdlib is allowed to be incomplete / not typecheck-clean in early versions.
+    // Tooling (like doc snippet verification) may want to run without it.
+    if std::env::var("AIVI_NO_STDLIB").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true")) {
+        return Vec::new();
+    }
+
     let trace = std::env::var("AIVI_TRACE_STDLIB").is_ok_and(|v| v == "1");
     let mut modules = Vec::new();
     for module in EMBEDDED_MODULES {
