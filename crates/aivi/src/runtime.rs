@@ -81,7 +81,104 @@ enum RuntimeError {
     Message(String),
 }
 
+#[derive(Debug, Clone)]
+pub struct TestFailure {
+    pub name: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct TestReport {
+    pub passed: usize,
+    pub failed: usize,
+    pub failures: Vec<TestFailure>,
+}
+
 pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
+    let mut runtime = build_runtime_from_program(program)?;
+    let main = runtime
+        .ctx
+        .globals
+        .get("main")
+        .ok_or_else(|| AiviError::Runtime("missing main definition".to_string()))?;
+    let main_value = match runtime.force_value(main) {
+        Ok(value) => value,
+        Err(err) => return Err(AiviError::Runtime(format_runtime_error(err))),
+    };
+    let effect = match main_value {
+        Value::Effect(effect) => Value::Effect(effect),
+        other => {
+            return Err(AiviError::Runtime(format!(
+                "main must be an Effect value, got {}",
+                format_value(&other)
+            )))
+        }
+    };
+
+    match runtime.run_effect_value(effect) {
+        Ok(_) => Ok(()),
+        Err(err) => Err(AiviError::Runtime(format_runtime_error(err))),
+    }
+}
+
+pub fn run_test_suite(program: HirProgram, test_names: &[String]) -> Result<TestReport, AiviError> {
+    let mut runtime = build_runtime_from_program(program)?;
+    let mut report = TestReport {
+        passed: 0,
+        failed: 0,
+        failures: Vec::new(),
+    };
+
+    for name in test_names {
+        let Some(value) = runtime.ctx.globals.get(name) else {
+            report.failed += 1;
+            report.failures.push(TestFailure {
+                name: name.clone(),
+                message: "missing definition".to_string(),
+            });
+            continue;
+        };
+
+        let value = match runtime.force_value(value) {
+            Ok(value) => value,
+            Err(err) => {
+                report.failed += 1;
+                report.failures.push(TestFailure {
+                    name: name.clone(),
+                    message: format_runtime_error(err),
+                });
+                continue;
+            }
+        };
+
+        let effect = match value {
+            Value::Effect(effect) => Value::Effect(effect),
+            other => {
+                report.failed += 1;
+                report.failures.push(TestFailure {
+                    name: name.clone(),
+                    message: format!("test must be an Effect value, got {}", format_value(&other)),
+                });
+                continue;
+            }
+        };
+
+        match runtime.run_effect_value(effect) {
+            Ok(_) => report.passed += 1,
+            Err(err) => {
+                report.failed += 1;
+                report.failures.push(TestFailure {
+                    name: name.clone(),
+                    message: format_runtime_error(err),
+                });
+            }
+        }
+    }
+
+    Ok(report)
+}
+
+fn build_runtime_from_program(program: HirProgram) -> Result<Runtime, AiviError> {
     if program.modules.is_empty() {
         return Err(AiviError::Runtime("no modules to run".to_string()));
     }
@@ -128,44 +225,14 @@ pub fn run_native(program: HirProgram) -> Result<(), AiviError> {
 
     let ctx = Arc::new(RuntimeContext { globals });
     let cancel = CancelToken::root();
-    let mut runtime = Runtime::new(ctx, cancel);
+    Ok(Runtime::new(ctx, cancel))
+}
 
-    let main = runtime
-        .ctx
-        .globals
-        .get("main")
-        .ok_or_else(|| AiviError::Runtime("missing main definition".to_string()))?;
-    let main_value = match runtime.force_value(main) {
-        Ok(value) => value,
-        Err(RuntimeError::Cancelled) => {
-            return Err(AiviError::Runtime("execution cancelled".to_string()))
-        }
-        Err(RuntimeError::Message(message)) => return Err(AiviError::Runtime(message)),
-        Err(RuntimeError::Error(value)) => {
-            return Err(AiviError::Runtime(format!(
-                "runtime error: {}",
-                format_value(&value)
-            )))
-        }
-    };
-    let effect = match main_value {
-        Value::Effect(effect) => Value::Effect(effect),
-        other => {
-            return Err(AiviError::Runtime(format!(
-                "main must be an Effect value, got {}",
-                format_value(&other)
-            )))
-        }
-    };
-
-    match runtime.run_effect_value(effect) {
-        Ok(_) => Ok(()),
-        Err(RuntimeError::Cancelled) => Err(AiviError::Runtime("execution cancelled".to_string())),
-        Err(RuntimeError::Message(message)) => Err(AiviError::Runtime(message)),
-        Err(RuntimeError::Error(value)) => Err(AiviError::Runtime(format!(
-            "runtime error: {}",
-            format_value(&value)
-        ))),
+fn format_runtime_error(err: RuntimeError) -> String {
+    match err {
+        RuntimeError::Cancelled => "execution cancelled".to_string(),
+        RuntimeError::Message(message) => message,
+        RuntimeError::Error(value) => format!("runtime error: {}", format_value(&value)),
     }
 }
 

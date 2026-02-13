@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::diagnostics::{Diagnostic, DiagnosticSeverity, FileDiagnostic};
-use crate::surface::{BlockItem, Def, DomainItem, Expr, Module, ModuleItem, Pattern, TextPart};
+use crate::surface::{
+    BlockItem, Decorator, Def, DomainItem, Expr, Literal, Module, ModuleItem, Pattern, TextPart,
+};
 
 pub fn check_modules(modules: &[Module]) -> Vec<FileDiagnostic> {
     let mut diagnostics = Vec::new();
@@ -124,7 +126,7 @@ fn check_defs(
     module_map: &HashMap<String, &Module>,
     diagnostics: &mut Vec<FileDiagnostic>,
 ) {
-    let mut scope: HashSet<String> = HashSet::new();
+    let mut scope: HashMap<String, Option<String>> = HashMap::new();
     let mut allow_unknown = false;
 
     for item in module.items.iter() {
@@ -139,7 +141,10 @@ fn check_defs(
                     .map(|name| name.name.as_str())
                     .collect();
                 for export in &target.exports {
-                    scope.insert(export.name.clone());
+                    scope.insert(
+                        export.name.clone(),
+                        deprecated_message_for_export(target, &export.name),
+                    );
                 }
                 for item in &target.items {
                     if let ModuleItem::ClassDecl(class_decl) = item {
@@ -147,7 +152,7 @@ fn check_defs(
                             continue;
                         }
                         for member in &class_decl.members {
-                            scope.insert(member.name.name.clone());
+                            scope.insert(member.name.name.clone(), None);
                         }
                     }
                 }
@@ -164,13 +169,16 @@ fn check_defs(
                 .collect();
             for item in &use_decl.items {
                 if target.exports.iter().any(|export| export.name == item.name) {
-                    scope.insert(item.name.clone());
+                    scope.insert(
+                        item.name.clone(),
+                        deprecated_message_for_export(target, &item.name),
+                    );
                     if exported.contains(item.name.as_str()) {
                         for module_item in &target.items {
                             if let ModuleItem::ClassDecl(class_decl) = module_item {
                                 if class_decl.name.name == item.name {
                                     for member in &class_decl.members {
-                                        scope.insert(member.name.name.clone());
+                                        scope.insert(member.name.name.clone(), None);
                                     }
                                 }
                             }
@@ -207,36 +215,36 @@ fn check_defs(
     }
 }
 
-fn collect_value_defs(item: &ModuleItem, scope: &mut HashSet<String>) {
+fn collect_value_defs(item: &ModuleItem, scope: &mut HashMap<String, Option<String>>) {
     match item {
         ModuleItem::Def(def) => {
-            scope.insert(def.name.name.clone());
+            scope.insert(def.name.name.clone(), deprecated_message(&def.decorators));
         }
         ModuleItem::TypeDecl(type_decl) => {
             for ctor in &type_decl.constructors {
-                scope.insert(ctor.name.name.clone());
+                scope.insert(ctor.name.name.clone(), None);
             }
         }
         ModuleItem::TypeAlias(_) => {}
         ModuleItem::ClassDecl(class_decl) => {
             for member in &class_decl.members {
-                scope.insert(member.name.name.clone());
+                scope.insert(member.name.name.clone(), None);
             }
         }
         ModuleItem::InstanceDecl(instance) => {
             for def in &instance.defs {
-                scope.insert(def.name.name.clone());
+                scope.insert(def.name.name.clone(), deprecated_message(&def.decorators));
             }
         }
         ModuleItem::DomainDecl(domain) => {
             for domain_item in &domain.items {
                 match domain_item {
                     DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
-                        scope.insert(def.name.name.clone());
+                        scope.insert(def.name.name.clone(), deprecated_message(&def.decorators));
                     }
                     DomainItem::TypeAlias(type_decl) => {
                         for ctor in &type_decl.constructors {
-                            scope.insert(ctor.name.name.clone());
+                            scope.insert(ctor.name.name.clone(), None);
                         }
                     }
                     DomainItem::TypeSig(_) => {}
@@ -247,9 +255,50 @@ fn collect_value_defs(item: &ModuleItem, scope: &mut HashSet<String>) {
     }
 }
 
+fn deprecated_message(decorators: &[Decorator]) -> Option<String> {
+    decorators
+        .iter()
+        .find(|decorator| decorator.name.name == "deprecated")
+        .and_then(|decorator| match &decorator.arg {
+            Some(Expr::Literal(Literal::String { text, .. })) => Some(text.clone()),
+            _ => None,
+        })
+}
+
+fn deprecated_message_for_export(module: &Module, name: &str) -> Option<String> {
+    for item in &module.items {
+        match item {
+            ModuleItem::Def(def) if def.name.name == name => {
+                return deprecated_message(&def.decorators);
+            }
+            ModuleItem::InstanceDecl(instance) => {
+                for def in &instance.defs {
+                    if def.name.name == name {
+                        return deprecated_message(&def.decorators);
+                    }
+                }
+            }
+            ModuleItem::DomainDecl(domain) => {
+                for domain_item in &domain.items {
+                    match domain_item {
+                        DomainItem::Def(def) | DomainItem::LiteralDef(def)
+                            if def.name.name == name =>
+                        {
+                            return deprecated_message(&def.decorators);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 fn check_def(
     def: &Def,
-    scope: &HashSet<String>,
+    scope: &HashMap<String, Option<String>>,
     diagnostics: &mut Vec<FileDiagnostic>,
     module: &Module,
     allow_unknown: bool,
@@ -267,7 +316,7 @@ fn check_def(
 
 fn check_expr(
     expr: &Expr,
-    scope: &mut HashSet<String>,
+    scope: &mut HashMap<String, Option<String>>,
     diagnostics: &mut Vec<FileDiagnostic>,
     module: &Module,
     allow_unknown: bool,
@@ -293,7 +342,19 @@ fn check_expr(
             if allow_unknown {
                 return;
             }
-            if !scope.contains(&name.name) {
+            if let Some(Some(message)) = scope.get(&name.name) {
+                diagnostics.push(file_diag(
+                    module,
+                    Diagnostic {
+                        code: "W2500".to_string(),
+                        severity: DiagnosticSeverity::Warning,
+                        message: format!("use of deprecated name '{}': {}", name.name, message),
+                        span: name.span.clone(),
+                        labels: Vec::new(),
+                    },
+                ));
+            }
+            if !scope.contains_key(&name.name) {
                 diagnostics.push(file_diag(
                     module,
                     Diagnostic {
@@ -406,18 +467,18 @@ fn check_expr(
     }
 }
 
-fn collect_pattern_bindings(patterns: &[Pattern], scope: &mut HashSet<String>) {
+fn collect_pattern_bindings(patterns: &[Pattern], scope: &mut HashMap<String, Option<String>>) {
     for pattern in patterns {
         collect_pattern_binding(pattern, scope);
     }
 }
 
-fn collect_pattern_binding(pattern: &Pattern, scope: &mut HashSet<String>) {
+fn collect_pattern_binding(pattern: &Pattern, scope: &mut HashMap<String, Option<String>>) {
     match pattern {
         Pattern::Wildcard(_) => {}
         Pattern::Ident(name) => {
             if !is_constructor_name(&name.name) {
-                scope.insert(name.name.clone());
+                scope.insert(name.name.clone(), None);
             }
         }
         Pattern::Literal(_) => {}

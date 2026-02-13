@@ -83,7 +83,6 @@ pub struct ClassMember {
 #[derive(Debug, Clone)]
 pub struct InstanceDecl {
     pub decorators: Vec<Decorator>,
-    pub label: Option<SpannedName>,
     pub name: SpannedName,
     pub params: Vec<TypeExpr>,
     pub defs: Vec<Def>,

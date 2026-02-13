@@ -151,7 +151,7 @@
           "name": "keyword.control.aivi"
         },
         {
-          "match": "\\b(module|export|use|as|hiding|domain|class|instance|type|over|patch)\\b",
+          "match": "\\b(module|export|use|as|hiding|domain|class|instance|type|over|patch|with)\\b",
           "name": "keyword.other.aivi"
         }
       ]

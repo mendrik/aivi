@@ -45,7 +45,7 @@ pub use pm::{
     CargoDepSpecParseError, CargoManifestEdits, ProjectKind,
 };
 pub use resolver::check_modules;
-pub use runtime::run_native;
+pub use runtime::{run_native, run_test_suite, TestFailure, TestReport};
 pub use rust_codegen::{compile_rust_native, compile_rust_native_lib};
 pub use rust_ir::{lower_kernel as lower_rust_ir, RustIrProgram};
 pub use rustc_backend::{build_with_rustc, emit_rustc_source};
@@ -141,7 +141,7 @@ pub fn load_module_diagnostics(target: &str) -> Result<Vec<FileDiagnostic>, Aivi
 
 pub fn desugar_target(target: &str) -> Result<HirProgram, AiviError> {
     let diagnostics = load_module_diagnostics(target)?;
-    if !diagnostics.is_empty() {
+    if file_diagnostics_have_errors(&diagnostics) {
         return Err(AiviError::Diagnostics);
     }
     let paths = workspace::expand_target(target)?;
@@ -158,7 +158,7 @@ pub fn desugar_target(target: &str) -> Result<HirProgram, AiviError> {
 
 pub fn desugar_target_typed(target: &str) -> Result<HirProgram, AiviError> {
     let diagnostics = load_module_diagnostics(target)?;
-    if !diagnostics.is_empty() {
+    if file_diagnostics_have_errors(&diagnostics) {
         return Err(AiviError::Diagnostics);
     }
     let paths = workspace::expand_target(target)?;
@@ -175,7 +175,7 @@ pub fn desugar_target_typed(target: &str) -> Result<HirProgram, AiviError> {
     if diagnostics.is_empty() {
         diagnostics.extend(elaborate_expected_coercions(&mut stdlib_modules));
     }
-    if !diagnostics.is_empty() {
+    if file_diagnostics_have_errors(&diagnostics) {
         return Err(AiviError::Diagnostics);
     }
 

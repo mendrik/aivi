@@ -22,6 +22,8 @@ pub struct RustIrModule {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RustIrDef {
     pub name: String,
+    #[serde(default)]
+    pub inline: bool,
     pub expr: RustIrExpr,
 }
 
@@ -297,6 +299,7 @@ fn lower_def(def: KernelDef, globals: &[String]) -> Result<RustIrDef, AiviError>
     let expr = lower_expr(def.expr, globals, &mut locals)?;
     Ok(RustIrDef {
         name: def.name,
+        inline: def.inline,
         expr,
     })
 }

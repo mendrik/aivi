@@ -118,7 +118,7 @@ DomainItem     := TypeAlias | TypeDef | ValueSig | ValueBinding | OpDef | DeltaL
 OpDef          := "(" Operator ")" ":" Type Sep
                | "(" Operator ")" Pattern { Pattern } "=" Expr Sep
 Operator       := "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "++" | "??"
-               | "&" | "|" | "^" | "~" | "<<" | ">>"
+               | "|" | "^" | "~" | "<<" | ">>"
 DeltaLitBinding:= SuffixedNumberLit "=" Expr Sep
 
 ClassDef       := "class" UpperIdent ClassParams "=" Type Sep
@@ -126,7 +126,7 @@ ClassParams    := ClassParam { ClassParam }
 ClassParam     := UpperIdent
                | "(" UpperIdent "*" { "*" } ")"
 
-InstanceDef    := "instance" [ UpperIdent ":" ] UpperIdent InstanceHead "=" RecordLit Sep
+InstanceDef    := "instance" UpperIdent InstanceHead "=" RecordLit Sep
 InstanceHead   := "(" Type ")"
 ```
 
@@ -165,8 +165,7 @@ AndExpr        := EqExpr { "&&" EqExpr }
 EqExpr         := CmpExpr { ("==" | "!=") CmpExpr }
 CmpExpr        := BitOrExpr { ("<" | "<=" | ">" | ">=") BitOrExpr }
 BitOrExpr      := BitXorExpr { "|" BitXorExpr }
-BitXorExpr     := BitAndExpr { "^" BitAndExpr }
-BitAndExpr     := ShiftExpr { "&" ShiftExpr }
+BitXorExpr     := ShiftExpr { "^" ShiftExpr }
 ShiftExpr      := AddExpr { ("<<" | ">>") AddExpr }
 AddExpr        := MulExpr { ("+" | "-" | "++") MulExpr }
 MulExpr        := UnaryExpr { ("*" | "/" | "%") UnaryExpr }
@@ -297,7 +296,7 @@ If you want multi-argument matching, match on a tuple:
 ```ebnf
 Type           := TypeArrow
 TypeArrow      := TypeAnd [ "->" TypeArrow ]
-TypeAnd        := TypePipe { "&" TypePipe }
+TypeAnd        := TypePipe { "with" TypePipe }
 TypePipe       := TypeApp { "|>" TypeApp }
 TypeApp        := TypeAtom { TypeAtom }
 TypeAtom       := UpperIdent

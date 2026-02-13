@@ -1,7 +1,7 @@
 # AIVI Language Specification (v0.1)
 
-> Note: **AIVI v0.1** is primarily an interpreted language (CST -> Kernel -> interpreter runtime).
-> Experimental native Rust codegen exists, but coverage is smaller than the interpreter today.
+> Note: **AIVI v0.1** executes via a native Rust runtime (CST -> Kernel -> native runtime).
+> Experimental Rust codegen exists for ahead-of-time compilation, but coverage is still evolving.
 > See [Missing Features](./missing_features_v0.1.md) for current implementation status.
 
 ## 0. Overview
@@ -50,7 +50,7 @@ AIVI is a statically typed, purely functional language designed for **high-integ
 > **Patterns are total by default; use `?` for partial matches.**
 > **Predicates are expressions with implicit scope (`.prop`).**
 > **Patches describe structure, not mutation (`<|`).**
-> **Domains own semantics and interpreted operators.**
+> **Domains own semantics and domain-defined operators.**
 > **Generators model data streams; effects model typed I/O (`Effect E A`).**
 
 ## Why AIVI?
@@ -68,7 +68,7 @@ AIVI is built from the ground up to target **WebAssembly (WASM)**.
 
 ### The Power of Domains
 In AIVI, the language doesn't try to know everything. Instead, it provides **Domains**—a mechanism to extend the language's semantics.
-- **Semantic Arithmetic**: Operators like `+` and `-` are not restricted to numbers; they are interpreted by domains to perform calendar shifts, color blending, or vector math.
+- **Semantic Arithmetic**: Operators like `+` and `-` are not restricted to numbers; they are resolved by domains to perform calendar shifts, color blending, or vector math.
 - **Syntactic Sugar**: Surface-level syntax can desugar into a small kernel, keeping the core language minimal.
 - **Extensibility**: Developers can define their own domains, creating a language that speaks the vocabulary of their specific business area (Finance, IoT, UI) without losing the safety of the AIVI core.
 

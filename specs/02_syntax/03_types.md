@@ -119,11 +119,14 @@ desugars to:
 
 `A with B` in type position denotes **record/type composition** (an intersection-like merge). It is primarily used for class inheritance and trait aggregation in v0.1.
 
-In v0.1, `&` is accepted as a legacy alias for `with`, but `with` is the preferred spelling going forward (to avoid confusion with `&&` and bitwise `&`).
-
 Instances:
 
 <<< ../snippets/from_md/02_syntax/03_types/block_18.aivi{aivi}
+
+Notes:
+
+- `instance ClassName (TypeExpr) = { ... }` defines a dictionary value for a class implementation.
+- In `Result E *`, `E` is a type parameter and `*` is the remaining type slot for higher-kinded types. Read it as: “`Result` with the error fixed to `E`, as a 1-parameter type constructor”.
 
 > [!NOTE] Implementation Note: Kinds
 > In the v0.1 compiler, kind annotations like `(F *)` were hints. The type checker now (planned) enforces kinds explicitly.
@@ -161,6 +164,5 @@ per-record boilerplate.
 ## 3.7 Implementation Details
 
 > [!NOTE] Rust Codegen
-> AIVI v0.1 includes an interpreter and an experimental native Rust codegen backend.
-> Project builds (`aivi build` / `aivi run`) use native codegen, which emits standalone Rust logic and is currently partial
-> (limited builtins/stdlib coverage; no `match` yet).
+> AIVI v0.1 includes a native Rust runtime and an experimental Rust codegen backend.
+> The codegen backend emits standalone Rust logic and is currently partial (limited builtins/stdlib coverage).

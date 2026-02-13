@@ -74,6 +74,9 @@ fn emit_module(module: RustIrModule, kind: EmitKind) -> Result<String, AiviError
             ));
         }
         if defs.len() == 1 {
+            if defs[0].inline {
+                out.push_str("#[inline(always)]\n");
+            }
             out.push_str(&format!(
                 "{def_vis}fn {}(rt: &mut Runtime) -> R {{\n",
                 utils::rust_global_fn_name(&name)
@@ -85,15 +88,21 @@ fn emit_module(module: RustIrModule, kind: EmitKind) -> Result<String, AiviError
         }
 
         // Multiple defs with the same name become a runtime `MultiClause` value, matching the
-        // interpreter's behavior.
+        // native runtime's behavior.
         for (i, def) in defs.iter().enumerate() {
             let clause_fn = format!("{}_clause_{i}", utils::rust_global_fn_name(&name));
+            if def.inline {
+                out.push_str("#[inline(always)]\n");
+            }
             out.push_str(&format!("fn {clause_fn}(rt: &mut Runtime) -> R {{\n"));
             out.push_str("    ");
             out.push_str(&expr::emit_expr(&def.expr, 1)?);
             out.push_str("\n}\n\n");
         }
 
+        if defs.iter().any(|def| def.inline) {
+            out.push_str("#[inline(always)]\n");
+        }
         out.push_str(&format!(
             "{def_vis}fn {}(rt: &mut Runtime) -> R {{\n",
             utils::rust_global_fn_name(&name)

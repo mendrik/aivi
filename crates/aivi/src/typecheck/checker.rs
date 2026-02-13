@@ -837,8 +837,7 @@ impl TypeChecker {
         // Only methods provided by superclass constraints may be delegated.
         let direct_supers = self.flatten_type_and_list(&class_info.supers);
         for super_expr in direct_supers {
-            let Some((super_name, super_params)) =
-                self.class_ref_from_type_expr(&super_expr)
+            let Some((super_name, super_params)) = self.class_ref_from_type_expr(&super_expr)
             else {
                 continue;
             };
@@ -855,7 +854,10 @@ impl TypeChecker {
             for (class_param, inst_param) in class_info.params.iter().zip(instance.params.iter()) {
                 let class_ty = self.type_from_expr(class_param, &mut ctx);
                 let inst_ty = self.type_from_expr(inst_param, &mut ctx);
-                if self.unify(class_ty, inst_ty, instance.span.clone()).is_err() {
+                if self
+                    .unify(class_ty, inst_ty, instance.span.clone())
+                    .is_err()
+                {
                     self.subst = base_subst;
                     return false;
                 }
@@ -890,7 +892,10 @@ impl TypeChecker {
             let mut ok = true;
             for (expected_ty, candidate_param) in params.iter().zip(candidate.params.iter()) {
                 let candidate_ty = self.type_from_expr(candidate_param, &mut ctx);
-                if self.unify(expected_ty.clone(), candidate_ty, span.clone()).is_err() {
+                if self
+                    .unify(expected_ty.clone(), candidate_ty, span.clone())
+                    .is_err()
+                {
                     ok = false;
                     break;
                 }

@@ -153,11 +153,11 @@ class Functor (F *) = { map: (A -> B) -> F A -> F B }
 }
 
 #[test]
-fn parses_named_instance_decl() {
+fn parses_instance_decl() {
     let src = r#"
 module Example
 
-instance MyFunctor : Functor (Option *) = {
+instance Functor (Option *) = {
   map: f opt => opt
 }
 "#;
@@ -179,10 +179,7 @@ instance MyFunctor : Functor (Option *) = {
         .expect("instance decl");
 
     assert_eq!(instance_decl.name.name, "Functor");
-    assert_eq!(
-        instance_decl.label.as_ref().map(|name| name.name.as_str()),
-        Some("MyFunctor")
-    );
+    assert_eq!(instance_decl.params.len(), 1);
 }
 
 #[test]

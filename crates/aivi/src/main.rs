@@ -240,14 +240,22 @@ fn spawn_aivi_lsp(args: &[String]) -> Result<std::process::ExitStatus, AiviError
     // workspace builds and `cargo install` when both binaries are installed).
     if let Ok(exe) = env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let name = if cfg!(windows) { "aivi-lsp.exe" } else { "aivi-lsp" };
+            let name = if cfg!(windows) {
+                "aivi-lsp.exe"
+            } else {
+                "aivi-lsp"
+            };
             candidates.push(dir.join(name));
         }
     }
 
     // Convenience for working in a repo with a globally-installed `aivi`.
     if let Ok(cwd) = env::current_dir() {
-        let name = if cfg!(windows) { "aivi-lsp.exe" } else { "aivi-lsp" };
+        let name = if cfg!(windows) {
+            "aivi-lsp.exe"
+        } else {
+            "aivi-lsp"
+        };
         candidates.push(cwd.join("target").join("debug").join(name));
         candidates.push(cwd.join("target").join("release").join(name));
     }

@@ -109,18 +109,20 @@ fn expand_domain_exports(modules: &mut [Module]) {
 
 fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
     fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
-        decorators.iter().any(|decorator| decorator.name.name == name)
+        decorators
+            .iter()
+            .any(|decorator| decorator.name.name == name)
     }
 
     fn emit_diag(
-        module: &Module,
+        module_path: &str,
         out: &mut Vec<FileDiagnostic>,
         code: &str,
         message: String,
         span: Span,
     ) {
         out.push(FileDiagnostic {
-            path: module.path.clone(),
+            path: module_path.to_string(),
             diagnostic: Diagnostic {
                 code: code.to_string(),
                 severity: DiagnosticSeverity::Error,
@@ -131,13 +133,19 @@ fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
         });
     }
 
-    fn apply_static_to_def(module: &Module, def: &mut Def, out: &mut Vec<FileDiagnostic>) {
-        if !has_decorator(&def.decorators, "static") {
+    fn apply_static_to_def(
+        module_path: &str,
+        base_dir: &std::path::Path,
+        is_static: bool,
+        def: &mut Def,
+        out: &mut Vec<FileDiagnostic>,
+    ) {
+        if !is_static {
             return;
         }
         if !def.params.is_empty() {
             emit_diag(
-                module,
+                module_path,
                 out,
                 "E1514",
                 "`@static` can only be applied to value definitions (no parameters)".to_string(),
@@ -151,13 +159,7 @@ fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
         let original_span = expr_span(&def.expr);
         let expr = def.expr.clone();
         let Expr::Call { func, args, .. } = &expr else {
-            emit_diag(
-                module,
-                out,
-                "E1515",
-                "`@static` currently supports only `file.read \"path\"`".to_string(),
-                original_span,
-            );
+            // `@static` is allowed on any value definition; compile-time evaluation is best-effort.
             return;
         };
         let (base_name, field_name) = match func.as_ref() {
@@ -168,39 +170,15 @@ fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
             _ => (None, None),
         };
         if base_name != Some("file") || field_name != Some("read") {
-            emit_diag(
-                module,
-                out,
-                "E1515",
-                "`@static` currently supports only `file.read \"path\"`".to_string(),
-                original_span,
-            );
             return;
         }
         if args.len() != 1 {
-            emit_diag(
-                module,
-                out,
-                "E1515",
-                "`@static` currently supports only `file.read \"path\"`".to_string(),
-                original_span,
-            );
             return;
         }
         let Some(Expr::Literal(Literal::String { text: rel, .. })) = args.first() else {
-            emit_diag(
-                module,
-                out,
-                "E1515",
-                "`@static file.read` expects a string literal path".to_string(),
-                original_span,
-            );
             return;
         };
 
-        let base_dir = std::path::Path::new(&module.path)
-            .parent()
-            .unwrap_or_else(|| std::path::Path::new("."));
         let full_path = base_dir.join(rel);
         match std::fs::read_to_string(&full_path) {
             Ok(contents) => {
@@ -211,14 +189,10 @@ fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
             }
             Err(err) => {
                 emit_diag(
-                    module,
+                    module_path,
                     out,
                     "E1515",
-                    format!(
-                        "`@static` failed to read {}: {}",
-                        full_path.display(),
-                        err
-                    ),
+                    format!("`@static` failed to read {}: {}", full_path.display(), err),
                     original_span,
                 );
             }
@@ -227,69 +201,55 @@ fn apply_static_decorators(modules: &mut [Module]) -> Vec<FileDiagnostic> {
 
     let mut diags = Vec::new();
     for module in modules {
+        let module_path = module.path.clone();
+        let base_dir = std::path::Path::new(&module_path)
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."))
+            .to_path_buf();
+
+        let mut static_sigs = std::collections::HashSet::<String>::new();
+        for item in &module.items {
+            let ModuleItem::TypeSig(sig) = item else {
+                continue;
+            };
+            if has_decorator(&sig.decorators, "static") {
+                static_sigs.insert(sig.name.name.clone());
+            }
+        }
         for item in &mut module.items {
             match item {
-                ModuleItem::Def(def) => apply_static_to_def(module, def, &mut diags),
+                ModuleItem::Def(def) => {
+                    let is_static = has_decorator(&def.decorators, "static")
+                        || static_sigs.contains(&def.name.name);
+                    apply_static_to_def(&module_path, &base_dir, is_static, def, &mut diags)
+                }
                 ModuleItem::InstanceDecl(instance) => {
                     for def in &mut instance.defs {
-                        apply_static_to_def(module, def, &mut diags);
+                        let is_static = has_decorator(&def.decorators, "static");
+                        apply_static_to_def(&module_path, &base_dir, is_static, def, &mut diags);
                     }
                 }
                 ModuleItem::DomainDecl(domain) => {
                     for domain_item in &mut domain.items {
                         match domain_item {
                             DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
-                                apply_static_to_def(module, def, &mut diags);
+                                let is_static = has_decorator(&def.decorators, "static");
+                                apply_static_to_def(
+                                    &module_path,
+                                    &base_dir,
+                                    is_static,
+                                    def,
+                                    &mut diags,
+                                );
                             }
-                            DomainItem::TypeAlias(_)
-                            | DomainItem::TypeSig(_) => {}
+                            DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
                         }
                     }
                 }
-                ModuleItem::TypeSig(sig) => {
-                    if has_decorator(&sig.decorators, "static") {
-                        emit_diag(
-                            module,
-                            &mut diags,
-                            "E1514",
-                            "`@static` can only be applied to value definitions".to_string(),
-                            sig.span.clone(),
-                        );
-                    }
-                }
-                ModuleItem::TypeDecl(type_decl) => {
-                    if has_decorator(&type_decl.decorators, "static") {
-                        emit_diag(
-                            module,
-                            &mut diags,
-                            "E1514",
-                            "`@static` can only be applied to value definitions".to_string(),
-                            type_decl.span.clone(),
-                        );
-                    }
-                }
-                ModuleItem::TypeAlias(type_alias) => {
-                    if has_decorator(&type_alias.decorators, "static") {
-                        emit_diag(
-                            module,
-                            &mut diags,
-                            "E1514",
-                            "`@static` can only be applied to value definitions".to_string(),
-                            type_alias.span.clone(),
-                        );
-                    }
-                }
-                ModuleItem::ClassDecl(class_decl) => {
-                    if has_decorator(&class_decl.decorators, "static") {
-                        emit_diag(
-                            module,
-                            &mut diags,
-                            "E1514",
-                            "`@static` can only be applied to value definitions".to_string(),
-                            class_decl.span.clone(),
-                        );
-                    }
-                }
+                ModuleItem::TypeSig(_)
+                | ModuleItem::TypeDecl(_)
+                | ModuleItem::TypeAlias(_)
+                | ModuleItem::ClassDecl(_) => {}
             }
         }
     }
@@ -670,10 +630,8 @@ impl Parser {
                             "`@deprecated` expects an argument (e.g. `@deprecated \"message\"`)",
                             decorator.span.clone(),
                         );
-                    } else if !matches!(
-                        decorator.arg,
-                        Some(Expr::Literal(Literal::String { .. }))
-                    ) {
+                    } else if !matches!(decorator.arg, Some(Expr::Literal(Literal::String { .. })))
+                    {
                         let span = decorator
                             .arg
                             .as_ref()
@@ -947,21 +905,7 @@ impl Parser {
 
     fn parse_instance_decl(&mut self, decorators: Vec<Decorator>) -> Option<InstanceDecl> {
         let start = self.previous_span();
-        let first = self.consume_ident()?;
-        let mut label = None;
-        let name = if self.consume_symbol(":") {
-            label = Some(first);
-            self.consume_ident().unwrap_or_else(|| {
-                let span = self.peek_span().unwrap_or_else(|| self.previous_span());
-                self.emit_diag("E1500", "expected class name after ':'", span.clone());
-                SpannedName {
-                    name: "<missing>".to_string(),
-                    span,
-                }
-            })
-        } else {
-            first
-        };
+        let name = self.consume_ident()?;
         let mut params = Vec::new();
         while !self.check_symbol("=") && self.pos < self.tokens.len() {
             if let Some(ty) = self.parse_type_atom() {
@@ -989,7 +933,6 @@ impl Parser {
         let span = merge_span(start, end.unwrap_or(name.span.clone()));
         Some(InstanceDecl {
             decorators,
-            label,
             name,
             params,
             defs,
@@ -2835,7 +2778,7 @@ impl Parser {
 
     fn parse_type_and(&mut self) -> Option<TypeExpr> {
         let mut items = vec![self.parse_type_pipe()?];
-        while self.consume_symbol("&") || self.consume_ident_text("with").is_some() {
+        while self.consume_ident_text("with").is_some() {
             let rhs = self.parse_type_pipe().unwrap_or(TypeExpr::Unknown {
                 span: type_span(items.last().unwrap()),
             });

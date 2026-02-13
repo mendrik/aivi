@@ -93,9 +93,10 @@ instance Sub Int = {
 
     let type_diags = check_types(&modules);
     assert!(
-        type_diags
-            .iter()
-            .any(|d| d.diagnostic.message.contains("missing instance method 'foo'")),
+        type_diags.iter().any(|d| d
+            .diagnostic
+            .message
+            .contains("missing instance method 'foo'")),
         "expected missing 'foo' diagnostic, got: {type_diags:#?}"
     );
 }

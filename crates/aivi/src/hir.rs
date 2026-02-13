@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::surface::{
-    BlockItem, BlockKind, Def, DomainItem, Expr, Module, ModuleItem, Pattern, TextPart,
+    BlockItem, BlockKind, Decorator, Def, DomainItem, Expr, Module, ModuleItem, Pattern, TextPart,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -18,6 +18,8 @@ pub struct HirModule {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HirDef {
     pub name: String,
+    #[serde(default)]
+    pub inline: bool,
     pub expr: HirExpr,
 }
 
@@ -242,12 +244,13 @@ pub fn desugar_modules(modules: &[Module]) -> HirProgram {
         }
         let defs = collect_defs(module)
             .into_iter()
-            .map(|(name, expr)| {
+            .map(|(name, inline, expr)| {
                 if trace {
                     eprintln!("[AIVI_TRACE_DESUGAR]   def {}.{}", module.name.name, name);
                 }
                 HirDef {
                     name,
+                    inline,
                     expr: lower_expr(expr, &mut id_gen),
                 }
             })
@@ -262,21 +265,39 @@ pub fn desugar_modules(modules: &[Module]) -> HirProgram {
     }
 }
 
-fn collect_defs(module: &Module) -> Vec<(String, Expr)> {
+fn collect_defs(module: &Module) -> Vec<(String, bool, Expr)> {
+    fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
+        decorators
+            .iter()
+            .any(|decorator| decorator.name.name == name)
+    }
+
     let mut defs = Vec::new();
     for item in &module.items {
         match item {
-            ModuleItem::Def(def) => defs.push((def.name.name.clone(), def_expr(def))),
+            ModuleItem::Def(def) => defs.push((
+                def.name.name.clone(),
+                has_decorator(&def.decorators, "inline"),
+                def_expr(def),
+            )),
             ModuleItem::InstanceDecl(instance) => {
                 for def in &instance.defs {
-                    defs.push((def.name.name.clone(), def_expr(def)));
+                    defs.push((
+                        def.name.name.clone(),
+                        has_decorator(&def.decorators, "inline"),
+                        def_expr(def),
+                    ));
                 }
             }
             ModuleItem::DomainDecl(domain) => {
                 for domain_item in &domain.items {
                     match domain_item {
                         DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
-                            defs.push((def.name.name.clone(), def_expr(def)));
+                            defs.push((
+                                def.name.name.clone(),
+                                has_decorator(&def.decorators, "inline"),
+                                def_expr(def),
+                            ));
                         }
                         DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
                     }

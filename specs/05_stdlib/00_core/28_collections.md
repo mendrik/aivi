@@ -6,14 +6,7 @@ The `Collections` domain is your toolbox for structured data. While `List` is gr
 
 <<< ../../snippets/from_md/05_stdlib/00_core/28_collections/block_01.aivi{aivi}
 
-## v1.0 Scope
-
-- **Map/Dict**: persistent ordered maps (AVL/Red-Black) and/or HashMaps (HAMT).
-- **Set**: persistent sets corresponding to map types.
-- **Queue/Deque**: efficient FIFO/LIFO structures.
-- **Heap/PriorityQueue**.
-
-## Literals and Merging (v1.0)
+## Literals and Merging
 
 Collections introduce sigil-based literals for concise construction. These are domain literals and are validated at compile time.
 
@@ -44,9 +37,9 @@ The `Collections` domain provides `++` as a right-biased merge for `Map` and uni
 
 <<< ../../snippets/from_md/05_stdlib/00_core/28_collections/block_05.aivi{aivi}
 
-## Core API (v1.0)
+## Core API
 
-The following functions are required for v1.0 implementations. Exact module layout may vary, but names and behavior should match.
+The following functions are required. Exact module layout may vary, but names and behavior should match.
 
 ### Map
 
