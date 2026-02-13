@@ -1,5 +1,6 @@
 # Number Domains (BigInt, Rational, Complex, Quaternion)
 
+<!-- quick-info: {"kind":"module","name":"aivi.number"} -->
 The `aivi.number` family groups numeric domains that sit above `Int` and `Float`:
 
 - `aivi.number.bigint` for arbitrary-precision integers
@@ -8,6 +9,7 @@ The `aivi.number` family groups numeric domains that sit above `Int` and `Float`
 
 You can use either the facade module or the specific domain module depending on how much you want in scope.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/01_math/10_number/block_01.aivi{aivi}
 
 

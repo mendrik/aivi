@@ -1,7 +1,9 @@
 # HTTPS Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.net.https"} -->
 The `Https` domain mirrors `Http`, but enforces secure (TLS) connections. It is intended for production use where transport security is required.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/03_network/02_https/block_01.aivi{aivi}
 
 ## Functions

@@ -1,5 +1,6 @@
 # Probability & Distribution Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.probability"} -->
 The `Probability` domain gives you tools for **Statistical Distributions** and structured randomness.
 
 Standard `random()` just gives you a boring uniform number between 0 and 1. But reality isn't uniform.
@@ -9,6 +10,7 @@ Standard `random()` just gives you a boring uniform number between 0 and 1. But 
 
 This domain lets you define the *shape* of the chaotic world you want to simulate, and then draw mathematically correct samples from it.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/13_probability/block_01.aivi{aivi}

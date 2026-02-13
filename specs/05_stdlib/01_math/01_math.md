@@ -1,8 +1,10 @@
 # Math Module
 
+<!-- quick-info: {"kind":"module","name":"aivi.math"} -->
 The `aivi.math` module provides standard numeric functions and constants for `Int` and `Float`.
 It is intentionally small, predictable, and aligned with common math libraries across languages.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/01_math/block_01.aivi{aivi}

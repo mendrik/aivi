@@ -1,9 +1,11 @@
 # URL Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.url"} -->
 The `Url` domain handles **Uniform Resource Locators** without the string-mashing headaches.
 
 A URL isn't just text; it's a structured address with protocols, hosts, and queries. Concatenating strings to build URLs leads to bugs (missing `/`, double `?`, unescaped spaces). This domain treats URLs as safe, structured records, letting you modify protocols or add query parameters without breaking the address.
 
+<!-- /quick-info -->
 ## Module
 
 <<< ../../snippets/from_md/05_stdlib/03_system/25_url/block_01.aivi{aivi}

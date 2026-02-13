@@ -1,5 +1,6 @@
 # File Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.file"} -->
 The `File` domain bridges the gap between your code and the disk.
 
 Your code lives in ephemeral memory, but data needs to persist. This domain lets you safely read configs, save user data, and inspect directories.
@@ -9,6 +10,7 @@ Your code lives in ephemeral memory, but data needs to persist. This domain lets
 
 Direct file access is dangerous (locks, missing files, permissions). AIVI wraps these in `Effect` types, forcing you to handle errors explicitly. Your program won't crash just because a file is missing; it will handle it.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/03_system/20_file/block_01.aivi{aivi}

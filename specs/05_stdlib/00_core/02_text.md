@@ -5,7 +5,6 @@ The `aivi.text` module provides core string and character utilities for `Text` a
 It focuses on predictable, Unicode-aware behavior, and uses `Option`/`Result` instead of
 sentinel values like `-1`.
 <!-- /quick-info -->
-
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/00_core/02_text/block_01.aivi{aivi}

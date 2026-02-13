@@ -1,5 +1,6 @@
 # Database Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.database"} -->
 The `Database` domain provides a type-safe, composable way to work with relational data. It treats tables as immutable records of schema plus rows, while compiling predicates and patches into efficient SQL under the hood.
 
 It builds on existing AIVI features:
@@ -8,6 +9,7 @@ It builds on existing AIVI features:
 - **Patching** for declarative updates
 - **Effects** for explicit error handling
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/03_system/23_database/block_01.aivi{aivi}

@@ -1,11 +1,13 @@
 # Linear Algebra Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.linalg"} -->
 The `LinearAlgebra` domain solves massive **Systems of Equations**.
 
 While `Vector` and `Matrix` are for 3D graphics, this domain is for "hard" science and engineering. It answers questions like: "If `3x + 2y = 10` and `x - y = 5`, what are `x` and `y`?"... but for systems with *thousands* of variables.
 
 Whether you're simulating heat flow across a computer chip, calculating structural loads on a bridge, or training a neural network, you are solving systems of linear equations. This domain wraps industrial-grade solvers (like LAPACK) to do the heavy lifting for you.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/18_linear_algebra/block_01.aivi{aivi}

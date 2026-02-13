@@ -1,5 +1,6 @@
 # Geometry Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.geometry"} -->
 The `Geometry` domain creates shapes (`Sphere`, `Ray`, `Rect`) and checks if they touch.
 
 This is the "physical" side of math. While `Vector` handles movement, `Geometry` handles **stuff**.
@@ -9,6 +10,7 @@ This is the "physical" side of math. While `Vector` handles movement, `Geometry`
 
 Almost every visual application needs to know when two things collide. This domain gives you standard shapes and highly optimized algorithms to check for intersections instantly.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/15_geometry/block_01.aivi{aivi}

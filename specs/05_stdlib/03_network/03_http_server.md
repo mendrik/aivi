@@ -1,7 +1,9 @@
 # HTTP Server Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.net.http_server"} -->
 The `HttpServer` domain provides a scalable HTTP/1.1 + HTTP/2 server with optional WebSocket upgrades. The server is designed to run across multiple CPU cores.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/03_network/03_http_server/block_01.aivi{aivi}
 
 ## Types

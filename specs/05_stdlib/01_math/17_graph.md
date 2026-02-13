@@ -1,5 +1,6 @@
 # Graph Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.graph"} -->
 The `Graph` domain is for modelling **Relationships** and **Networks**.
 
 In computer science, a "Graph" isn't a pie chart. It's a map of connections:
@@ -9,6 +10,7 @@ In computer science, a "Graph" isn't a pie chart. It's a map of connections:
 
 If you need to find the shortest path between two points or see who is friends with whom, you need a Graph. This domain provides the data structures and algorithms (like BFS and Dijkstra) to solve these problems efficiently.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/17_graph/block_01.aivi{aivi}

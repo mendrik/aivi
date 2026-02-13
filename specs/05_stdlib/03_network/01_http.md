@@ -1,7 +1,9 @@
 # HTTP Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.net.http"} -->
 The `Http` domain connects your program to the world. Whether you're fetching data from an API, submitting a form, or scraping a website, this domain provides the standard tools (`get`, `post`, `fetch`) to speak the language of the web reliably.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/03_network/01_http/block_01.aivi{aivi}
 
 ## Functions

@@ -1,5 +1,6 @@
 # Vector Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.vector"} -->
 The `Vector` domain handles 2D and 3D vectors (`Vec2`, `Vec3`), the fundamental atoms of spatial math.
 
 A **Vector** is just a number with a direction. It's the difference between saying "10 miles" (Scalar) and "10 miles North" (Vector).
@@ -9,6 +10,7 @@ A **Vector** is just a number with a direction. It's the difference between sayi
 
 Graphics and physics use vectors for clean math (`v1 + v2`) and benefit from hardware acceleration (SIMD).
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/05_vector/block_01.aivi{aivi}

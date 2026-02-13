@@ -1,7 +1,9 @@
 # Streams Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.net.streams"} -->
 The `Streams` domain provides stream-oriented utilities for processing inbound and outbound data without loading everything into memory.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/03_network/05_streams/block_01.aivi{aivi}
 
 ## Types

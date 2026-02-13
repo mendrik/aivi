@@ -1,7 +1,9 @@
 # UI Virtual DOM
 
+<!-- quick-info: {"kind":"module","name":"aivi.ui"} -->
 The `aivi.ui` module defines a **typed Virtual DOM** (`VNode msg`). Programs construct `VNode` trees and leave rendering + diffing to the runtime.
 
+<!-- /quick-info -->
 ## Core Types
 
 <<< ../../snippets/from_md/05_stdlib/04_ui/02_vdom/block_01.aivi{aivi}

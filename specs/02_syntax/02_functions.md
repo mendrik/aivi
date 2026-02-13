@@ -23,7 +23,9 @@ Multi-argument lambdas must be explicit:
 
 ## 2.3 Pipes
 
+<!-- quick-info: {"kind":"operator","name":"|>"} -->
 Pipelines use `|>`.
+<!-- /quick-info -->
 
 <<< ../snippets/from_md/02_syntax/02_functions/block_04.aivi{aivi}
 

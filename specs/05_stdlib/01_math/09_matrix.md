@@ -1,11 +1,13 @@
 # Matrix Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.matrix"} -->
 The `Matrix` domain provides grids of numbers (`Mat3`, `Mat4`) used primarily for **Transformations**.
 
 Think of a Matrix as a "teleporter instruction set" for points. A single 4x4 grid can bundle up a complex recipe of movements: "Rotate 30 degrees, scale up by 200%, and move 5 units left."
 
 Manually calculating the new position of a 3D point after it's been rotated, moved, and scaled is incredibly complex algebra. Matrices simplify this to `Point * Matrix`. They are the mathematical engine behind every 3D game and renderer.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/01_math/09_matrix/block_01.aivi{aivi}

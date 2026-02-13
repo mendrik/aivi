@@ -1,8 +1,10 @@
 # Patching Records
 
+<!-- quick-info: {"kind":"operator","name":"<|"} -->
 The `<|` operator applies a **declarative structural patch**. This avoids overloading `<=`, which is expected to be a normal comparison operator.
 
 The compiler enforces that the patch shape matches the target record's type, ensuring that only existing fields are updated or new fields are added according to the record's openness. When a patch path selects a `Map` entry, the patch applies to the **value** stored at that key.
+<!-- /quick-info -->
 
 <<< ../snippets/from_md/02_syntax/05_patching/block_01.aivi{aivi}
 

@@ -1,6 +1,6 @@
 {
   "scopeName": "text.html.aivi.injection",
-  "injectionSelector": "L:string.quoted.other.sigil.aivi",
+  "injectionSelector": "L:source.aivi",
   "patterns": [
     {
       "begin": "(~html)(~>)",

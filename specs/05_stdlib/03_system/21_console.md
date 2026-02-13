@@ -1,7 +1,9 @@
 # Console Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.console"} -->
 The `Console` domain is your program's voice. It handles basic interactions with the terminal. Whether you're debugging with a quick `print`, logging a status update, or asking the user for input, this is where your program talks to the human running it.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/03_system/21_console/block_01.aivi{aivi}
 
 ## Functions

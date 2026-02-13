@@ -1,9 +1,11 @@
 # Color Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.color"} -->
 The `Color` domain helps you work with **Colors** the way humans do.
 
 Screens think in Red, Green, and Blue, but people think in **Hue**, **Saturation**, and **Lightness**. This domain lets you mix colors mathematically (e.g., `primary + 10% lightness` for a hover state) without the mud that comes from raw RGB math.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/04_ui/04_color/block_01.aivi{aivi}

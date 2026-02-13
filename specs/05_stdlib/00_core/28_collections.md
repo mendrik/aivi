@@ -1,7 +1,9 @@
 # Collections Domain
 
+<!-- quick-info: {"kind":"module","name":"aivi.collections"} -->
 The `Collections` domain is your toolbox for structured data. While `List` is great for simple sequences, real-world software needs more. Whether you need to look up users by their ID (Map), keep a list of unique tags (Set), or process tasks by priority (Heap), this domain provides persistent data structures designed for functional code.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/00_core/28_collections/block_01.aivi{aivi}

@@ -1,7 +1,9 @@
 # TimeZone and ZonedDateTime
 
+<!-- quick-info: {"kind":"module","name":"aivi.calendar"} -->
 The `TimeZone` and `ZonedDateTime` domains handle geographic time offsets, daylight saving transitions, and global time coordination.
 
+<!-- /quick-info -->
 ## Overview
 
 <<< ../../snippets/from_md/05_stdlib/02_chronos/04_timezone/block_01.aivi{aivi}

@@ -1,10 +1,12 @@
 # LiveView-Style Server-Driven UI
 
+<!-- quick-info: {"kind":"module","name":"aivi.ui"} -->
 `aivi.ui.live` starts an HTTP server that:
 
 - serves an initial HTML page rendered from `view : model -> VNode msg`, and
 - accepts browser events over a WebSocket and responds with VDOM diffs as patches.
 
+<!-- /quick-info -->
 <<< ../../snippets/from_md/05_stdlib/04_ui/05_liveview/block_01.aivi{aivi}
 
 ## API Shape
