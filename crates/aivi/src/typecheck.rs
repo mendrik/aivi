@@ -6,6 +6,8 @@ use crate::surface::{DomainItem, Module, ModuleItem, TypeExpr};
 mod builtins;
 mod checker;
 mod types;
+#[cfg(test)]
+mod expected_coercions_tests;
 
 use self::checker::TypeChecker;
 use self::types::Scheme;
@@ -241,6 +243,65 @@ fn ordered_modules(modules: &[Module]) -> Vec<&Module> {
     out
 }
 
+fn ordered_module_indices(modules: &[Module]) -> Vec<usize> {
+    let mut name_to_index = HashMap::new();
+    for (idx, module) in modules.iter().enumerate() {
+        name_to_index
+            .entry(module.name.name.as_str())
+            .or_insert(idx);
+    }
+
+    let mut indegree = vec![0usize; modules.len()];
+    let mut edges: Vec<Vec<usize>> = vec![Vec::new(); modules.len()];
+
+    for (idx, module) in modules.iter().enumerate() {
+        for use_decl in module.uses.iter() {
+            let Some(&dep_idx) = name_to_index.get(use_decl.module.name.as_str()) else {
+                continue;
+            };
+            if dep_idx == idx {
+                continue;
+            }
+            edges[dep_idx].push(idx);
+            indegree[idx] += 1;
+        }
+    }
+
+    let mut ready: Vec<usize> = indegree
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, &deg)| (deg == 0).then_some(idx))
+        .collect();
+    ready.sort_by(|a, b| modules[*a].name.name.cmp(&modules[*b].name.name));
+
+    let mut out = Vec::new();
+    let mut processed = vec![false; modules.len()];
+    while let Some(idx) = ready.first().copied() {
+        ready.remove(0);
+        if processed[idx] {
+            continue;
+        }
+        processed[idx] = true;
+        out.push(idx);
+        for &next in edges[idx].iter() {
+            indegree[next] = indegree[next].saturating_sub(1);
+            if indegree[next] == 0 && !processed[next] {
+                ready.push(next);
+                ready.sort_by(|a, b| modules[*a].name.name.cmp(&modules[*b].name.name));
+            }
+        }
+    }
+
+    let mut remaining: Vec<usize> = processed
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, done)| (!done).then_some(idx))
+        .collect();
+    remaining.sort_by(|a, b| modules[*a].name.name.cmp(&modules[*b].name.name));
+    out.extend(remaining);
+    out
+}
+
 pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
     let mut checker = TypeChecker::new();
     let mut diagnostics = Vec::new();
@@ -273,6 +334,95 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
 
         let mut module_diags = checker.check_module_defs(module, &sigs, &mut env);
         diagnostics.append(&mut module_diags);
+
+        let mut exports = HashMap::new();
+        for export in &module.exports {
+            if let Some(scheme) = env.get(&export.name) {
+                exports.insert(export.name.clone(), scheme.clone());
+            }
+        }
+        module_exports.insert(module.name.name.clone(), exports);
+        let (class_exports, instance_exports) =
+            collect_exported_class_env(module, &checker.classes, &checker.instances);
+        module_class_exports.insert(module.name.name.clone(), class_exports);
+        module_instance_exports.insert(module.name.name.clone(), instance_exports);
+    }
+
+    diagnostics
+}
+
+pub fn elaborate_expected_coercions(modules: &mut [Module]) -> Vec<FileDiagnostic> {
+    let mut checker = TypeChecker::new();
+    let mut diagnostics = Vec::new();
+    let mut module_exports: HashMap<String, HashMap<String, Scheme>> = HashMap::new();
+    let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
+    let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
+
+    for idx in ordered_module_indices(modules) {
+        let module = &mut modules[idx];
+        checker.reset_module_context(module);
+
+        let mut env = checker.builtins.clone();
+        checker.register_module_types(module);
+        diagnostics.extend(checker.collect_type_expr_diags(module));
+        let sigs = checker.collect_type_sigs(module);
+        checker.register_module_constructors(module, &mut env);
+        checker.register_imports(module, &module_exports, &mut env);
+
+        let (imported_classes, imported_instances) =
+            collect_imported_class_env(module, &module_class_exports, &module_instance_exports);
+        let (local_classes, local_instances) = collect_local_class_env(module);
+        let local_class_names: HashSet<String> = local_classes.keys().cloned().collect();
+        let mut classes = imported_classes;
+        classes.extend(local_classes);
+        let classes = expand_classes(classes);
+        let mut instances: Vec<InstanceDeclInfo> = imported_instances
+            .into_iter()
+            .filter(|instance| !local_class_names.contains(&instance.class_name))
+            .collect();
+        instances.extend(local_instances);
+        checker.set_class_env(classes, instances);
+
+        checker.register_module_defs(module, &sigs, &mut env);
+
+        // Rewrite user modules only. Embedded stdlib modules are not guaranteed to typecheck in v0.1,
+        // but we still want their type signatures, classes, and instances in scope for elaboration.
+        if !module.path.starts_with("<embedded:") {
+            let mut elab_errors = Vec::new();
+            for item in module.items.iter_mut() {
+                match item {
+                    ModuleItem::Def(def) => {
+                        if let Err(err) = checker.elaborate_def_expr(def, &sigs, &env) {
+                            elab_errors.push(err);
+                        }
+                    }
+                    ModuleItem::InstanceDecl(instance) => {
+                        for def in instance.defs.iter_mut() {
+                            if let Err(err) = checker.elaborate_def_expr(def, &sigs, &env) {
+                                elab_errors.push(err);
+                            }
+                        }
+                    }
+                    ModuleItem::DomainDecl(domain) => {
+                        for domain_item in domain.items.iter_mut() {
+                            match domain_item {
+                                DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                                    if let Err(err) = checker.elaborate_def_expr(def, &sigs, &env)
+                                    {
+                                        elab_errors.push(err);
+                                    }
+                                }
+                                DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            for err in elab_errors {
+                diagnostics.push(checker.error_to_diag(module, err));
+            }
+        }
 
         let mut exports = HashMap::new();
         for export in &module.exports {

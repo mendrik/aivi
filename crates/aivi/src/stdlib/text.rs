@@ -4,6 +4,7 @@ pub const SOURCE: &str = r#"
 @no_prelude
 module aivi.text
 export Bytes, Encoding, TextError
+export ToText
 export length, isEmpty, isDigit, isAlpha, isAlnum, isSpace, isUpper, isLower
 export contains, startsWith, endsWith, indexOf, lastIndexOf, count, compare
 export slice, split, splitLines, chunk
@@ -11,12 +12,29 @@ export trim, trimStart, trimEnd, padStart, padEnd
 export replace, replaceAll, remove, repeat, reverse, concat
 export toLower, toUpper, capitalize, titleCase, caseFold
 export normalizeNFC, normalizeNFD, normalizeNFKC, normalizeNFKD
-export toBytes, fromBytes, toText, parseInt, parseFloat
+export toBytes, fromBytes, debugText, parseInt, parseFloat
 
 use aivi
 
 type Encoding = Utf8 | Utf16 | Utf32 | Latin1
 type TextError = InvalidEncoding Encoding
+
+// ------------------------------------------------------------
+// Expected-type coercions: `A` -> `Text` via instances
+// ------------------------------------------------------------
+
+class ToText A = {
+  toText: A -> Text
+}
+
+// Any record (open by default) can be coerced to `Text` using the runtime
+// `text.toText` representation. We pattern-match on `{}` so this clause fails
+// for non-record values, allowing other `toText` clauses to apply.
+instance ToText {} = {
+  toText: value =>
+    value ?
+      | {} => text.toText value
+}
 
 length : Text -> Int
 length value = text.length value
@@ -141,8 +159,8 @@ toBytes encoding value = text.toBytes encoding value
 fromBytes : Encoding -> Bytes -> Result TextError Text
 fromBytes encoding value = text.fromBytes encoding value
 
-toText : A -> Text
-toText value = text.toText value
+debugText : A -> Text
+debugText value = text.toText value
 
 parseInt : Text -> Option Int
 parseInt value = text.parseInt value

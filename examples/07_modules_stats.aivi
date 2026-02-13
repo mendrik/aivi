@@ -16,4 +16,3 @@ sumCount = xs => xs ?
 mean = xs => (sumCount xs) ?
   | (_, n) when n == 0 => 0
   | (s, n)             => s / n
-

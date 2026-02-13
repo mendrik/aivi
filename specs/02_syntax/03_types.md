@@ -204,7 +204,46 @@ instance E: Monad (Result E *) = { ... } // E: binds the error parameter for the
 > [!NOTE] Implementation Note: Kinds
 > In the v0.1 compiler, kind annotations like `(F *)` were hints. The type checker now (planned) enforces kinds explicitly.
 
-## 3.6 Implementation Details
+## 3.6 Expected-Type Coercions (Instance-Driven)
+
+In some positions, the surrounding syntax provides an **expected type** (for example, function arguments,
+record fields when a record literal is checked against a known record type, or annotated bindings).
+
+In these expected-type positions only, the compiler may insert a conversion call when needed.
+This is **not** a global implicit cast mechanism: conversions are only inserted when there is an
+in-scope instance that authorizes the coercion.
+
+### `ToText`
+
+The standard library provides:
+
+```aivi
+class ToText A = { toText: A -> Text }
+```
+
+Rule (informal):
+
+- When a `Text` is expected and an expression has type `A`, the compiler may rewrite the expression to
+  `toText expr` if a `ToText A` instance is in scope.
+
+This supports ergonomic boundary code such as HTTP requests:
+
+```aivi
+req = {
+  method: "Post",
+  url: ~u(https://api.example.com/v1/users),
+  headers: [("Content-Type", "application/json")],
+  body: Some { name: "New User" }
+}
+```
+
+### Record Instances
+
+AIVI uses open structural records, so a record type like `{}` denotes "any record".
+Implementations may ship a default instance `ToText {}` to support record-to-text coercions without
+per-record boilerplate.
+
+## 3.7 Implementation Details
 
 > [!NOTE] Rust Codegen
 > AIVI provides two Rust backends in v0.1:

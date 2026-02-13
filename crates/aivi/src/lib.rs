@@ -57,7 +57,7 @@ pub use surface::{
     Pattern, RecordField, RecordPatternField, SpannedName, TextPart, TypeAlias, TypeCtor, TypeDecl,
     TypeExpr, TypeSig, UseDecl,
 };
-pub use typecheck::{check_types, infer_value_types};
+pub use typecheck::{check_types, elaborate_expected_coercions, infer_value_types};
 
 #[derive(Debug, thiserror::Error)]
 pub enum AiviError {
@@ -157,8 +157,34 @@ pub fn desugar_target(target: &str) -> Result<HirProgram, AiviError> {
     Ok(hir::desugar_modules(&stdlib_modules))
 }
 
+pub fn desugar_target_typed(target: &str) -> Result<HirProgram, AiviError> {
+    let diagnostics = load_module_diagnostics(target)?;
+    if !diagnostics.is_empty() {
+        return Err(AiviError::Diagnostics);
+    }
+    let paths = workspace::expand_target(target)?;
+    let mut modules = Vec::new();
+    for path in &paths {
+        let content = fs::read_to_string(path)?;
+        let (mut parsed, _) = parse_modules(path.as_path(), &content);
+        modules.append(&mut parsed);
+    }
+    let mut stdlib_modules = stdlib::embedded_stdlib_modules();
+    stdlib_modules.append(&mut modules);
+
+    let mut diagnostics = check_modules(&stdlib_modules);
+    if diagnostics.is_empty() {
+        diagnostics.extend(elaborate_expected_coercions(&mut stdlib_modules));
+    }
+    if !diagnostics.is_empty() {
+        return Err(AiviError::Diagnostics);
+    }
+
+    Ok(hir::desugar_modules(&stdlib_modules))
+}
+
 pub fn kernel_target(target: &str) -> Result<kernel::KernelProgram, AiviError> {
-    let hir = desugar_target(target)?;
+    let hir = desugar_target_typed(target)?;
     Ok(kernel::lower_hir(hir))
 }
 

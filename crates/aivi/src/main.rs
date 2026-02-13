@@ -176,7 +176,7 @@ fn run() -> Result<(), AiviError> {
                         )));
                     }
                     let _modules = load_checked_modules_with_progress(&opts.input)?;
-                    let program = desugar_target(&opts.input)?;
+                    let program = aivi::desugar_target_typed(&opts.input)?;
                     if opts.target == "rust" || opts.target == "rust-embed" {
                         let rust = compile_rust(program)?;
                         let out_dir = opts
@@ -1008,7 +1008,7 @@ fn generate_project_rust(project_root: &Path, cfg: &aivi::AiviToml) -> Result<()
         .ok_or_else(|| AiviError::InvalidPath(entry_path.display().to_string()))?;
 
     let _modules = load_checked_modules(entry_str)?;
-    let program = desugar_target(entry_str)?;
+    let program = aivi::desugar_target_typed(entry_str)?;
 
     let gen_dir = project_root.join(&cfg.build.gen_dir);
     let src_out = gen_dir.join("src");

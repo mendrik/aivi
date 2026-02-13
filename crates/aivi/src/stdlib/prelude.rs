@@ -5,6 +5,7 @@ pub const SOURCE: &str = r#"
 module aivi.prelude
 export Int, Float, Bool, Text, Char, Bytes
 export List, Option, Result, Tuple, Patch
+export ToText
 
 export domain Calendar
 export domain Duration
