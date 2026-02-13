@@ -1,17 +1,21 @@
 # AIVI Language Specification & Implementation
 
-> [!NOTE]
-> **AIVI v0.1** implements a CST→AST→HIR→Kernel pipeline with native Rust runtime execution.
-> WARNING! The whole project has been vibe-coded and is not fit for production as of todat.
+> [!WARNING]
+> The whole project has been vibe-coded and is not fit for production as of today.
 > I just want to see if I can get my own language up and running by applying my experience
-> to guide LLM models.
+> and expertise to guide LLM models and to learn which ways are the best.
 
 AIVI is a type-safe functional language targeting WebAssembly, featuring **global type inference**, **open structural records** (row polymorphism), **type classes with higher-kinded types (HKTs)**, **typed effects** (`Effect E A`), and **algebraic data types (ADTs)**.
 
+**AIVI v0.1** implements a CST→AST→HIR→Kernel pipeline with native Rust runtime execution.
+
 This repository contains:
 - **Language specification** (normative semantics, type system, desugaring rules)
-- **v0.1 Rust implementation** (compiler pipeline + runtime)
-- **Experimental Rust codegen** (typed Kernel → Rust AST emission)
+- **Rust implementation** (compiler pipeline + runtime)
+- **Rust codegen** (typed Kernel → Rust AST emission)
+- **VSCode extension** (syntax highlighting, type checking, quick docs etc)
+- **Documentation** (specs, online docs, local build)
+- **CLI** (project scaffolding, building, introspection)
 
 ## Documentation
 
