@@ -160,8 +160,17 @@ impl Parser {
             let annotations = self.consume_decorators();
             if self.peek_keyword("module") {
                 self.pos += 1;
+                let module_kw_span = self.previous_span();
                 if let Some(module) = self.parse_module(annotations) {
-                    modules.push(module);
+                    if modules.is_empty() {
+                        modules.push(module);
+                    } else {
+                        self.emit_diag(
+                            "E1516",
+                            "only one `module` declaration is allowed per file",
+                            module_kw_span,
+                        );
+                    }
                 } else {
                     self.recover_to_module();
                 }

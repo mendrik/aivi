@@ -1,0 +1,9 @@
+@no_prelude
+module examples.compiler.math
+export add, sub, mul, square
+
+add = x y => x + y
+sub = x y => x - y
+mul = x y => x * y
+square = x => mul x x
+

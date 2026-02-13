@@ -19,23 +19,7 @@ subtract = a b => a - b
 abs = n => if n < 0 then -n else n
 ```
 
-When using the flat form, the `module` declaration must be the last top-level item in the file and its body extends to EOF.
-
-The explicit braced form is still supported (and required for multiple modules in one file):
-
-```aivi
-module my.utility.math = {
-  export add, subtract
-  export pi
-  
-  pi = 3.14159
-  add = a b => a + b
-  subtract = a b => a - b
-  
-  // Internal helper, not exported
-  abs = n => if n < 0 then -n else n
-}
-```
+In v0.1, there is exactly one module per file. In the flat form, the `module` declaration must be the last top-level item in the file and its body extends to EOF. The braced form (`module path = { ... }`) is equivalent but ends at the closing `}`.
 
 
 ## 10.2 Module Pathing (Dot Separator)

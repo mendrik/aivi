@@ -92,9 +92,24 @@ module Example
 }
 
 #[test]
+fn rejects_multiple_modules_per_file() {
+    let src = r#"
+module A = {
+  x = 1
+}
+
+module B = {
+  y = 2
+}
+"#;
+    let (_, diags) = parse_modules(Path::new("test.aivi"), src);
+    assert!(diag_codes(&diags).contains(&"E1516".to_string()));
+}
+
+#[test]
 fn rejects_result_or_success_arms() {
     let src = r#"
-module Example
+	module Example
 
 Result E A = Err E | Ok A
 
