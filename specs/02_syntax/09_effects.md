@@ -161,12 +161,15 @@ Example translations:
 Example translation:
 
 <<< ../snippets/from_md/02_syntax/09_effects/block_21.aivi{aivi}
+
 ## 9.5 Expressive Effect Composition
 
 Effect blocks can be combined with pipelines and pattern matching to create very readable business logic.
 
 ### Concatenating effectful operations
+
 <<< ../snippets/from_md/02_syntax/09_effects/block_22.aivi{aivi}
 
 ### Expressive Error Handling
+
 <<< ../snippets/from_md/02_syntax/09_effects/block_23.aivi{aivi}

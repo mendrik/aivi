@@ -26,12 +26,15 @@ Module resolution is static and determined at compile time based on the project 
 Use the `use` keyword to bring symbols from another module into the current scope.
 
 ### Basic Import
+
 <<< ../snippets/from_md/02_syntax/10_modules/block_02.aivi{aivi}
 
 ### Selective / Selective Hiding
+
 <<< ../snippets/from_md/02_syntax/10_modules/block_03.aivi{aivi}
 
 ### Renaming / Aliasing
+
 <<< ../snippets/from_md/02_syntax/10_modules/block_04.aivi{aivi}
 
 Compiler checks:
@@ -54,6 +57,7 @@ When another module calls `use geo.vector`, it gains the ability to use `+` on `
 Modules are statically resolved but behave like first-class records within the compiler's intermediate representation. This enables powerful composition patterns.
 
 ### Nested Modules
+
 <<< ../snippets/from_md/02_syntax/10_modules/block_06.aivi{aivi}
 
 ### Module Re-exports
@@ -79,9 +83,11 @@ Circular module dependencies are **strictly prohibited** at the import level. Th
 Modules allow for building clean, layered architectures where complex internal implementations are hidden behind simple, expressive facades.
 
 ### Clean App Facade
+
 <<< ../snippets/from_md/02_syntax/10_modules/block_09.aivi{aivi}
 
 ### Domain Extension Pattern
+
 <<< ../snippets/from_md/02_syntax/10_modules/block_10.aivi{aivi}
 
 ### Context-Specific Environments (Static Injection)

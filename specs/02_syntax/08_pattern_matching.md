@@ -75,6 +75,7 @@ Patterns can have guards using `when`:
 ### Expression Evaluation
 
 <<< ../snippets/from_md/02_syntax/08_pattern_matching/block_13.aivi{aivi}
+
 ## 8.7 Expressive Pattern Orchestration
 
 Pattern matching excels at simplifying complex conditional branches into readable declarations.
@@ -82,7 +83,9 @@ Pattern matching excels at simplifying complex conditional branches into readabl
 <<< ../snippets/from_md/02_syntax/08_pattern_matching/block_14.aivi{aivi}
 
 ### Concise State Machines
+
 <<< ../snippets/from_md/02_syntax/08_pattern_matching/block_15.aivi{aivi}
 
 ### Expressive Logic Branches
+
 <<< ../snippets/from_md/02_syntax/08_pattern_matching/block_16.aivi{aivi}

@@ -67,12 +67,15 @@ This aligns with the general design principle: generators stay pure; use `Effect
 Generators provide a powerful, declarative way to build complex sequences without intermediate collections or mutation.
 
 ### Cartesian Products
+
 <<< ../snippets/from_md/02_syntax/07_generators/block_07.aivi{aivi}
 
 ### Complex Filtering and Transformation
+
 <<< ../snippets/from_md/02_syntax/07_generators/block_08.aivi{aivi}
 
 ### Expressive Infinity
+
 <<< ../snippets/from_md/02_syntax/07_generators/block_09.aivi{aivi}
 
 `loop (pat) = init => { ... }` introduces a local tail-recursive loop for generators.

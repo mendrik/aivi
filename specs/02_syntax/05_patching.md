@@ -92,12 +92,15 @@ Removal is structural and reflected in the resulting type.
 Patching allows for very concise updates to deeply nested data structures and collections.
 
 ### Deep Collection Updates
+
 <<< ../snippets/from_md/02_syntax/05_patching/block_11.aivi{aivi}
 
 <<< ../snippets/from_md/02_syntax/05_patching/block_12.aivi{aivi}
 
 ### Complex Sum-Type Patching
+
 <<< ../snippets/from_md/02_syntax/05_patching/block_13.aivi{aivi}
 
 ### Record Bulk Update
+
 <<< ../snippets/from_md/02_syntax/05_patching/block_14.aivi{aivi}

@@ -91,7 +91,9 @@ Semantics:
 * Intermediate records are **not** bound unless explicitly requested.
 
 This is exactly equivalent to the nested expansion:
+
 <<< ../snippets/from_md/02_syntax/01_bindings/block_10.aivi{aivi}
+
 But much more readable for deep hierarchies.
 
 > [!NOTE]

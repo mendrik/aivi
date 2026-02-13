@@ -145,7 +145,11 @@ for (const mdRel of mdFiles) {
       const relFromMdDir = ensureDotSlash(
         toPosix(path.relative(path.dirname(mdAbs), snippetAbs)),
       );
+      // Snippet includes must be block-level (not inside a paragraph), so keep them
+      // separated by blank lines.
+      if (out.length > 0 && out[out.length - 1].trim() !== "") out.push("");
       out.push(`<<< ${relFromMdDir}{aivi}`);
+      out.push("");
       changed = true;
       extracted++;
 
@@ -192,4 +196,3 @@ process.stdout.write(
     2,
   ) + "\n",
 );
-

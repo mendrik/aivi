@@ -10,6 +10,7 @@
     "snippets:scan": "node scripts/scan-aivi-fences.mjs",
     "snippets:verify": "node scripts/verify-snippets.mjs",
     "snippets:verify:fix": "node scripts/verify-snippets.mjs --fix",
+    "snippets:includes:fix": "node scripts/fix-snippet-includes.mjs --apply",
     "snippets:extract:dry": "node scripts/extract-aivi-snippets.mjs",
     "snippets:extract": "node scripts/extract-aivi-snippets.mjs --apply",
     "snippets:check": "pnpm snippets:verify",
