@@ -635,3 +635,60 @@ Queue.isEmpty
         panic!("expected isEmpty token");
     }
 }
+
+#[test]
+fn semantic_tokens_treat_value_signatures_like_function_signatures() {
+    let text = r#"module Andreas.test
+User = { name: String, age: Int }
+user1 : User
+user1 = { name: "Alice", age: 3 }
+"#;
+    let tokens = Backend::build_semantic_tokens(text);
+    let lines: Vec<&str> = text.lines().collect();
+
+    let mut abs_line = 0u32;
+    let mut abs_start = 0u32;
+    let mut user1_token_type = None;
+
+    for token in tokens.data.iter() {
+        abs_line += token.delta_line;
+        if token.delta_line == 0 {
+            abs_start += token.delta_start;
+        } else {
+            abs_start = token.delta_start;
+        }
+        let line = lines.get(abs_line as usize).copied().unwrap_or_default();
+        let text: String = line
+            .chars()
+            .skip(abs_start as usize)
+            .take(token.length as usize)
+            .collect();
+        if abs_line == 2 && text == "user1" {
+            user1_token_type = Some(token.token_type);
+            break;
+        }
+    }
+
+    assert_eq!(
+        user1_token_type,
+        Some(Backend::SEM_TOKEN_FUNCTION),
+        "expected value signature name to be highlighted like a function signature name",
+    );
+}
+
+#[test]
+fn goto_definition_from_record_field_label_jumps_to_type_alias_field() {
+    let text = r#"module Andreas.test
+User = { name: String, age: Int }
+user1 : User
+user1 = { name: "Alice", age: 3 }
+"#;
+    let uri = sample_uri();
+
+    let position = position_for(text, "name: \"Alice\"");
+    let location = Backend::build_definition(text, &uri, position).expect("definition found");
+
+    let expected_position = position_for(text, "name: String");
+    assert_eq!(location.uri, uri);
+    assert_eq!(location.range.start, expected_position);
+}

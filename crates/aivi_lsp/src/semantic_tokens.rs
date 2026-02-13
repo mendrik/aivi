@@ -184,14 +184,18 @@ impl Backend {
         roles
     }
 
-    fn is_record_label(token: &CstToken, next: Option<&CstToken>) -> bool {
+    fn is_record_label(prev: Option<&CstToken>, token: &CstToken, next: Option<&CstToken>) -> bool {
         let Some(next) = next else {
             return false;
         };
         if next.kind != "symbol" || next.text != ":" {
             return false;
         }
-        Self::is_lower_ident(token)
+        // Disambiguate record labels from type signatures. A record label must appear directly
+        // after `{` or `,` in a record field list; type signatures are top-level `name : Type`.
+        let is_field_context = prev
+            .is_some_and(|prev| prev.kind == "symbol" && matches!(prev.text.as_str(), "{" | ","));
+        Self::is_lower_ident(token) && is_field_context
     }
 
     fn is_expression_token(token: &CstToken) -> bool {
@@ -290,7 +294,7 @@ impl Backend {
                 if prev.is_some_and(|prev| prev.kind == "symbol" && prev.text == "@") {
                     return Some(Self::SEM_TOKEN_DECORATOR);
                 }
-                if Self::is_record_label(token, next) {
+                if Self::is_record_label(prev, token, next) {
                     return Some(Self::SEM_TOKEN_PROPERTY);
                 }
                 if matches!(

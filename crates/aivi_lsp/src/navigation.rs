@@ -12,7 +12,206 @@ use crate::backend::Backend;
 use crate::state::IndexedModule;
 
 impl Backend {
+    fn find_record_field_name_at_position(
+        expr: &aivi::Expr,
+        position: Position,
+    ) -> Option<&aivi::SpannedName> {
+        use aivi::Expr;
+        match expr {
+            Expr::Record { fields, .. } | Expr::PatchLit { fields, .. } => {
+                for field in fields.iter() {
+                    for segment in field.path.iter() {
+                        if let aivi::PathSegment::Field(name) = segment {
+                            let range = Self::span_to_range(name.span.clone());
+                            if Self::range_contains_position(&range, position) {
+                                return Some(name);
+                            }
+                        }
+                    }
+                    if let Some(found) =
+                        Self::find_record_field_name_at_position(&field.value, position)
+                    {
+                        return Some(found);
+                    }
+                }
+                None
+            }
+            Expr::FieldAccess { base, field, .. } => {
+                let range = Self::span_to_range(field.span.clone());
+                if Self::range_contains_position(&range, position) {
+                    return Some(field);
+                }
+                Self::find_record_field_name_at_position(base, position)
+            }
+            Expr::FieldSection { field, .. } => {
+                let range = Self::span_to_range(field.span.clone());
+                if Self::range_contains_position(&range, position) {
+                    return Some(field);
+                }
+                None
+            }
+            Expr::Ident(_) | Expr::Literal(_) | Expr::Raw { .. } => None,
+            Expr::TextInterpolate { parts, .. } => parts.iter().find_map(|part| match part {
+                aivi::TextPart::Text { .. } => None,
+                aivi::TextPart::Expr { expr, .. } => {
+                    Self::find_record_field_name_at_position(expr, position)
+                }
+            }),
+            Expr::List { items, .. } => items
+                .iter()
+                .find_map(|item| Self::find_record_field_name_at_position(&item.expr, position)),
+            Expr::Tuple { items, .. } => items
+                .iter()
+                .find_map(|item| Self::find_record_field_name_at_position(item, position)),
+            Expr::Index { base, index, .. } => {
+                Self::find_record_field_name_at_position(base, position)
+                    .or_else(|| Self::find_record_field_name_at_position(index, position))
+            }
+            Expr::Call { func, args, .. } => {
+                Self::find_record_field_name_at_position(func, position).or_else(|| {
+                    args.iter()
+                        .find_map(|arg| Self::find_record_field_name_at_position(arg, position))
+                })
+            }
+            Expr::Lambda {
+                params: _, body, ..
+            } => Self::find_record_field_name_at_position(body, position),
+            Expr::Match {
+                scrutinee, arms, ..
+            } => scrutinee
+                .as_ref()
+                .and_then(|expr| Self::find_record_field_name_at_position(expr, position))
+                .or_else(|| {
+                    arms.iter().find_map(|arm| {
+                        Self::find_record_field_name_at_position(&arm.body, position).or_else(
+                            || {
+                                arm.guard.as_ref().and_then(|guard| {
+                                    Self::find_record_field_name_at_position(guard, position)
+                                })
+                            },
+                        )
+                    })
+                }),
+            Expr::If {
+                cond,
+                then_branch,
+                else_branch,
+                ..
+            } => Self::find_record_field_name_at_position(cond, position)
+                .or_else(|| Self::find_record_field_name_at_position(then_branch, position))
+                .or_else(|| Self::find_record_field_name_at_position(else_branch, position)),
+            Expr::Binary { left, right, .. } => {
+                Self::find_record_field_name_at_position(left, position)
+                    .or_else(|| Self::find_record_field_name_at_position(right, position))
+            }
+            Expr::Block { items, .. } => items.iter().find_map(|item| match item {
+                aivi::BlockItem::Bind { expr, .. }
+                | aivi::BlockItem::Let { expr, .. }
+                | aivi::BlockItem::Filter { expr, .. }
+                | aivi::BlockItem::Yield { expr, .. }
+                | aivi::BlockItem::Recurse { expr, .. }
+                | aivi::BlockItem::Expr { expr, .. } => {
+                    Self::find_record_field_name_at_position(expr, position)
+                }
+            }),
+        }
+    }
+
+    fn type_sig_for_value<'a>(module: &'a Module, value_name: &str) -> Option<&'a aivi::TypeSig> {
+        for item in module.items.iter() {
+            match item {
+                aivi::ModuleItem::TypeSig(sig) if sig.name.name == value_name => return Some(sig),
+                aivi::ModuleItem::DomainDecl(domain) => {
+                    for domain_item in domain.items.iter() {
+                        if let aivi::DomainItem::TypeSig(sig) = domain_item {
+                            if sig.name.name == value_name {
+                                return Some(sig);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn type_alias_named<'a>(module: &'a Module, type_name: &str) -> Option<&'a aivi::TypeAlias> {
+        for item in module.items.iter() {
+            match item {
+                aivi::ModuleItem::TypeAlias(alias) if alias.name.name == type_name => {
+                    return Some(alias);
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn record_field_definition_range_for_type(
+        module: &Module,
+        ty: &aivi::TypeExpr,
+        field_name: &str,
+    ) -> Option<tower_lsp::lsp_types::Range> {
+        use aivi::TypeExpr;
+
+        match ty {
+            TypeExpr::Record { fields, .. } => fields.iter().find_map(|(name, _)| {
+                if name.name == field_name {
+                    Some(Self::span_to_range(name.span.clone()))
+                } else {
+                    None
+                }
+            }),
+            TypeExpr::Name(name) => {
+                let bare = name.name.rsplit('.').next().unwrap_or(&name.name);
+                let alias = Self::type_alias_named(module, bare)?;
+                Self::record_field_definition_range_for_type(module, &alias.aliased, field_name)
+            }
+            TypeExpr::Apply { base, .. } => {
+                // For `Foo A B`, field declarations live on `Foo` if it's a record alias.
+                Self::record_field_definition_range_for_type(module, base, field_name)
+            }
+            TypeExpr::And { .. }
+            | TypeExpr::Func { .. }
+            | TypeExpr::Tuple { .. }
+            | TypeExpr::Star { .. }
+            | TypeExpr::Unknown { .. } => None,
+        }
+    }
+
+    fn build_record_field_definition(
+        text: &str,
+        uri: &Url,
+        position: Position,
+    ) -> Option<Location> {
+        let path = PathBuf::from(Self::path_from_uri(uri));
+        let (modules, _) = parse_modules(&path, text);
+        let module = Self::module_at_position(&modules, position)?;
+
+        // Find the containing def so we can use its type signature to resolve the record type.
+        for item in module.items.iter() {
+            let aivi::ModuleItem::Def(def) = item else {
+                continue;
+            };
+            let def_range = Self::span_to_range(Self::expr_span(&def.expr).clone());
+            if !Self::range_contains_position(&def_range, position) {
+                continue;
+            }
+            let field = Self::find_record_field_name_at_position(&def.expr, position)?;
+            let sig = Self::type_sig_for_value(module, &def.name.name)?;
+            let range = Self::record_field_definition_range_for_type(module, &sig.ty, &field.name)?;
+            return Some(Location::new(uri.clone(), range));
+        }
+
+        None
+    }
+
     pub(super) fn build_definition(text: &str, uri: &Url, position: Position) -> Option<Location> {
+        if let Some(location) = Self::build_record_field_definition(text, uri, position) {
+            return Some(location);
+        }
+
         let ident = Self::extract_identifier(text, position)?;
         let path = PathBuf::from(Self::path_from_uri(uri));
         let (modules, _) = parse_modules(&path, text);
@@ -40,6 +239,11 @@ impl Backend {
         position: Position,
         workspace_modules: &HashMap<String, IndexedModule>,
     ) -> Option<Location> {
+        // Try local record-field navigation first (it relies on local type signatures and aliases).
+        if let Some(location) = Self::build_record_field_definition(text, uri, position) {
+            return Some(location);
+        }
+
         let ident = Self::extract_identifier(text, position)?;
 
         if let Some(location) = Self::build_definition(text, uri, position) {
