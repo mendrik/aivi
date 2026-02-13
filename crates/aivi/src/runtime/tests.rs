@@ -184,6 +184,45 @@ n = Set.size s
 }
 
 #[test]
+fn layout_suffix_literals_find_domain_templates_at_runtime() {
+    let source = r#"
+module test.layoutSuffix
+
+use aivi.ui.layout
+
+x = 10px
+"#;
+
+    let (mut modules, diags) = crate::surface::parse_modules(std::path::Path::new("test.aivi"), source);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let mut stdlib_modules = crate::stdlib::embedded_stdlib_modules();
+    assert!(
+        stdlib_modules
+            .iter()
+            .any(|m| m.name.name == "aivi.ui.layout"),
+        "expected embedded stdlib to include aivi.ui.layout"
+    );
+    stdlib_modules.append(&mut modules);
+    let program = crate::hir::desugar_modules(&stdlib_modules);
+    let has_template = program
+        .modules
+        .iter()
+        .any(|m| m.defs.iter().any(|d| d.name == "1px"));
+    assert!(has_template, "expected embedded stdlib to define `1px`");
+
+    let mut runtime = build_runtime_from_program(program).expect("runtime");
+    let x = runtime.ctx.globals.get("x").expect("x");
+    let value = runtime.force_value(x);
+    if let Err(err) = value {
+        panic!(
+            "expected `10px` to evaluate via a `1px` template binding, got: {}",
+            format_runtime_error(err)
+        );
+    }
+}
+
+#[test]
 fn database_persists_rows_in_sqlite_memory() {
     let source = r#"
 module test.databaseSqlite

@@ -252,6 +252,116 @@ x = ~html{ <div key="k">Hi</div> }
 }
 
 #[test]
+fn parses_domain_literal_def_in_embedded_ui_layout() {
+    let src = crate::stdlib::embedded_stdlib_source("aivi.ui.layout")
+        .expect("embedded stdlib source for aivi.ui.layout");
+    let (modules, diags) = parse_modules(Path::new("<embedded:aivi.ui.layout>"), src);
+    assert!(
+        diags.is_empty(),
+        "unexpected diagnostics: {:?}",
+        diag_codes(&diags)
+    );
+    let module = modules
+        .iter()
+        .find(|m| m.name.name == "aivi.ui.layout")
+        .expect("aivi.ui.layout module");
+    let domain = module
+        .items
+        .iter()
+        .find_map(|item| match item {
+            ModuleItem::DomainDecl(domain) if domain.name.name == "Layout" => Some(domain),
+            _ => None,
+        })
+        .expect("Layout domain");
+
+    let has_1px = domain.items.iter().any(|item| match item {
+        crate::surface::DomainItem::LiteralDef(def) => def.name.name == "1px",
+        _ => false,
+    });
+    let literal_defs: Vec<String> = domain
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            crate::surface::DomainItem::LiteralDef(def) => Some(def.name.name.clone()),
+            _ => None,
+        })
+        .collect();
+    let plain_defs: Vec<String> = domain
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            crate::surface::DomainItem::Def(def) => Some(def.name.name.clone()),
+            _ => None,
+        })
+        .collect();
+    eprintln!("Layout literal defs: {literal_defs:?}");
+    eprintln!("Layout plain defs: {plain_defs:?}");
+    if !has_1px {
+        let (cst, lex_diags) = crate::lexer::lex(src);
+        assert!(lex_diags.is_empty(), "unexpected lex diagnostics: {lex_diags:?}");
+        let toks = crate::lexer::filter_tokens(&cst);
+        let mut px_context = Vec::new();
+        for i in 0..toks.len() {
+            if toks[i].text == "px" {
+                let prev = toks.get(i.wrapping_sub(1)).map(|t| (t.kind.clone(), t.text.clone()));
+                let next = toks.get(i + 1).map(|t| (t.kind.clone(), t.text.clone()));
+                px_context.push((toks[i].span.start.line, prev, next));
+            }
+        }
+        eprintln!("px token contexts (line, prev, next): {px_context:?}");
+    }
+    assert!(has_1px, "expected Layout domain to define a `1px` literal template");
+}
+
+#[test]
+fn parses_domain_literal_def_px_suffix() {
+    let src = r#"
+module Example
+
+UnitVal = { val: Float }
+
+domain Layout over UnitVal = {
+  type Length = Px Float
+
+  1px = Px 1.0
+  1em = Em 1.0
+}
+"#;
+    let (modules, diags) = parse_modules(Path::new("test.aivi"), src);
+    assert!(
+        diags.is_empty(),
+        "unexpected diagnostics: {:?}",
+        diag_codes(&diags)
+    );
+    let module = modules.first().expect("module");
+    let domain = module
+        .items
+        .iter()
+        .find_map(|item| match item {
+            ModuleItem::DomainDecl(domain) if domain.name.name == "Layout" => Some(domain),
+            _ => None,
+        })
+        .expect("Layout domain");
+
+    let literal_defs: Vec<String> = domain
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            crate::surface::DomainItem::LiteralDef(def) => Some(def.name.name.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        literal_defs.contains(&"1px".to_string()),
+        "expected literal defs to contain 1px, got {literal_defs:?}"
+    );
+    assert!(
+        literal_defs.contains(&"1em".to_string()),
+        "expected literal defs to contain 1em, got {literal_defs:?}"
+    );
+}
+
+#[test]
 fn parses_decorator_on_class_decl() {
     let src = r#"
 module Example
