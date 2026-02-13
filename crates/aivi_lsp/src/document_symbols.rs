@@ -15,9 +15,9 @@ impl Backend {
             .map(|module| {
                 let mut children = Vec::new();
                 for export in module.exports {
-                    let range = Self::span_to_range(export.span);
+                    let range = Self::span_to_range(export.name.span);
                     children.push(DocumentSymbol {
-                        name: export.name,
+                        name: export.name.name,
                         detail: Some("export".to_string()),
                         kind: SymbolKind::PROPERTY,
                         tags: None,

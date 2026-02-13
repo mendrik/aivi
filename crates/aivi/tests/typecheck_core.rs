@@ -222,6 +222,36 @@ value = 2w"#;
 }
 
 #[test]
+fn typecheck_suffix_literal_from_imported_domain() {
+    let source = r#"
+@no_prelude
+module test.delta_import
+export brightRed
+
+use aivi
+use aivi.color (Rgb, domain Color)
+
+red : Rgb
+red = { r: 255, g: 0, b: 0 }
+
+brightRed = red + 10l"#;
+    check_ok_with_embedded(source, &["aivi", "aivi.color"]);
+}
+
+#[test]
+fn typecheck_record_literal_missing_required_field_is_error() {
+    let source = r#"
+module test.record_missing
+export user
+
+User = { name: Text, age: Int }
+
+user : User
+user = { name: "Alice" }"#;
+    check_err(source);
+}
+
+#[test]
 fn typecheck_error_effect_final() {
     let source = r#"
 module test.err

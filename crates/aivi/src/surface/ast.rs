@@ -6,6 +6,24 @@ pub struct SpannedName {
     pub span: Span,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScopeItemKind {
+    Value,
+    Domain,
+}
+
+#[derive(Debug, Clone)]
+pub struct UseItem {
+    pub kind: ScopeItemKind,
+    pub name: SpannedName,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExportItem {
+    pub kind: ScopeItemKind,
+    pub name: SpannedName,
+}
+
 #[derive(Debug, Clone)]
 pub struct Decorator {
     pub name: SpannedName,
@@ -16,7 +34,7 @@ pub struct Decorator {
 #[derive(Debug, Clone)]
 pub struct UseDecl {
     pub module: SpannedName,
-    pub items: Vec<SpannedName>,
+    pub items: Vec<UseItem>,
     pub span: Span,
     pub wildcard: bool,
     pub alias: Option<SpannedName>,
@@ -129,7 +147,7 @@ pub enum ModuleItem {
 #[derive(Debug, Clone)]
 pub struct Module {
     pub name: SpannedName,
-    pub exports: Vec<SpannedName>,
+    pub exports: Vec<ExportItem>,
     pub uses: Vec<UseDecl>,
     pub items: Vec<ModuleItem>,
     pub annotations: Vec<Decorator>,

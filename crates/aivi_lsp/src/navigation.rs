@@ -224,8 +224,8 @@ impl Backend {
                 return Some(Location::new(uri.clone(), range));
             }
             for export in module.exports.iter() {
-                if export.name == ident {
-                    let range = Self::span_to_range(export.span.clone());
+                if export.name.name == ident {
+                    let range = Self::span_to_range(export.name.span.clone());
                     return Some(Location::new(uri.clone(), range));
                 }
             }
@@ -263,7 +263,7 @@ impl Backend {
 
         for use_decl in current_module.uses.iter() {
             let imported =
-                use_decl.wildcard || use_decl.items.iter().any(|item| item.name == ident);
+                use_decl.wildcard || use_decl.items.iter().any(|item| item.name.name == ident);
             if !imported {
                 continue;
             }
@@ -366,7 +366,7 @@ impl Backend {
 
         for use_decl in current_module.uses.iter() {
             let imported =
-                use_decl.wildcard || use_decl.items.iter().any(|item| item.name == ident);
+                use_decl.wildcard || use_decl.items.iter().any(|item| item.name.name == ident);
             if !imported {
                 continue;
             }
@@ -448,7 +448,8 @@ impl Backend {
                     .uses
                     .iter()
                     .find(|use_decl| {
-                        use_decl.wildcard || use_decl.items.iter().any(|item| item.name == ident)
+                        use_decl.wildcard
+                            || use_decl.items.iter().any(|item| item.name.name == ident)
                     })
                     .map(|use_decl| use_decl.module.name.clone())
             };
@@ -463,7 +464,7 @@ impl Backend {
                 || indexed.module.uses.iter().any(|use_decl| {
                     use_decl.module.name == origin_module
                         && (use_decl.wildcard
-                            || use_decl.items.iter().any(|item| item.name == ident))
+                            || use_decl.items.iter().any(|item| item.name.name == ident))
                 });
             if !should_search {
                 continue;

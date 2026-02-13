@@ -99,8 +99,8 @@ fn find_symbol_span(text: &str, name: &str) -> Span {
             }
         }
         for export in module.exports.iter() {
-            if export.name == name {
-                return export.span.clone();
+            if export.name.name == name {
+                return export.name.span.clone();
             }
         }
     }

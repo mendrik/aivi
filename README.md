@@ -1,19 +1,40 @@
-# AIVI (draft language spec)
+# AIVI Language Specification & Implementation
 
 > [!NOTE]
-> **AIVI v0.1** executes via a native Rust runtime embedding a CST-to-Kernel pipeline.
-> Experimental native Rust codegen exists, but coverage is still evolving.
-> See [Missing Features](specs/missing_features_v0.1.md) for current implementation status.
+> **AIVI v0.1** implements a CST→AST→HIR→Kernel pipeline with native Rust runtime execution.
+> Experimental Rust codegen exists but coverage is partial.
+> See [Missing Features (v0.1)](specs/missing_features_v0.1.md) for detailed implementation status.
 
-AIVI is a high-integrity functional language aimed at WebAssembly. This repo contains the **v0.1 Rust implementation** (native runtime) and the language specification.
+AIVI is a type-safe functional language targeting WebAssembly, featuring **global type inference**, **open structural records** (row polymorphism), **type classes with higher-kinded types (HKTs)**, **typed effects** (`Effect E A`), and **algebraic data types (ADTs)**.
 
-- Read the spec entrypoint: `specs/README.md`
-- Browse the docs index: [Full specification](https://mendrik.github.io/aivi/)
-- Build the docs site: `cd specs && pnpm docs:dev` / `pnpm docs:build`
+This repository contains:
+- **Language specification** (normative semantics, type system, desugaring rules)
+- **v0.1 Rust implementation** (compiler pipeline + runtime)
+- **Experimental Rust codegen** (typed Kernel → Rust AST emission)
 
-## Syntax sketch (very early)
+## Documentation
 
-The snippets below are written in AIVI syntax; GitHub highlighting is approximate.
+- **Specification entry**: [`specs/README.md`](specs/README.md)
+- **Online documentation**: [mendrik.github.io/aivi](https://mendrik.github.io/aivi/)
+- **Local docs build**: `cd specs && pnpm docs:dev` (or `pnpm docs:build`)
+
+## Type System & Language Features
+
+AIVI provides:
+
+1. **Global type inference** with let-generalization
+2. **Algebraic data types (ADTs)** with pattern matching via `?` operator
+3. **Open structural records** with row polymorphism (extend/shrink via patching `<|`)
+4. **Type classes and higher-kinded types** (Fantasy Land algebraic hierarchy)
+5. **Typed effects** (`Effect E A`) with compositional error handling (`bind`, `pure`, `fail`)
+6. **Domains as static rewrites** — operator/literal resolution chains (e.g., calendar deltas, color ops)
+7. **Patching operator `<|`** — desugars to nested updates/removals, supporting deep-key literals with `{ a.b.c: value }`
+
+## Syntax Examples
+
+> The snippets below use AIVI syntax; GitHub highlighting is approximate.
+
+### Counter model with ADTs and patching
 
 ```haskell
 module demo.counter
@@ -28,24 +49,27 @@ init = { count: 0, step: 1 }
 update : Msg -> Model -> Model
 update msg model =
   msg ?
-  | Inc        => model <| { count: _ + model.step }
-  | Dec        => model <| { count: _ - model.step }
-  | SetStep s  => model <| { step: _ <- s }
+  | Inc       => model <| { count: _ + model.step }
+  | Dec       => model <| { count: _ - model.step }
+  | SetStep s => model <| { step: _ <- s }
 
-// Pipes and a few “ligature-friendly” operators: -> => |> <| ?? <= >= != && ||
+// Pipe composition with ligature-friendly operators
 renderCount = model =>
   model.count
     |> toText
     |> "Count: _"
-
-// Domain-directed deltas (examples from the spec’s stdlib ideas)
-deadline = now + 2w + 3d
-shade    = { r: 255, g: 85, b: 0 } + 10l - 30s
-width    = 100%   // typed Style percentage delta
-height   = 100svh // typed Style viewport delta
 ```
 
-Effect fallback with `or` (fallback-only sugar):
+### Domain-directed deltas (static operator rewrites)
+
+```aivi
+deadline = now + 2w + 3d             // Calendar domain
+shade    = { r: 255, g: 85, b: 0 } + 10l - 30s  // Color domain
+width    = 100%                      // Style percentage
+height   = 100svh                    // Style viewport
+```
+
+### Typed effects with fallback
 
 ```aivi
 main = effect {
@@ -54,34 +78,68 @@ main = effect {
 }
 ```
 
-I18n key + message sigils (placeholder types are checked):
+### I18n sigils (type-checked placeholders)
 
 ```aivi
 welcomeKey = ~k"app.welcome"
 welcomeMsg = ~m"Hello, {name:Text}!"
 ```
 
-## Feedback
+## Compiler Pipeline
 
-If you see type-soundness issues, unclear semantics, bad ergonomics, or “this desugaring can’t work” problems:
+The AIVI compiler implements a multi-stage pipeline:
 
-- Open an issue / PR with a minimal counterexample.
-- Point to a specific page in `specs/` (or propose a rewrite).
+1. **Lexer** → Token stream
+2. **Parser** → Concrete Syntax Tree (CST)
+3. **AST lowering** → Abstract Syntax Tree (AST)
+4. **Resolution** → High-level Intermediate Representation (HIR) with symbol IDs
+5. **Desugaring** → Kernel IR (minimal core calculus: fold + generators model)
+6. **Type inference** → Constraint generation and unification (supports row polymorphism, classes, effects)
+7. **Runtime execution** (v0.1 native) or **Rust codegen** (experimental)
 
-## CLI (experimental)
+Additional tooling:
+- **Formatter** (`aivi fmt`)
+- **LSP server** (`aivi_lsp`) for editor integration
 
-The `aivi` CLI can scaffold and build Cargo-backed AIVI projects (generated Rust goes in `target/aivi-gen/`):
+## Feedback & Contributions
 
-- `cargo install aivi`
-- `aivi init my-app --bin` (or `--lib`)
-- `cd my-app && aivi build`
-- `cd my-app && aivi run`
-- `cd my-app && aivi install aivi-foo@^0.1`
-- `cd my-app && aivi package`
-- `cd my-app && aivi publish --dry-run`
+If you identify:
+- **Type-soundness issues** (principal types, constraint generation bugs)
+- **Spec-code divergence** (documented but unimplemented, or vice versa)
+- **Unclear semantics** (ambiguous desugaring, missing inference rules)
+- **Ergonomic problems** (confusing error messages, parser nags, type errors)
 
-It also has compiler-introspection and a direct `rustc` path:
+Please:
+- Open an issue/PR with a **minimal counterexample** (runnable `.aivi` snippet)
+- Reference specific spec sections in [`specs/`](specs/)
+- For type system issues, include expected vs. actual inferred types
 
-- `aivi kernel examples/10_wasm.aivi` (dump Kernel IR as JSON)
-- `aivi rust-ir examples/10_wasm.aivi` (dump Rust IR as JSON)
-- `aivi build examples/10_wasm.aivi --target rustc --out target/aivi-rustc/hello_bin -- -C opt-level=3`
+## CLI Usage (Experimental)
+
+The `aivi` CLI supports project scaffolding, building, and introspection:
+
+### Project management
+```sh
+cargo install aivi
+aivi init my-app --bin          # or --lib
+cd my-app && aivi build
+cd my-app && aivi run
+aivi install aivi-foo@^0.1      # dependency management
+aivi package && aivi publish --dry-run
+```
+
+### Compiler introspection
+```sh
+aivi kernel examples/10_wasm.aivi    # Dump Kernel IR (JSON)
+aivi rust-ir examples/10_wasm.aivi   # Dump Rust IR (JSON)
+
+# Direct rustc invocation with custom flags
+aivi build examples/10_wasm.aivi --target rustc \
+  --out target/aivi-rustc/hello_bin -- -C opt-level=3
+```
+
+**Implementation Note**: Generated Rust code is emitted to `target/aivi-gen/` (managed builds) or `target/aivi-rustc/` (direct `rustc` target).
+
+## License
+
+[License information to be determined]

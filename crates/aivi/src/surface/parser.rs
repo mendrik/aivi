@@ -81,24 +81,34 @@ fn expand_domain_exports(modules: &mut [Module]) {
     use std::collections::HashSet;
 
     for module in modules {
-        let mut exported: HashSet<String> = module
+        let mut exported_values: HashSet<String> = module
             .exports
             .iter()
-            .map(|name| name.name.clone())
+            .filter(|item| item.kind == crate::surface::ScopeItemKind::Value)
+            .map(|item| item.name.name.clone())
+            .collect();
+        let exported_domains: HashSet<String> = module
+            .exports
+            .iter()
+            .filter(|item| item.kind == crate::surface::ScopeItemKind::Domain)
+            .map(|item| item.name.name.clone())
             .collect();
         let mut extra_exports = Vec::new();
         for item in &module.items {
             let ModuleItem::DomainDecl(domain) = item else {
                 continue;
             };
-            if !exported.contains(&domain.name.name) {
+            if !exported_domains.contains(&domain.name.name) {
                 continue;
             }
             for domain_item in &domain.items {
                 match domain_item {
                     DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
-                        if exported.insert(def.name.name.clone()) {
-                            extra_exports.push(def.name.clone());
+                        if exported_values.insert(def.name.name.clone()) {
+                            extra_exports.push(crate::surface::ExportItem {
+                                kind: crate::surface::ScopeItemKind::Value,
+                                name: def.name.clone(),
+                            });
                         }
                     }
                     DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
@@ -856,19 +866,25 @@ impl Parser {
         })
     }
 
-    fn parse_export_list(&mut self) -> Vec<SpannedName> {
+    fn parse_export_list(&mut self) -> Vec<crate::surface::ExportItem> {
         let mut exports = Vec::new();
         loop {
             if self.match_keyword("domain") {
                 if let Some(name) = self.consume_ident() {
-                    exports.push(name);
+                    exports.push(crate::surface::ExportItem {
+                        kind: crate::surface::ScopeItemKind::Domain,
+                        name,
+                    });
                 } else {
                     let span = self.peek_span().unwrap_or_else(|| self.previous_span());
                     self.emit_diag("E1500", "expected domain name after 'domain'", span);
                     break;
                 }
             } else if let Some(name) = self.consume_ident() {
-                exports.push(name);
+                exports.push(crate::surface::ExportItem {
+                    kind: crate::surface::ScopeItemKind::Value,
+                    name,
+                });
             } else {
                 break;
             }
@@ -901,14 +917,20 @@ impl Parser {
             while !self.check_symbol(")") && self.pos < self.tokens.len() {
                 if self.match_keyword("domain") {
                     if let Some(name) = self.consume_ident() {
-                        items.push(name);
+                        items.push(crate::surface::UseItem {
+                            kind: crate::surface::ScopeItemKind::Domain,
+                            name,
+                        });
                     } else {
                         let span = self.peek_span().unwrap_or_else(|| self.previous_span());
                         self.emit_diag("E1500", "expected domain name after 'domain'", span);
                         break;
                     }
                 } else if let Some(name) = self.consume_ident() {
-                    items.push(name);
+                    items.push(crate::surface::UseItem {
+                        kind: crate::surface::ScopeItemKind::Value,
+                        name,
+                    });
                 }
                 if !self.consume_symbol(",") {
                     break;

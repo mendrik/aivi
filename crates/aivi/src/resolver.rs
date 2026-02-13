@@ -61,7 +61,11 @@ fn check_unused_imports_and_bindings(module: &Module, diagnostics: &mut Vec<File
     }
 
     let used = collect_used_names(module);
-    let exported: HashSet<&str> = module.exports.iter().map(|e| e.name.as_str()).collect();
+    let exported: HashSet<&str> = module
+        .exports
+        .iter()
+        .map(|e| e.name.name.as_str())
+        .collect();
 
     // Unused explicit imports.
     for use_decl in &module.uses {
@@ -69,14 +73,18 @@ fn check_unused_imports_and_bindings(module: &Module, diagnostics: &mut Vec<File
             continue;
         }
         for item in &use_decl.items {
-            if !used.contains(item.name.as_str()) {
+            // Domain imports are often used only via operators/suffix literals (no identifier use).
+            if item.kind == crate::surface::ScopeItemKind::Domain {
+                continue;
+            }
+            if !used.contains(item.name.name.as_str()) {
                 diagnostics.push(file_diag(
                     module,
                     Diagnostic {
                         code: "W2100".to_string(),
                         severity: DiagnosticSeverity::Warning,
-                        message: format!("unused import '{}'", item.name),
-                        span: item.span.clone(),
+                        message: format!("unused import '{}'", item.name.name),
+                        span: item.name.span.clone(),
                         labels: Vec::new(),
                     },
                 ));
@@ -311,14 +319,14 @@ fn collect_used_names(module: &Module) -> HashSet<String> {
 fn check_duplicate_exports(module: &Module, diagnostics: &mut Vec<FileDiagnostic>) {
     let mut seen: HashSet<&str> = HashSet::new();
     for export in &module.exports {
-        if !seen.insert(export.name.as_str()) {
+        if !seen.insert(export.name.name.as_str()) {
             diagnostics.push(file_diag(
                 module,
                 Diagnostic {
                     code: "E2001".to_string(),
                     severity: DiagnosticSeverity::Error,
-                    message: format!("duplicate export '{}'", export.name),
-                    span: export.span.clone(),
+                    message: format!("duplicate export '{}'", export.name.name),
+                    span: export.name.span.clone(),
                     labels: Vec::new(),
                 },
             ));
@@ -356,10 +364,10 @@ fn check_uses(
         let exports: HashSet<&str> = target
             .exports
             .iter()
-            .map(|name| name.name.as_str())
+            .map(|item| item.name.name.as_str())
             .collect();
         for item in &use_decl.items {
-            if !exports.contains(item.name.as_str()) {
+            if !exports.contains(item.name.name.as_str()) {
                 diagnostics.push(file_diag(
                     module,
                     Diagnostic {
@@ -367,9 +375,9 @@ fn check_uses(
                         severity: DiagnosticSeverity::Error,
                         message: format!(
                             "module '{}' does not export '{}'",
-                            use_decl.module.name, item.name
+                            use_decl.module.name, item.name.name
                         ),
-                        span: item.span.clone(),
+                        span: item.name.span.clone(),
                         labels: Vec::new(),
                     },
                 ));
@@ -395,12 +403,12 @@ fn check_defs(
                 let exported: HashSet<&str> = target
                     .exports
                     .iter()
-                    .map(|name| name.name.as_str())
+                    .map(|item| item.name.name.as_str())
                     .collect();
                 for export in &target.exports {
                     scope.insert(
-                        export.name.clone(),
-                        deprecated_message_for_export(target, &export.name),
+                        export.name.name.clone(),
+                        deprecated_message_for_export(target, &export.name.name),
                     );
                 }
                 for item in &target.items {
@@ -422,21 +430,58 @@ fn check_defs(
             let exported: HashSet<&str> = target
                 .exports
                 .iter()
-                .map(|name| name.name.as_str())
+                .map(|item| item.name.name.as_str())
                 .collect();
             for item in &use_decl.items {
-                if target.exports.iter().any(|export| export.name == item.name) {
-                    scope.insert(
-                        item.name.clone(),
-                        deprecated_message_for_export(target, &item.name),
-                    );
-                    if exported.contains(item.name.as_str()) {
-                        for module_item in &target.items {
-                            if let ModuleItem::ClassDecl(class_decl) = module_item {
-                                if class_decl.name.name == item.name {
-                                    for member in &class_decl.members {
-                                        scope.insert(member.name.name.clone(), None);
+                match item.kind {
+                    crate::surface::ScopeItemKind::Value => {
+                        if target
+                            .exports
+                            .iter()
+                            .any(|export| export.name.name == item.name.name)
+                        {
+                            scope.insert(
+                                item.name.name.clone(),
+                                deprecated_message_for_export(target, &item.name.name),
+                            );
+                            if exported.contains(item.name.name.as_str()) {
+                                for module_item in &target.items {
+                                    if let ModuleItem::ClassDecl(class_decl) = module_item {
+                                        if class_decl.name.name == item.name.name {
+                                            for member in &class_decl.members {
+                                                scope.insert(member.name.name.clone(), None);
+                                            }
+                                        }
                                     }
+                                }
+                            }
+                        }
+                    }
+                    crate::surface::ScopeItemKind::Domain => {
+                        // Importing a domain brings its operators and literal templates into scope.
+                        let exported_domain = target.exports.iter().any(|export| {
+                            export.kind == crate::surface::ScopeItemKind::Domain
+                                && export.name.name == item.name.name
+                        });
+                        if !exported_domain {
+                            continue;
+                        }
+                        for module_item in &target.items {
+                            let ModuleItem::DomainDecl(domain) = module_item else {
+                                continue;
+                            };
+                            if domain.name.name != item.name.name {
+                                continue;
+                            }
+                            for domain_item in &domain.items {
+                                match domain_item {
+                                    DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                                        scope.insert(
+                                            def.name.name.clone(),
+                                            deprecated_message_for_export(target, &def.name.name),
+                                        );
+                                    }
+                                    DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
                                 }
                             }
                         }

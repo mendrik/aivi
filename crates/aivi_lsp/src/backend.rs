@@ -447,10 +447,10 @@ impl Backend {
             ));
         }
         for export in module.exports.iter() {
-            if export.name == ident {
+            if export.name.name == ident {
                 locations.push(Location::new(
                     uri.clone(),
-                    Self::span_to_range(export.span.clone()),
+                    Self::span_to_range(export.name.span.clone()),
                 ));
             }
         }
@@ -483,10 +483,10 @@ impl Backend {
             ));
         }
         for item in use_decl.items.iter() {
-            if item.name == ident {
+            if item.name.name == ident {
                 locations.push(Location::new(
                     uri.clone(),
-                    Self::span_to_range(item.span.clone()),
+                    Self::span_to_range(item.name.span.clone()),
                 ));
             }
         }

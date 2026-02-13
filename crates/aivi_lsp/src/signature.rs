@@ -80,7 +80,7 @@ impl Backend {
 
         for use_decl in current_module.uses.iter() {
             let imported =
-                use_decl.wildcard || use_decl.items.iter().any(|item| item.name == ident);
+                use_decl.wildcard || use_decl.items.iter().any(|item| item.name.name == ident);
             if !imported {
                 continue;
             }

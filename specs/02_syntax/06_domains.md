@@ -46,6 +46,8 @@ When you write:
 
 The compiler sees `red` is type `Rgb`. It looks for a domain over `Rgb` (the `Color` domain). It then desugars `10l` using the domain's rules into `Lightness 10`, and maps `+` to the domain's `(+)` function.
 
+This requires the domain to be in scope (e.g. `use aivi.color (domain Color)`), not just the carrier type.
+
 ## Multi-Carrier Domains
 
 Some domains cover multiple types (e.g., `Vector` over `Vec2` and `Vec3`). In v0.1, this is handled by defining the domain multiple times, once for each carrier.

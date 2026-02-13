@@ -670,6 +670,7 @@ impl TypeChecker {
         &mut self,
         module: &Module,
         module_exports: &HashMap<String, HashMap<String, Scheme>>,
+        module_domain_exports: &HashMap<String, HashMap<String, Vec<String>>>,
         env: &mut TypeEnv,
     ) {
         for use_decl in &module.uses {
@@ -680,8 +681,26 @@ impl TypeChecker {
                     }
                 } else {
                     for item in &use_decl.items {
-                        if let Some(scheme) = exports.get(&item.name) {
-                            env.insert(item.name.clone(), scheme.clone());
+                        match item.kind {
+                            crate::surface::ScopeItemKind::Value => {
+                                if let Some(scheme) = exports.get(&item.name.name) {
+                                    env.insert(item.name.name.clone(), scheme.clone());
+                                }
+                            }
+                            crate::surface::ScopeItemKind::Domain => {
+                                let Some(domains) = module_domain_exports.get(&use_decl.module.name)
+                                else {
+                                    continue;
+                                };
+                                let Some(members) = domains.get(&item.name.name) else {
+                                    continue;
+                                };
+                                for member in members {
+                                    if let Some(scheme) = exports.get(member) {
+                                        env.insert(member.clone(), scheme.clone());
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1157,7 +1176,9 @@ impl TypeChecker {
                         let template_name = format!("1{suffix}");
                         let scheme = env.get(&template_name).cloned().ok_or_else(|| TypeError {
                             span: span.clone(),
-                            message: format!("unknown numeric literal '{text}'"),
+                            message: format!(
+                                "unknown numeric literal '{text}' (suffix literals require a '{template_name}' template in scope; import the relevant domain with `use ... (domain ...)` or define '{template_name} = ...`)"
+                            ),
                             expected: None,
                             found: None,
                         })?;
@@ -1725,17 +1746,37 @@ impl TypeChecker {
         fields: &[RecordField],
         env: &mut TypeEnv,
     ) -> Result<Type, TypeError> {
+        // A record literal without spreads is concrete and cannot have unknown extra fields.
+        // This is important for catching missing required fields when checking against a known
+        // record type.
         let mut record_ty = Type::Record {
             fields: BTreeMap::new(),
-            open: true,
+            open: false,
         };
+
+        fn closed_record_from_path(path: &[PathSegment], value: Type) -> Type {
+            let mut current = value;
+            for segment in path.iter().rev() {
+                match segment {
+                    PathSegment::Field(name) => {
+                        let mut fields = BTreeMap::new();
+                        fields.insert(name.name.clone(), current);
+                        current = Type::Record { fields, open: false };
+                    }
+                    PathSegment::Index(_, _) | PathSegment::All(_) => {
+                        current = Type::con("List").app(vec![current]);
+                    }
+                }
+            }
+            current
+        }
         for field in fields {
             let value_ty = self.infer_expr(&field.value, env)?;
             if field.spread {
                 // `{ ...base, field: value }` composes record types.
                 record_ty = self.merge_records(record_ty, value_ty, field.span.clone())?;
             } else {
-                let field_ty = self.record_from_path(&field.path, value_ty);
+                let field_ty = closed_record_from_path(&field.path, value_ty);
                 record_ty = self.merge_records(record_ty, field_ty, field.span.clone())?;
             }
         }

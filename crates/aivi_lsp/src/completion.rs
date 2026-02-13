@@ -276,7 +276,7 @@ impl Backend {
         let mut out = Vec::new();
         if !module.exports.is_empty() {
             for export in module.exports.iter() {
-                let label = export.name.clone();
+                let label = export.name.name.clone();
                 let kind = kind_by_name
                     .get(&label)
                     .copied()

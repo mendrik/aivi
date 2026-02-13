@@ -153,9 +153,12 @@ fn collect_imported_class_env(
         }
         let mut imported_classes = HashSet::new();
         for item in &use_decl.items {
-            if let Some(info) = class_exports.get(&item.name) {
-                classes.insert(item.name.clone(), info.clone());
-                imported_classes.insert(item.name.clone());
+            if item.kind != crate::surface::ScopeItemKind::Value {
+                continue;
+            }
+            if let Some(info) = class_exports.get(&item.name.name) {
+                classes.insert(item.name.name.clone(), info.clone());
+                imported_classes.insert(item.name.name.clone());
             }
         }
         if let Some(instance_exports) = module_instance_exports.get(&use_decl.module.name) {
@@ -177,9 +180,12 @@ fn collect_exported_class_env(
     let mut class_exports = HashMap::new();
     let mut exported_class_names = HashSet::new();
     for export in &module.exports {
-        if let Some(info) = classes.get(&export.name) {
-            class_exports.insert(export.name.clone(), info.clone());
-            exported_class_names.insert(export.name.clone());
+        if export.kind != crate::surface::ScopeItemKind::Value {
+            continue;
+        }
+        if let Some(info) = classes.get(&export.name.name) {
+            class_exports.insert(export.name.name.clone(), info.clone());
+            exported_class_names.insert(export.name.name.clone());
         }
     }
     let instance_exports = instances
@@ -315,6 +321,7 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
     let mut checker = TypeChecker::new();
     let mut diagnostics = Vec::new();
     let mut module_exports: HashMap<String, HashMap<String, Scheme>> = HashMap::new();
+    let mut module_domain_exports: HashMap<String, HashMap<String, Vec<String>>> = HashMap::new();
     let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
     let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
 
@@ -325,7 +332,7 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
         diagnostics.extend(checker.collect_type_expr_diags(module));
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
-        checker.register_imports(module, &module_exports, &mut env);
+        checker.register_imports(module, &module_exports, &module_domain_exports, &mut env);
         let (imported_classes, imported_instances) =
             collect_imported_class_env(module, &module_class_exports, &module_instance_exports);
         let (local_classes, local_instances) = collect_local_class_env(module);
@@ -346,11 +353,41 @@ pub fn check_types(modules: &[Module]) -> Vec<FileDiagnostic> {
 
         let mut exports = HashMap::new();
         for export in &module.exports {
-            if let Some(scheme) = env.get(&export.name) {
-                exports.insert(export.name.clone(), scheme.clone());
+            if export.kind != crate::surface::ScopeItemKind::Value {
+                continue;
+            }
+            if let Some(scheme) = env.get(&export.name.name) {
+                exports.insert(export.name.name.clone(), scheme.clone());
             }
         }
         module_exports.insert(module.name.name.clone(), exports);
+
+        let mut domain_exports = HashMap::new();
+        for export in &module.exports {
+            if export.kind != crate::surface::ScopeItemKind::Domain {
+                continue;
+            }
+            let domain_name = export.name.name.as_str();
+            let mut members = Vec::new();
+            for item in &module.items {
+                let ModuleItem::DomainDecl(domain) = item else {
+                    continue;
+                };
+                if domain.name.name != domain_name {
+                    continue;
+                }
+                for domain_item in &domain.items {
+                    match domain_item {
+                        DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                            members.push(def.name.name.clone());
+                        }
+                        DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
+                    }
+                }
+            }
+            domain_exports.insert(domain_name.to_string(), members);
+        }
+        module_domain_exports.insert(module.name.name.clone(), domain_exports);
         let (class_exports, instance_exports) =
             collect_exported_class_env(module, &checker.classes, &checker.instances);
         module_class_exports.insert(module.name.name.clone(), class_exports);
@@ -364,6 +401,7 @@ pub fn elaborate_expected_coercions(modules: &mut [Module]) -> Vec<FileDiagnosti
     let mut checker = TypeChecker::new();
     let mut diagnostics = Vec::new();
     let mut module_exports: HashMap<String, HashMap<String, Scheme>> = HashMap::new();
+    let mut module_domain_exports: HashMap<String, HashMap<String, Vec<String>>> = HashMap::new();
     let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
     let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
 
@@ -376,7 +414,7 @@ pub fn elaborate_expected_coercions(modules: &mut [Module]) -> Vec<FileDiagnosti
         diagnostics.extend(checker.collect_type_expr_diags(module));
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
-        checker.register_imports(module, &module_exports, &mut env);
+        checker.register_imports(module, &module_exports, &module_domain_exports, &mut env);
 
         let (imported_classes, imported_instances) =
             collect_imported_class_env(module, &module_class_exports, &module_instance_exports);
@@ -434,11 +472,41 @@ pub fn elaborate_expected_coercions(modules: &mut [Module]) -> Vec<FileDiagnosti
 
         let mut exports = HashMap::new();
         for export in &module.exports {
-            if let Some(scheme) = env.get(&export.name) {
-                exports.insert(export.name.clone(), scheme.clone());
+            if export.kind != crate::surface::ScopeItemKind::Value {
+                continue;
+            }
+            if let Some(scheme) = env.get(&export.name.name) {
+                exports.insert(export.name.name.clone(), scheme.clone());
             }
         }
         module_exports.insert(module.name.name.clone(), exports);
+
+        let mut domain_exports = HashMap::new();
+        for export in &module.exports {
+            if export.kind != crate::surface::ScopeItemKind::Domain {
+                continue;
+            }
+            let domain_name = export.name.name.as_str();
+            let mut members = Vec::new();
+            for item in &module.items {
+                let ModuleItem::DomainDecl(domain) = item else {
+                    continue;
+                };
+                if domain.name.name != domain_name {
+                    continue;
+                }
+                for domain_item in &domain.items {
+                    match domain_item {
+                        DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                            members.push(def.name.name.clone());
+                        }
+                        DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
+                    }
+                }
+            }
+            domain_exports.insert(domain_name.to_string(), members);
+        }
+        module_domain_exports.insert(module.name.name.clone(), domain_exports);
         let (class_exports, instance_exports) =
             collect_exported_class_env(module, &checker.classes, &checker.instances);
         module_class_exports.insert(module.name.name.clone(), class_exports);
@@ -457,6 +525,7 @@ pub fn infer_value_types(
     let mut checker = TypeChecker::new();
     let mut diagnostics = Vec::new();
     let mut module_exports: HashMap<String, HashMap<String, Scheme>> = HashMap::new();
+    let mut module_domain_exports: HashMap<String, HashMap<String, Vec<String>>> = HashMap::new();
     let mut module_class_exports: HashMap<String, HashMap<String, ClassDeclInfo>> = HashMap::new();
     let mut module_instance_exports: HashMap<String, Vec<InstanceDeclInfo>> = HashMap::new();
     let mut inferred: HashMap<String, HashMap<String, String>> = HashMap::new();
@@ -468,7 +537,7 @@ pub fn infer_value_types(
         diagnostics.extend(checker.collect_type_expr_diags(module));
         let sigs = checker.collect_type_sigs(module);
         checker.register_module_constructors(module, &mut env);
-        checker.register_imports(module, &module_exports, &mut env);
+        checker.register_imports(module, &module_exports, &module_domain_exports, &mut env);
         let (imported_classes, imported_instances) =
             collect_imported_class_env(module, &module_class_exports, &module_instance_exports);
         let (local_classes, local_instances) = collect_local_class_env(module);
@@ -523,11 +592,41 @@ pub fn infer_value_types(
 
         let mut exports = HashMap::new();
         for export in &module.exports {
-            if let Some(scheme) = env.get(&export.name) {
-                exports.insert(export.name.clone(), scheme.clone());
+            if export.kind != crate::surface::ScopeItemKind::Value {
+                continue;
+            }
+            if let Some(scheme) = env.get(&export.name.name) {
+                exports.insert(export.name.name.clone(), scheme.clone());
             }
         }
         module_exports.insert(module.name.name.clone(), exports);
+
+        let mut domain_exports = HashMap::new();
+        for export in &module.exports {
+            if export.kind != crate::surface::ScopeItemKind::Domain {
+                continue;
+            }
+            let domain_name = export.name.name.as_str();
+            let mut members = Vec::new();
+            for item in &module.items {
+                let ModuleItem::DomainDecl(domain) = item else {
+                    continue;
+                };
+                if domain.name.name != domain_name {
+                    continue;
+                }
+                for domain_item in &domain.items {
+                    match domain_item {
+                        DomainItem::Def(def) | DomainItem::LiteralDef(def) => {
+                            members.push(def.name.name.clone());
+                        }
+                        DomainItem::TypeAlias(_) | DomainItem::TypeSig(_) => {}
+                    }
+                }
+            }
+            domain_exports.insert(domain_name.to_string(), members);
+        }
+        module_domain_exports.insert(module.name.name.clone(), domain_exports);
         let (class_exports, instance_exports) =
             collect_exported_class_env(module, &checker.classes, &checker.instances);
         module_class_exports.insert(module.name.name.clone(), class_exports);
